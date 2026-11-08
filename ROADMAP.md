@@ -1,0 +1,167 @@
+# Roadmap
+
+The order of work. **This file tracks progress; it does not define behaviour.** [`DESIGN.md`](DESIGN.md) says what Tally does, and where it disagrees with this file, this file is stale and should be corrected. The detail of every task, with its technical notes and what makes it done, is in [`docs/epics/`](docs/epics/). How a task is run is in [`AGENTS.md`](AGENTS.md).
+
+State as of 2026-11-09: **planned, nothing built.** The developer assigns each task; the first row not done, with its dependencies met, is what the order recommends.
+
+_Status key: ✅ Done · ⏳ In progress · 📋 Planned · 🚧 Waits on a decision · ➖ Superseded_
+
+_Priority:_ **P0** nothing else can stand without it · **P1** the product · **P2** needed before the first release · **P3** can follow the first release if it must
+
+## How this is ordered
+
+Tusk's order (building-an-app §14): conventions, configuration, database, sign-in, the shell, then the product, then the image and the release. Within the product:
+
+1. **People and groups first** (B), so that no table is written without `group_id` and membership in its statement.
+2. **The arithmetic and the one write path before any screen** (C): splitting, balances and applying a mutation are pure or server-side, and every later screen and the sync use them.
+3. **Offline before the screens** (D), because the screens read the device's store: building them on server reads first would mean building them twice.
+4. **The screens** (E) make it usable by people who already have accounts.
+5. **Bringing people in** (F): placeholders and invitations, with mail.
+6. **Notices and reminders** (G), then **insights** (H), which wait on charts in the design system.
+7. **The suite and portability** (I), then the release (J). Sign-in through core is P0 but can come late, as Tusk's and Ledger's do: nothing before it depends on it.
+
+**Epic 14 is work in `sovereign`**, tracked here because Tally waits on it: the design system's missing parts and the `invite` sign-up value. Each is started early enough to be released before the task that needs it.
+
+## Phase 1 — the MVP
+
+### Milestone A — Foundation
+
+The repository can hold the app. Nothing a person would notice. **Done when** an empty database boots on all three forms from the image, and CI proves it.
+
+| #   | ID                               | Task                             | Priority | Depends on | Status |
+| --- | -------------------------------- | -------------------------------- | -------- | ---------- | ------ |
+| 1   | [1.1](docs/epics/foundation.md)  | Repository conventions           | P0       | —          | 📋     |
+| 2   | [1.2](docs/epics/foundation.md)  | Format, lint and test tooling    | P0       | 1.1        | 📋     |
+| 3   | [1.3](docs/epics/foundation.md)  | Continuous integration           | P0       | 1.2        | 📋     |
+| 4   | [1.4](docs/epics/foundation.md)  | Configuration and start-up       | P0       | 1.2        | 📋     |
+| 5   | [1.5](docs/epics/foundation.md)  | The database layer               | P0       | 1.4        | 📋     |
+| 6   | [1.8](docs/epics/foundation.md)  | Design system boundary and shell | P0       | 1.2        | 📋     |
+| 7   | [1.7](docs/epics/foundation.md)  | Security headers                 | P0       | 1.4        | 📋     |
+| 8   | [1.6](docs/epics/foundation.md)  | The job runner                   | P0       | 1.5        | 📋     |
+| 9   | [1.9](docs/epics/foundation.md)  | Browser tests                    | P0       | 1.5        | 📋     |
+| 10  | [1.10](docs/epics/foundation.md) | The image and deployment setups  | P0       | 1.5, 1.6   | 📋     |
+
+### Milestone B — Accounts, people and groups
+
+A person signs in, makes a group and is its owner, and every statement carries the permission. **Done when** a second person can reach nothing of a group they are not in, and deleting a person leaves nothing personal.
+
+| #   | ID                            | Task                             | Priority | Depends on    | Status |
+| --- | ----------------------------- | -------------------------------- | -------- | ------------- | ------ |
+| 11  | [2.1](docs/epics/accounts.md) | Local sign-in                    | P0       | 1.5, 1.8      | 📋     |
+| 12  | [3.1](docs/epics/groups.md)   | Persons                          | P0       | 2.1           | 📋     |
+| 13  | [4.1](docs/epics/money.md)    | Money and currencies             | P0       | 1.5           | 📋     |
+| 14  | [3.2](docs/epics/groups.md)   | Groups, members and access       | P0       | 3.1, 4.1      | 📋     |
+| 15  | [2.2](docs/epics/accounts.md) | Landing page and the address `/` | P1       | 2.1           | 📋     |
+| 16  | [2.5](docs/epics/accounts.md) | Deleting a person                | P0       | 3.2           | 📋     |
+| 17  | [2.6](docs/epics/accounts.md) | Settings                         | P1       | 2.1, 1.8, 3.1 | 📋     |
+
+### Milestone C — The arithmetic and the write path
+
+Expenses, payments and comments can be written through the one path, and every figure comes from one pure module. **Done when** the property tests hold and a mutation is applied, refused and replayed correctly on all three databases.
+
+| #   | ID                            | Task                                 | Priority | Depends on    | Status |
+| --- | ----------------------------- | ------------------------------------ | -------- | ------------- | ------ |
+| 18  | [4.2](docs/epics/money.md)    | Splitting and rounding               | P0       | 4.1           | 📋     |
+| 19  | [4.3](docs/epics/money.md)    | Balances, pairwise and simplified    | P0       | 4.2           | 📋     |
+| 20  | [5.1](docs/epics/expenses.md) | Actions and validators               | P0       | 4.2, 3.2      | 📋     |
+| 21  | [5.2](docs/epics/expenses.md) | Applying a mutation                  | P0       | 5.1           | 📋     |
+| 22  | [5.3](docs/epics/expenses.md) | Comments                             | P1       | 5.2           | 📋     |
+| 23  | [5.4](docs/epics/expenses.md) | The activity log and its words       | P1       | 5.2, 3.2      | 📋     |
+| 24  | [3.3](docs/epics/groups.md)   | Leaving, removing, closing, deleting | P1       | 3.2, 4.3, 5.2 | 📋     |
+
+### Milestone D — Offline and sync
+
+The device holds every group and records without a network. **Done when** two browsers, one offline, add and edit expenses in one group and both end with the same rows, with nothing lost and every refusal in Couldn't sync.
+
+| #   | ID                               | Task                                | Priority | Depends on | Status |
+| --- | -------------------------------- | ----------------------------------- | -------- | ---------- | ------ |
+| 25  | [6.1](docs/epics/sync.md)        | The sync endpoint                   | P0       | 5.2        | 📋     |
+| 26  | [6.2](docs/epics/sync.md)        | The device's store, outbox and loop | P0       | 6.1        | 📋     |
+| 27  | [6.3](docs/epics/sync.md)        | Couldn't sync                       | P1       | 6.2        | 📋     |
+| 28  | [1.11](docs/epics/foundation.md) | The PWA                             | P1       | 1.8        | 📋     |
+| 29  | [6.4](docs/epics/sync.md)        | Opening offline                     | P1       | 6.2, 1.11  | 📋     |
+| 30  | [6.5](docs/epics/sync.md)        | Keeping the history small           | P2       | 6.1, 1.6   | 📋     |
+
+### Milestone E — The screens
+
+The interface of `DESIGN.md` §15 on the device's data. **Done when** people with accounts can share a trip from first expense to closing the group, at desktop and phone widths.
+
+| #   | ID                             | Task                                             | Priority | Depends on     | Status |
+| --- | ------------------------------ | ------------------------------------------------ | -------- | -------------- | ------ |
+| 31  | [14.4](docs/epics/upstream.md) | `MoneyInput` and a currency picker (`sovereign`) | P1       | —              | 📋     |
+| 32  | [14.2](docs/epics/upstream.md) | `AvatarStack` (`sovereign`)                      | P1       | —              | 📋     |
+| 33  | [14.3](docs/epics/upstream.md) | A floating action button (`sovereign`)           | P1       | —              | 📋     |
+| 34  | [7.1](docs/epics/screens.md)   | The shell's places and the groups list           | P1       | 6.2, 3.2       | 📋     |
+| 35  | [7.2](docs/epics/screens.md)   | Adding an expense                                | P1       | 7.1, 6.2, 14.4 | 📋     |
+| 36  | [7.3](docs/epics/screens.md)   | A group: expenses                                | P1       | 7.2            | 📋     |
+| 37  | [7.4](docs/epics/screens.md)   | A group: balances                                | P1       | 7.3, 4.3       | 📋     |
+| 38  | [7.5](docs/epics/screens.md)   | Payments and settling up                         | P1       | 7.4            | 📋     |
+| 39  | [7.6](docs/epics/screens.md)   | An expense: comments and history                 | P1       | 7.3, 5.3       | 📋     |
+| 40  | [4.4](docs/epics/money.md)     | Across groups                                    | P1       | 4.3            | 📋     |
+| 41  | [7.7](docs/epics/screens.md)   | Home                                             | P1       | 7.5, 4.4, 14.2 | 📋     |
+| 42  | [7.8](docs/epics/screens.md)   | People and a person                              | P1       | 7.5, 4.4       | 📋     |
+| 43  | [7.9](docs/epics/screens.md)   | A group's settings                               | P1       | 7.3, 3.3       | 📋     |
+| 44  | [7.10](docs/epics/screens.md)  | Activity                                         | P1       | 5.4, 7.1       | 📋     |
+| 45  | [7.11](docs/epics/screens.md)  | The phone                                        | P1       | 7.7, 7.8, 14.3 | 📋     |
+
+### Milestone F — Bringing people in
+
+People outside can be in a group before they have an account, and take their place later. **Done when** journeys 3 and 4 of `DESIGN.md` §3 pass in a browser, alone and with no mail set up.
+
+| #   | ID                             | Task                                      | Priority | Depends on     | Status |
+| --- | ------------------------------ | ----------------------------------------- | -------- | -------------- | ------ |
+| 46  | [8.1](docs/epics/invites.md)   | The mail outbox                           | P1       | 1.6            | 📋     |
+| 47  | [8.2](docs/epics/invites.md)   | Adding people and placeholders            | P1       | 7.9, 3.1       | 📋     |
+| 48  | [14.5](docs/epics/upstream.md) | `AUTH_SIGNUP` by invitation (`sovereign`) | P1       | —              | 📋     |
+| 49  | [8.3](docs/epics/invites.md)   | Invitations and claiming                  | P1       | 8.1, 8.2, 14.5 | 📋     |
+| 50  | [3.4](docs/epics/groups.md)    | Merging a placeholder                     | P2       | 8.2, 5.2       | 📋     |
+
+### Milestone G — Notices and reminders
+
+People hear about what concerns them. **Done when** each kind of notice reaches the right people through the bell and, where on, by email, and never the person who acted.
+
+| #   | ID                           | Task                  | Priority | Depends on | Status |
+| --- | ---------------------------- | --------------------- | -------- | ---------- | ------ |
+| 51  | [9.1](docs/epics/notices.md) | Notices and the bell  | P1       | 5.2, 7.1   | 📋     |
+| 52  | [9.2](docs/epics/notices.md) | Preferences and email | P1       | 9.1, 8.1   | 📋     |
+| 53  | [9.3](docs/epics/notices.md) | Reminders             | P1       | 9.2, 4.3   | 📋     |
+
+### Milestone H — Insights
+
+Looking back at what was spent. **Done when** every figure matches a hand-worked seed, with charts and their tables.
+
+| #   | ID                             | Task                 | Priority | Depends on      | Status |
+| --- | ------------------------------ | -------------------- | -------- | --------------- | ------ |
+| 54  | [14.1](docs/epics/upstream.md) | Charts (`sovereign`) | P1       | —               | 📋     |
+| 55  | [10.1](docs/epics/insights.md) | The figures          | P1       | 4.2             | 📋     |
+| 56  | [10.2](docs/epics/insights.md) | The screens          | P1       | 10.1, 7.3, 14.1 | 📋     |
+
+### Milestone I — The suite, and the person's data
+
+Part of the suite, and a person can leave. **Done when** it signs in through core, honours both notices, finds people in the directory, notifies through core's bell, and a person's groups round-trip through a file.
+
+| #   | ID                                | Task                         | Priority | Depends on | Status |
+| --- | --------------------------------- | ---------------------------- | -------- | ---------- | ------ |
+| 57  | [2.3](docs/epics/accounts.md)     | Sign-in through core         | P0       | 2.1, 3.1   | 📋     |
+| 58  | [2.4](docs/epics/accounts.md)     | Core's notices               | P0       | 2.3, 2.5   | 📋     |
+| 59  | [11.1](docs/epics/suite.md)       | Core's bell, email, activity | P2       | 2.3, 9.2   | 📋     |
+| 60  | [11.2](docs/epics/suite.md)       | Core's directory             | P2       | 2.3, 8.2   | 📋     |
+| 61  | [12.1](docs/epics/portability.md) | Export                       | P2       | 5.3, 3.3   | 📋     |
+| 62  | [12.2](docs/epics/portability.md) | Import                       | P2       | 12.1, 8.2  | 📋     |
+
+### Milestone J — Release
+
+**Done when** 0.1.0 is published and hosted on the live instance.
+
+| #   | ID                             | Task                                    | Priority | Depends on      | Status |
+| --- | ------------------------------ | --------------------------------------- | -------- | --------------- | ------ |
+| 63  | [13.1](docs/epics/release.md)  | Development seed                        | P1       | 8.3, 5.3        | 📋     |
+| 64  | [14.6](docs/epics/upstream.md) | Tally's port in the guide (`sovereign`) | P3       | —               | 📋     |
+| 65  | [13.3](docs/epics/release.md)  | Documents                               | P2       | 1.10            | 📋     |
+| 66  | [13.2](docs/epics/release.md)  | Security review                         | P2       | 12.2, 9.3, 11.2 | 📋     |
+| 67  | [13.4](docs/epics/release.md)  | Release 0.1.0                           | P2       | 13.2, 13.3      | 📋     |
+| 68  | [13.5](docs/epics/release.md)  | Hosting on an instance                  | P2       | 13.4            | 📋     |
+
+## Phase 2 — candidates
+
+None committed (`DESIGN.md` §21): receipts, currency conversion, recurring expenses, Push notifications, import from Splitwise, people and invitations offline, live updates.
