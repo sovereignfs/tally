@@ -16,7 +16,7 @@ trimmed (`DESIGN.md` §5.1).
 
 ## Tasks
 
-#### 📋 2.1 — Local sign-in
+#### ✅ 2.1 — Local sign-in
 
 **Goal:** accounts of the app's own. **Design:** §14.1, §6.4, §5.3. **Depends on:** 1.5, 1.8, 15.1.
 
@@ -29,6 +29,17 @@ Tusk's `src/auth/`, `src/mail/` (the mailer only), `src/limits/`.
 
 **Accepts when:** the first account can register and the second is refused with sign-up closed; sign-in works on all three databases over real
 requests; the pages answer 404 with local sign-in off.
+
+**Done as:** copied from Ledger's same task (itself Tusk's: `src/auth/`, `src/mail/`, `src/limits/`, the four pages, `/api/auth`, the proxy's 404
+with local sign-in off, the signed-in layout sending a visitor to `/sign-in`, Sign out in the avatar menu, `src/db/test-store.ts`) and renamed;
+better-auth 1.7.22 with its passkey plugin at 1.7.16, as Ledger pairs them. **Tally's change, the password never sent:** the sign-up, sign-in and
+reset forms send the Argon2id sign-in value (`src/auth/derive.ts`, 15.1) and check the minimum length themselves; a better-auth `before` hook refuses
+any `password`, `newPassword` or `currentPassword` that is not a sign-in value (`PASSWORD_NOT_DERIVED`), and a reset whose address is not the one the
+link was sent to (`WRONG_RESET_EMAIL`), so the reset form asks for it. The tests' client derives a stand-in value (SHA-256, the same shape) and can
+send a raw one. A browser test watches the sign-in request and finds no password in it, only a 43-character value. Run here: 308 tests on sqld and a
+file, 307 on PostgreSQL; 37 browser tests in Chromium and WebKit on a file, and the smoke and auth specs on sqld and PostgreSQL. The hook's tests and
+the browser test each failed with their fault planted. **Left out:** the account key made at sign-up (15.2), the person made with the account (3.1),
+Sovereign sign-in (2.3) and `invite` (8.3).
 
 #### 📋 2.2 — Landing page and the address `/`
 

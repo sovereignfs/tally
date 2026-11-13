@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { hydrated, offline, secondBrowser } from './helpers';
+import { hydrated, offline, secondBrowser, signedIn } from './helpers';
 import { PORTS } from './ports';
 
 /**
@@ -31,6 +31,7 @@ test('the app is up on its database, and says which', async ({ request }) => {
 test('the page is the shell: a header with the wordmark, the places, and the main area', async ({
   page,
 }) => {
+  await signedIn(page);
   const violations = await recordViolations(page);
   const errors: string[] = [];
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
@@ -58,6 +59,7 @@ test('the page is the shell: a header with the wordmark, the places, and the mai
 });
 
 test('each place opens, and is marked as the current one', async ({ page }) => {
+  await signedIn(page);
   await page.goto('/');
   const places = page.getByRole('navigation', { name: 'Main' }).first();
   for (const name of ['People', 'Activity', 'Insights', 'Groups', 'Home']) {
@@ -71,7 +73,7 @@ test('the browser refuses an inline event handler, which the policy does not all
   page,
 }) => {
   const violations = await recordViolations(page);
-  await page.goto('/');
+  await page.goto('/sign-in');
   await page.evaluate(() => {
     document.body.insertAdjacentHTML(
       'beforeend',
@@ -88,15 +90,14 @@ test('a page that is not there is a page, with a way back', async ({ page }) => 
   const response = await page.goto('/no-such-page');
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: 'That is not here' })).toBeVisible();
-  await page.getByRole('link', { name: 'Go back to Tally' }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('link', { name: 'Go back to Tally' })).toHaveAttribute('href', '/');
 });
 
 test.describe('in dark mode', () => {
   test.use({ colorScheme: 'dark' });
 
   test('the page is dark from the first paint, with no flash of light', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/sign-in');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(background).toBe('rgb(9, 9, 11)');
@@ -107,6 +108,7 @@ test.describe('at a phone’s width', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('the header and the page fit, with nothing to scroll sideways', async ({ page }) => {
+    await signedIn(page);
     await page.goto('/');
     await expect(page.getByRole('banner')).toBeVisible();
     const overflows = await page.evaluate(
@@ -116,6 +118,7 @@ test.describe('at a phone’s width', () => {
   });
 
   test('the footer has the places, and the sidebar is not drawn', async ({ page }) => {
+    await signedIn(page);
     await page.goto('/people');
     const footer = page.getByRole('contentinfo');
     await expect(footer.getByRole('link', { name: 'People' })).toHaveAttribute('href', '/people');
@@ -137,6 +140,7 @@ test.describe('at a phone’s width', () => {
   });
 
   test('the middle button opens Add expense and Insights', async ({ page }) => {
+    await signedIn(page);
     await page.goto('/');
     await hydrated(page);
     await page.getByRole('contentinfo').getByRole('button', { name: 'Apps' }).click();
@@ -150,6 +154,7 @@ test.describe('at a phone’s width', () => {
 test('the sidebar narrows to a rail and stays one, drawn as a rail from the first paint', async ({
   page,
 }) => {
+  await signedIn(page);
   await page.goto('/people');
   await hydrated(page);
   await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'full');
@@ -181,7 +186,7 @@ test('the sidebar narrows to a rail and stays one, drawn as a rail from the firs
 test('the typeface is the design system’s, served from this origin', async ({ page }) => {
   const requested: string[] = [];
   page.on('request', (request) => requested.push(request.url()));
-  await page.goto('/');
+  await page.goto('/sign-in');
   const family = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
   expect(family).toContain('Hanken Grotesk');
   const foreign = requested.filter(
@@ -194,6 +199,7 @@ test('a second browser is a second device: nothing it keeps is shared with the f
   page,
   browser,
 }) => {
+  await signedIn(page);
   await page.goto('/');
   await hydrated(page);
   await page.getByRole('button', { name: 'Narrow the sidebar' }).click();
@@ -208,7 +214,7 @@ test('offline, a request fails and the browser says it is offline; after, it is 
   page,
   context,
 }) => {
-  await page.goto('/');
+  await page.goto('/sign-in');
   const reach = () =>
     page.evaluate(async () => {
       try {
@@ -226,7 +232,7 @@ test('offline, a request fails and the browser says it is offline; after, it is 
 });
 
 test('WebAssembly compiles under the policy, for Argon2id', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/sign-in');
   // The smallest module there is: the magic number and the version.
   const compiled = await page.evaluate(async () => {
     try {

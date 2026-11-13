@@ -250,7 +250,8 @@ wrapped (`account_key_wrap`) by each way the person signs in:
   sealed, and its words as a quiet "…", with one line saying what will unlock it. What the person records meanwhile waits in the outbox and is sealed
   when the key arrives. Nothing is refused for it.
 - **A forgotten password** reset by email gives a new sign-in, not the old key: the device unlocks by passkey, another device or the recovery key, or
-  by the last row's new key. The reset page says so in a sentence.
+  by the last row's new key. The reset page says so in a sentence, and asks for the address the link was sent to, since the new password is
+  derived with it; the server refuses another address.
 - **Signing out** deletes the device's copy of the account key with its store; signing in again is a new device, and unlocks as the table says.
 
 **The recovery key** is offered once, right after sign-up, as a code to copy, download or print (with a QR code). It can be skipped; Settings shows a
