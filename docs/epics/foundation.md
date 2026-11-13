@@ -51,7 +51,7 @@ alias); `fake-indexeddb` 6.2 as a dev dependency, unused until 6.2 imports it pe
 a runner that finds nothing cannot pass. Each of `format:check`, `lint` (an unused variable, and an image with no `alt`), `typecheck` and `test` was
 seen to fail on a planted fault and pass once it was removed. **Left out:** git hooks, as in Ledger.
 
-#### 📋 1.3 — Continuous integration
+#### ✅ 1.3 — Continuous integration
 
 **Goal:** CI that runs what a change can affect. **Design:** §20. **Depends on:** 1.2.
 
@@ -59,6 +59,12 @@ seen to fail on a planted fault and pass once it was removed. **Left out:** git 
 with 1.10, the browser with 1.9. Skipped on drafts and `skip-ci`.
 
 **Accepts when:** a PR runs only the legs its files affect, and a failing leg fails the PR.
+
+**Done as:** copied from Ledger's same task (Tusk's CI): `scripts/ci-changes.sh` and its tests, and `.github/workflows/ci.yml`, a `changes` job with the
+draft and `skip-ci` guard, then `check` (format, lint, types, build, test) and `scripts` (shellcheck, the classifier's tests); a push to `main` and a
+weekly schedule always run. Changed: two strings naming Ledger's own task and file. Checked locally: actionlint and shellcheck clean, the classifier's 40
+cases pass and one planted wrong expectation fails, `pnpm build` passes. **Left out:** it has not run on GitHub yet, so "a failing leg fails the PR" is
+proved by the workflow's structure, not seen. The database, browser and image legs join with 1.5, 1.9 and 1.10.
 
 #### 📋 1.4 — Configuration and start-up
 

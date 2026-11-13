@@ -145,10 +145,12 @@ pnpm format:check                # Prettier; `pnpm format` writes
 pnpm lint                        # ESLint, strict TypeScript and jsx-a11y; `pnpm lint:fix`
 pnpm typecheck                   # next typegen && tsc --noEmit
 pnpm test                        # Vitest, files one after another
+pnpm build                       # next build, which CI runs too
+scripts/test-ci-changes.sh       # the CI classifier's tests, after changing scripts/ci-changes.sh
 pnpm dev                         # http://localhost:3004
 ```
 
-Still to come: `db:generate`, `db:dev` (1.5), `seed`, `boot-check`, `e2e`, `manifest:check`, `build`, `scripts/deploy-check.sh`. **`verify` means**
+Still to come: `db:generate`, `db:dev` (1.5), `seed`, `boot-check`, `e2e`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
 `format:check`, `lint`, `typecheck` and `test` pass.
 
 ## Layout
