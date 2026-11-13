@@ -109,13 +109,23 @@ database and PostgreSQL (125 passed on the first two, 124 and one more skipped o
 database for each form, and a planted schema change that made generating write a migration. **Left out:** CI has not run on GitHub (the account's
 billing stopped the last run).
 
-#### 📋 1.6 — The job runner
+#### ✅ 1.6 — The job runner
 
 **Goal:** background work in the web process, safe across processes. **Design:** §5. **Depends on:** 1.5.
 
 **Technical:** copy Tusk's `src/jobs/` (runner, `claim.ts`, `index.ts`) and `job_claim`; `TALLY_WORKER=off`; stopped on SIGTERM.
 
 **Accepts when:** a job's work is done once when two processes run it; SIGTERM stops the runner and the server cleanly.
+
+**Done as:** `src/jobs/` (`runner.ts`, `claim.ts`, `index.ts`) and their tests copied from Ledger's same task (itself Tusk's) and renamed; the list
+of jobs is empty, and the tasks that have one add it (6.5, 8.1, 9.1). The runner starts from `instrumentation-node.ts` after the database, is off
+with `TALLY_WORKER=off`, and stops on SIGTERM and SIGINT. **No `job_claim` table**, as Ledger decided: a claim is a conditional `UPDATE … RETURNING`
+on the table whose work it is, and `DESIGN.md` §19.3 says so. Run here: the job tests on sqld, a file and PostgreSQL (22 each, the claim racing two
+handles); two Node processes racing the claim over 300 rows, as the app opens each database, came to exactly 300 on PostgreSQL (94 and 206) and on a
+SQLite file three times over; the built server answered SIGTERM within a second with nothing left listening, and ran no job with `TALLY_WORKER=off`.
+**Found, not fixed here:** on the SQLite file form, after a write waits out the 5-second busy timeout and fails, the next write on the same client
+reports success and is never saved (seen with two processes); it is in the database layer of 1.5, shared with Tusk and Ledger, and needs a fix of its
+own.
 
 #### ✅ 1.7 — Security headers
 
