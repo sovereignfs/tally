@@ -11,6 +11,7 @@ import {
   type SqldConfig,
   type Store,
 } from './config';
+import { guardBusy } from './busy';
 import { createSqldClient } from './sqld';
 
 /**
@@ -67,16 +68,23 @@ async function openSqld(config: SqldConfig, store: Store): Promise<SqliteDatabas
   };
 }
 
-async function openFile(config: FileConfig, store: Store): Promise<SqliteDatabase> {
+/** How long a statement on a file waits for another process's write lock before it fails with `SQLITE_BUSY`. */
+export const BUSY_TIMEOUT_MS = 5000;
+
+/**
+ * The libSQL client of a database file. `timeout` is the busy timeout, and it is given here and not as a PRAGMA because the client keeps a pool of
+ * connections: a transaction takes one of its own, and a PRAGMA is per connection, so one set on the first would leave every other to fail at once
+ * when another holds the write lock. Two mutations of one account, or of two, are exactly that. The timeout is a parameter for the tests alone.
+ */
+export async function createFileClient(path: string, busyTimeoutMs = BUSY_TIMEOUT_MS) {
   const { createClient } = await import('@libsql/client/node');
+  // Guarded, because a connection that waited out the timeout would lose the next write it was given (`busy.ts`).
+  return guardBusy(createClient({ url: `file:${path}`, timeout: busyTimeoutMs }));
+}
+
+async function openFile(config: FileConfig, store: Store): Promise<SqliteDatabase> {
   const { drizzle } = await import('drizzle-orm/libsql/node');
-  // `timeout` is the busy timeout, and it is given here and not as a PRAGMA because the client keeps a pool of connections: a transaction takes
-  // one of its own, and a PRAGMA is per connection, so one set on the first would leave every other to fail at once when another holds the write
-  // lock. Two mutations of one account, or of two, are exactly that.
-  const client = createClient({
-    url: `file:${store === 'auth' ? config.authPath : config.path}`,
-    timeout: 5000,
-  });
+  const client = await createFileClient(store === 'auth' ? config.authPath : config.path);
   // Several processes (web and worker) may share the file on one host: WAL lets
   // readers and a writer overlap, and a busy timeout makes a second writer wait for
   // the first instead of failing. Foreign keys are off in SQLite until asked.

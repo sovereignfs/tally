@@ -123,9 +123,11 @@ with `TALLY_WORKER=off`, and stops on SIGTERM and SIGINT. **No `job_claim` table
 on the table whose work it is, and `DESIGN.md` §19.3 says so. Run here: the job tests on sqld, a file and PostgreSQL (22 each, the claim racing two
 handles); two Node processes racing the claim over 300 rows, as the app opens each database, came to exactly 300 on PostgreSQL (94 and 206) and on a
 SQLite file three times over; the built server answered SIGTERM within a second with nothing left listening, and ran no job with `TALLY_WORKER=off`.
-**Found, not fixed here:** on the SQLite file form, after a write waits out the 5-second busy timeout and fails, the next write on the same client
-reports success and is never saved (seen with two processes); it is in the database layer of 1.5, shared with Tusk and Ledger, and needs a fix of its
-own.
+**Found here, and fixed after it:** on the SQLite file form, after a write waits out the 5-second busy timeout and fails, libSQL's client (0.18)
+answers the next write on that connection as done and never saves it. `src/db/busy.ts` guards the file client (`createFileClient` in
+`client.ts`): a busy failure from any call or any statement of a transaction makes it replace its connections before the error goes on. Two
+regression tests in `busy.test.ts`, with a second process holding the lock, failed without the guard and pass with it. Tusk and Ledger have the
+same database layer and the same exposure.
 
 #### ✅ 1.7 — Security headers
 
