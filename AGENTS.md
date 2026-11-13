@@ -17,7 +17,7 @@ fully on its own, with every feature, needing no instance**: its own accounts, p
 `sovereignfs/sovereign-plugin-tally`, whose behaviour is the starting point and none of whose code, data or interface is carried over. It is a PWA on
 Next.js, with its own database (sqld, a SQLite file or PostgreSQL), signing people in locally, through a Sovereign core, or both, from one image.
 
-**Nothing is built yet.** `DESIGN.md` is the design, `ROADMAP.md` the order, and Milestone A starts by copying Tusk's infrastructure (`DESIGN.md`
+**Being built: Milestone A.** `DESIGN.md` is the design, `ROADMAP.md` the order, and Milestone A starts by copying Tusk's infrastructure (`DESIGN.md`
 §5.1).
 
 ## Source of truth
@@ -137,10 +137,19 @@ ours, exact-pinned. Never accept pnpm's offer to add one.
 
 ## Commands
 
-None exist yet. Milestone A brings Tusk's set (`format`, `lint`, `typecheck`, `test`, `db:generate`, `db:dev`, `seed`, `boot-check`, `e2e`,
-`manifest:check`, `build`, `scripts/deploy-check.sh`), and this list is where they are written as they land. Until then, `verify` means the Markdown is
-formatted and every relative link resolves.
+Milestone A brings Tusk's set, and this list is where they are written as they land:
+
+```bash
+pnpm install --frozen-lockfile   # every routine install
+pnpm typecheck                   # next typegen && tsc --noEmit
+pnpm exec prettier --check .     # until 1.2 brings `pnpm format:check`
+pnpm dev                         # http://localhost:3004
+```
+
+Still to come: `format`, `lint`, `test` (1.2), `db:generate`, `db:dev` (1.5), `seed`, `boot-check`, `e2e`, `manifest:check`, `build`,
+`scripts/deploy-check.sh`. Until `lint` and `test` exist, `verify` means the above pass and every relative link in the Markdown resolves.
 
 ## Layout
 
-`DESIGN.md` §5.1 is where things go as the app is built. Today the repository holds only `DESIGN.md`, `ROADMAP.md`, `docs/epics/` and this file.
+`DESIGN.md` §5.1 is where things go as the app is built. Today the repository holds the documents, the repository's conventions, and a placeholder
+page in `app/` that the shell (1.8) and the landing page (2.2) replace.

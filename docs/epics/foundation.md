@@ -17,7 +17,7 @@ copy may be the starting point, and the task says so. Each task says which files
 
 ## Tasks
 
-#### 📋 1.1 — Repository conventions
+#### ✅ 1.1 — Repository conventions
 
 **Goal:** the files a repository of the suite is expected to have. **Design:** §20, `AGENTS.md`. **Depends on:** nothing.
 
@@ -27,6 +27,13 @@ copy may be the starting point, and the task says so. Each task says which files
 `manifest` pinned exactly at Tusk's versions.
 
 **Accepts when:** a clean checkout installs with `pnpm install --frozen-lockfile`, `pnpm typecheck` passes, and `git status` is clean after.
+
+**Done as:** copied from Ledger's same task (itself Tusk's, renamed) and renamed for Tally: licence (AGPL-3.0-or-later), changelog, contributing
+guide, pull request template (with Tally's checks: the one write path, sealed text), Dependabot, `.editorconfig`, `.node-version` (24.18.0),
+`.gitignore`, `.prettierignore`, `pnpm-workspace.yaml` (engine-strict, every platform in the lockfile, `minimumReleaseAgeExclude` for
+`@sovereignfs/ui@0.92.0` only, `allowBuilds`), `tsconfig.json` (strict, `noUncheckedIndexedAccess`); `package.json` (`@sovereignfs/tally`, port 3004) with Next.js 16.4, React 19.3, TypeScript 6.0.3, `@sovereignfs/ui` pinned at Tusk's 0.92.0. Prettier and ESLint configs came with the copy, as in
+Ledger; their scripts are made to pass in 1.2. **Left out:** `@sovereignfs/config`, `sdk` and `manifest`, added by the tasks that use them (1.4, 2.3,
+1.10), as Ledger did. A placeholder page keeps `next typegen` honest until the shell (1.8).
 
 #### 📋 1.2 — Format, lint and test tooling
 
