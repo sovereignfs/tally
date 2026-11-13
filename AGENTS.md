@@ -146,12 +146,16 @@ pnpm lint                        # ESLint, strict TypeScript and jsx-a11y; `pnpm
 pnpm typecheck                   # next typegen && tsc --noEmit
 pnpm test                        # Vitest, files one after another
 pnpm build                       # next build, which CI runs too
+pnpm db:dev sqld|sqlite|postgres  # a development database in Docker, or a file
+pnpm db:generate <name>          # a migration for both dialects and both stores; never written by hand
+pnpm boot-check                  # the built server, from empty, on the database the TALLY_DB_* settings name
 scripts/test-ci-changes.sh       # the CI classifier's tests, after changing scripts/ci-changes.sh
 pnpm dev                         # http://localhost:3004
 ```
 
-Still to come: `db:generate`, `db:dev` (1.5), `seed`, `boot-check`, `e2e`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
-`format:check`, `lint`, `typecheck` and `test` pass.
+Still to come: `seed`, `boot-check`, `e2e`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
+`format:check`, `lint`, `typecheck` and `test` pass; a data-layer change also runs `test` and `boot-check` on sqld, a file and PostgreSQL
+(`TALLY_TEST_*`, as CI's `tests` legs set them).
 
 ## Layout
 

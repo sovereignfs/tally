@@ -9,15 +9,36 @@ function problems(result: LoadResult): readonly string[] {
 }
 
 describe('loadConfig', () => {
-  it('accepts no settings at all: the worker is on, and there is no address or key', () => {
+  it('accepts no settings at all: the worker is on, there is no address or key, and the database is an sqld service at its default address', () => {
     expect(loadConfig({})).toMatchObject({
       ok: true,
       config: {
         url: undefined,
         worker: true,
+        database: { database: { form: 'sqld' } },
         encryption: undefined,
       },
     });
+  });
+
+  it('reports a wrong database setting with the others, naming it', () => {
+    const [problem] = problems(loadConfig({ TALLY_DB_DIALECT: 'mysql' }));
+    expect(problem).toContain('TALLY_DB_DIALECT');
+  });
+
+  it('reads the PostgreSQL address from a file, and keeps it out of what it reports', () => {
+    const result = loadConfig(
+      { TALLY_DB_DIALECT: 'postgres', TALLY_POSTGRES_URL_FILE: '/run/db' },
+      () => 'postgres://u:hunter2@db:5432/tally\n',
+    );
+    expect(result).toMatchObject({ ok: true });
+    const bad = problems(
+      loadConfig(
+        { TALLY_DB_DIALECT: 'postgres', TALLY_POSTGRES_URL_FILE: '/run/db' },
+        () => 'hunter2 is not a url',
+      ),
+    );
+    expect(bad.join(' ')).not.toContain('hunter2');
   });
 
   describe('TALLY_URL', () => {

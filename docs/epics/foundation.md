@@ -88,7 +88,7 @@ holds `process.env` to `src/config` and `.env.example` to the declarations, and 
 four wrong settings, named all four, printed no value and exited 1; given good ones, `/api/health` answered 200. **Left out:** `/api/health` asks
 nothing yet; 1.5 makes it answer 200 only when the database does.
 
-#### 📋 1.5 — The database layer
+#### ✅ 1.5 — The database layer
 
 **Goal:** three forms, two dialects, migrations at start-up. **Design:** §19.1, §19.2. **Depends on:** 1.4.
 
@@ -97,6 +97,17 @@ vocabulary, `test-support.ts` reading `TALLY_TEST_*`); add a `money` column (64-
 `tally` and `tally_auth`; `pnpm db:generate`, `pnpm db:dev`; the parity test; CI legs on sqld, a file and PostgreSQL.
 
 **Accepts when:** an empty database of each form is provisioned and migrated at start-up, twice safely; CI fails if generating would write anything.
+
+**Done as:** copied from Ledger's same task (itself Tusk's) and renamed: `src/db/` (config, client, provision, migrate, boot with retries and
+`DB_CONNECT_TIMEOUT_MS`, `exec.ts`, the sqld namespaces, `test-support.ts` reading `TALLY_TEST_*`), the drizzle configs, `scripts/db-generate.mjs`,
+`dev-db.mjs`, `boot-check.mjs`, `serve-standalone.mjs`, and CI's `tests` legs for the three forms with the check that generating writes nothing;
+`/api/health` now answers 200 only when the database does, and the server will not start without one. The column vocabulary is `id`, `ref`,
+`epochMs`, `counter`, `money` (a 64-bit integer, `bigint` on PostgreSQL), `bool`, `isoDate` and `json`: Ledger's without its `month` and `decimal`,
+which Tally does not use. The app store has `rate_bucket` so far; **the migrations were generated anew** from Tally's schemas (`0000_init` in each
+of the four sets) rather than copied, so better-auth's tables are one migration here, not Ledger's two. Run here: the tests on sqld, a `file:`
+database and PostgreSQL (125 passed on the first two, 124 and one more skipped on PostgreSQL), `pnpm boot-check` from empty and again on the migrated
+database for each form, and a planted schema change that made generating write a migration. **Left out:** CI has not run on GitHub (the account's
+billing stopped the last run).
 
 #### 📋 1.6 — The job runner
 
