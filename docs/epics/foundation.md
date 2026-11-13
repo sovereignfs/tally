@@ -66,7 +66,7 @@ weekly schedule always run. Changed: two strings naming Ledger's own task and fi
 cases pass and one planted wrong expectation fails, `pnpm build` passes. **Left out:** it has not run on GitHub yet, so "a failing leg fails the PR" is
 proved by the workflow's structure, not seen. The database, browser and image legs join with 1.5, 1.9 and 1.10.
 
-#### 📋 1.4 — Configuration and start-up
+#### ✅ 1.4 — Configuration and start-up
 
 **Goal:** settings declared once and checked before anything is served. **Design:** §14.1, §20 Deployment. **Depends on:** 1.2.
 
@@ -76,6 +76,17 @@ proved by the workflow's structure, not seen. The database, browser and image le
 `/api/health`. Copied: Tusk's `src/config/`, instrumentation.
 
 **Accepts when:** a missing or malformed setting stops start-up with every problem named and no value printed; `.env.example` matches the code.
+
+**Done as:** copied from Ledger's same task (itself Tusk's `src/config/` and instrumentation, trimmed) and renamed: `src/config/` (`env.ts`,
+`index.ts`, `current.ts`, `edge.ts`), `instrumentation.ts` and `instrumentation-node.ts`, `next.config.ts` (standalone output), `src/site.ts`,
+`/api/health`, `.env.example`; every setting declared once through `@sovereignfs/config` 0.1.0 (prefix `TALLY`, secrets in the `_FILE` form,
+exact-pinned and in `minimumReleaseAgeExclude`). Changed: Ledger's exchange-rate settings removed; `.env.example` describes Tally's jobs, mail and
+`AUTH_SIGNUP`'s coming `invite`. Checked here: `TALLY_URL`, `WORKER`, the instance key with its previous one, and the all-or-none `CORE_*`; the
+database, sign-in and mail settings are declared and listed, and checked by the tasks that read them (1.5, 2.1, 8.1). `src/crypto/keys.ts` and
+`envelope.ts` are copied with their tests for core's refresh token; the `credential` table comes with 11.2, its first use. `process-env.test.ts`
+holds `process.env` to `src/config` and `.env.example` to the declarations, and failed when a setting was taken out of it. The built server, given
+four wrong settings, named all four, printed no value and exited 1; given good ones, `/api/health` answered 200. **Left out:** `/api/health` asks
+nothing yet; 1.5 makes it answer 200 only when the database does.
 
 #### 📋 1.5 — The database layer
 

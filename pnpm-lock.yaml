@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@sovereignfs/config':
+        specifier: 0.1.0
+        version: 0.1.0
       '@sovereignfs/ui':
         specifier: 0.92.0
         version: 0.92.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -492,6 +495,10 @@ packages:
 
   '@rolldown/pluginutils@1.1.0':
     resolution: {integrity: sha512-K+NU2HDCEem4sClgHH4ZZXwdJeNFkJo+hRk479DIwdIviAPN2hFJH1KHHwg8CxHQXvi0M5XY4deTXINfIiSG6w==}
+
+  '@sovereignfs/config@0.1.0':
+    resolution: {integrity: sha512-PEZ+pW9sMUzlmZu0K0VsUarXLhUsLnBD5TXkCrQ2gNZ52t95ddYlSB3qzZ4Moys2bDKx0a3NoSg4dYAk2ryMdg==}
+    engines: {node: '>=22.3'}
 
   '@sovereignfs/ui@0.92.0':
     resolution: {integrity: sha512-umMcihzirOazmcRgpEZ0J20nyfVgO0VNsSscMok4GYKSht++rEUsps131Wbj64uZGHxq7xHZpQz0otfAI6t7uQ==}
@@ -1949,6 +1956,8 @@ snapshots:
     optional: true
 
   '@rolldown/pluginutils@1.1.0': {}
+
+  '@sovereignfs/config@0.1.0': {}
 
   '@sovereignfs/ui@0.92.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
