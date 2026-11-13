@@ -16,7 +16,7 @@ property tests of `DESIGN.md` §20 live here.
 
 ## Tasks
 
-#### 📋 4.1 — Money and currencies
+#### ✅ 4.1 — Money and currencies
 
 **Goal:** amounts that are always integers of a currency's minor unit. **Design:** §8.7. **Depends on:** 1.5.
 
@@ -25,6 +25,13 @@ typed amounts to minor units and formatting them in a locale (`Intl.NumberFormat
 
 **Accepts when:** JPY, EUR and BHD amounts round-trip from typing to minor units to text in two locales; a float never reaches an amount (a lint rule or
 a type).
+
+**Done as:** from Ledger's `src/money/`: `currencies.ts` and `scripts/generate-currencies.ts` (`pnpm generate:currencies`; the same 160 ICU
+currencies, fiat only, without Ledger's exchange-rate pivot), `text.ts` (`decimalText`, `formatMoney`, `parseAmount`, through decimal text and never a
+float) and their tests. `amount.ts` is Ledger's without its half-to-even division and its split, which are not Tally's (4.2 writes Tally's rounding
+rule). **A float never reaches an amount by type:** `Minor` is a branded number, made only by `toMinor` (which checks it) and the arithmetic here;
+`amount.types.test.ts` has four `@ts-expect-error` lines a float or an unchecked number would need, and `pnpm typecheck` failed when `Minor` was made
+a plain number. A test round-trips JPY 1,500, EUR 1,234.56 and BHD 1.005 from typing to minor units to text and back, in English and in German.
 
 #### 📋 4.2 — Splitting and rounding
 
