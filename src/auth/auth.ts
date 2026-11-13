@@ -28,6 +28,12 @@ export interface AuthDependencies {
    * a single-use link that ends every other session; without one, neither exists** and the routes that would do them are not mounted (`app/api/auth`).
    */
   mailer?: Mailer | undefined;
+  /**
+   * Called once better-auth has made an account, with what it was made with: the app makes the account's person here (`src/people/persons.ts`).
+   * The account is not undone if this fails, since the person is made again at the account's next request; so a failure is not the visitor's.
+   */
+  onAccountCreated?:
+    ((account: { id: string; name: string; email: string }) => Promise<void>) | undefined;
 }
 
 /** The prefix of better-auth's cookies, so that ours do not collide with another app's on localhost. */
@@ -39,7 +45,13 @@ export const COOKIE_PREFIX = 'tally';
  */
 export const FRESH_SESSION_SECONDS = 10 * 60;
 
-export function createAuth({ settings, name, database, mailer }: AuthDependencies) {
+export function createAuth({
+  settings,
+  name,
+  database,
+  mailer,
+  onAccountCreated,
+}: AuthDependencies) {
   const schema = database.dialect === 'postgres' ? postgresAuth : sqliteAuth;
   const { local } = settings;
   // Mail is for the password's account: an address is verified, and a password reset, only where there is a password.
@@ -141,6 +153,11 @@ export function createAuth({ settings, name, database, mailer }: AuthDependencie
       user: {
         create: {
           // One policy for every way an account can come to be (DESIGN.md §6), here and not in a route, so that it holds for all of them.
+          after: async (user) => {
+            await onAccountCreated?.({ id: user.id, name: user.name, email: user.email }).catch(
+              () => undefined,
+            );
+          },
           before: async () => {
             if (settings.signUp === 'open') return;
             if ((await countUsers(database)) > 0) {

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { runMigrations } from '../db/migrate';
 import { freshDatabase } from '../db/test-support';
 import type { Mailer } from '../mail/mailer';
-import { createAuth } from './auth';
+import { type AuthDependencies, createAuth } from './auth';
 import type { AuthSettings } from './config';
 import { PASSWORD_FIELDS } from './password-value';
 
@@ -30,11 +30,15 @@ const SETTINGS: AuthSettings = {
 /** What a test changes about the instance it gets. */
 export type AuthOverrides = Partial<AuthSettings>;
 
-export async function makeAuth(overrides: AuthOverrides = {}, mailer?: Mailer): Promise<TestAuth> {
+export async function makeAuth(
+  overrides: AuthOverrides = {},
+  mailer?: Mailer,
+  onAccountCreated?: AuthDependencies['onAccountCreated'],
+): Promise<TestAuth> {
   const { database } = await freshDatabase('auth');
   await runMigrations(database);
   const settings: AuthSettings = { ...SETTINGS, ...overrides };
-  const auth = createAuth({ settings, name: 'Tally', database, mailer });
+  const auth = createAuth({ settings, name: 'Tally', database, mailer, onAccountCreated });
   return {
     auth,
     settings,
@@ -51,7 +55,6 @@ export interface Reply {
   setCookies: string[];
 }
 
-/** A browser, in miniature: it keeps the cookies it is given and sends them back. */
 /**
  * What a browser sends in a password's place, for the tests: base64url of SHA-256 of the phrase, 43 characters, as the real value is (Argon2id,
  * `src/cipher/password.ts`, which a test of the browser runs). The server cannot tell them apart, and Argon2id at 64 MiB for every request of a
@@ -76,6 +79,7 @@ function derived(body: unknown): unknown {
 /** A password field that starts with this is sent as it is, for the tests of what the server does with one that was not derived. */
 export const RAW = 'raw:';
 
+/** A browser, in miniature: it keeps the cookies it is given and sends them back. */
 export class TestClient {
   readonly jar = new Map<string, string>();
 

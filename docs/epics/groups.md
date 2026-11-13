@@ -15,7 +15,7 @@ operations (`/api/ops`), decided by the server at once (`DESIGN.md` §11.6). Add
 
 ## Tasks
 
-#### 📋 3.1 — Persons
+#### ✅ 3.1 — Persons
 
 **Goal:** every account has a person, and a person may have no account. **Design:** §6.1. **Depends on:** 2.1.
 
@@ -25,6 +25,16 @@ from `person`, never from the auth store.
 
 **Accepts when:** a new account has exactly one person; a person row can exist with no account; an email is returned only to those §6.1 allows, which a
 test checks for each read.
+
+**Done as:** `person` on both dialects (migration `0001_add_person`; `account_id` and `core_sub` unique, many placeholders allowed), and
+`src/people/persons.ts`: `ensurePerson`, `personOfAccount`, `personById`, `cleanName`. **Not one transaction with the account,** since the account is
+in the auth store and the person in the app store: better-auth's after-create hook makes the person (`onAccountCreated` in `createAuth`), and
+`requirePerson` (`src/people/session.ts`) makes it again if missing at every signed-in request; an insert that races another does nothing
+(`ON CONFLICT (account_id)`), and a person is never overwritten by a later ask. `src/people/visibility.ts` is the one rule for an email
+(`emailVisible`, `viewPerson`), the relation a read finds in its SQL given to it. The signed-in layout reads the name and email from the person.
+`src/db/tables.ts` names an app table for raw SQL on either dialect. Run here: 318 tests on sqld and a file, 317 on PostgreSQL; 38 browser tests; the
+test of a new account's person failed with the hook taken out. **Left out:** the only read that returns a person today is one's own; group reads
+(3.2, 8.2) bring the owner relation and their own tests; Settings keeping name and email in step is 2.6.
 
 #### 📋 3.2 — Groups, members and access
 
