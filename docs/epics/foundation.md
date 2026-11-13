@@ -171,7 +171,7 @@ and dark, at 1280px and 375px, the rail kept across a reload, the drawer open, t
 **Left out:** Add expense and New group are drawn disabled until 7.2 and 7.1; the design system has no chart icon, so Insights uses
 `layout-dashboard` until the charts (14.1) bring one; the PNG icons come with the PWA (1.11).
 
-#### 📋 1.9 — Browser tests
+#### ✅ 1.9 — Browser tests
 
 **Goal:** Playwright on the built app. **Design:** §20 Testing. **Depends on:** 1.5.
 
@@ -179,6 +179,17 @@ and dark, at 1280px and 375px, the rail kept across a reload, the drawer open, t
 browser context (for sync tests) and for going offline (`context.setOffline`).
 
 **Accepts when:** a smoke test opens the built app on each database form in CI.
+
+**Done as:** Playwright 1.64.1: `playwright.config.ts`, `e2e/ports.ts`, `scripts/e2e-shard.mjs` and CI's smoke step in each `tests` leg and
+`browser` job of two shards, copied from Ledger's same task (itself Tusk's) with its later fix for a shared runner's slowness, and without
+Ledger's exchange-rate setting. `e2e/helpers.ts` holds `hydrated` (Ledger's, for WebKit on a slow runner), `secondBrowser` (a second person or
+device, its own cookies and storage) and `offline` (`context.setOffline`, put back after), each used by a test. `e2e/smoke.spec.ts` is Tally's: the
+health route, the shell with Add expense, the four places, Groups and New group, each place opening and marked current, the policy refusing an inline
+handler, the not-found page, dark from first paint, a phone's width (the footer's places, no sidebar or toggle, the drawer's Add expense and
+Insights), **the rail kept across a reload and on the page before first paint**, the typeface from this origin, and the two helpers. Run here: 26
+pass in Chromium and WebKit on a SQLite file; the smoke spec in Chromium on sqld and PostgreSQL, 13 each; both shards as CI splits them. The rail's
+test failed with the pre-paint line taken out of the theme script. **Left out:** CI has not run it on GitHub (billing); instances for core and
+passkeys join with 2.3 and 2.1.
 
 #### 📋 1.10 — The image and deployment setups
 

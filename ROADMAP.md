@@ -2,7 +2,7 @@
 
 The order of work. **This file tracks progress; it does not define behaviour.** [`DESIGN.md`](DESIGN.md) says what Tally does, and where it disagrees with this file, this file is stale and should be corrected. The detail of every task, with its technical notes and what makes it done, is in [`docs/epics/`](docs/epics/). How a task is run is in [`AGENTS.md`](AGENTS.md).
 
-State as of 2026-11-13: **Milestone A begun** (1.1 to 1.8 done); group encryption added to the design (epic 15). The developer assigns each task; the first row not done, with its dependencies met, is what the order recommends.
+State as of 2026-11-13: **Milestone A begun** (1.1 to 1.9 done); group encryption added to the design (epic 15). The developer assigns each task; the first row not done, with its dependencies met, is what the order recommends.
 
 _Status key: ✅ Done · ⏳ In progress · 📋 Planned · 🚧 Waits on a decision · ➖ Superseded_
 
@@ -39,7 +39,7 @@ The repository can hold the app. Nothing a person would notice. **Done when** an
 | 6   | [1.8](docs/epics/foundation.md)  | Design system boundary and shell | P0       | 1.2        | ✅     |
 | 7   | [1.7](docs/epics/foundation.md)  | Security headers                 | P0       | 1.4        | ✅     |
 | 8   | [1.6](docs/epics/foundation.md)  | The job runner                   | P0       | 1.5        | ✅     |
-| 9   | [1.9](docs/epics/foundation.md)  | Browser tests                    | P0       | 1.5        | 📋     |
+| 9   | [1.9](docs/epics/foundation.md)  | Browser tests                    | P0       | 1.5        | ✅     |
 | 10  | [1.10](docs/epics/foundation.md) | The image and deployment setups  | P0       | 1.5, 1.6   | 📋     |
 
 ### Milestone B — Accounts, people and groups

@@ -149,13 +149,14 @@ pnpm build                       # next build, which CI runs too
 pnpm db:dev sqld|sqlite|postgres  # a development database in Docker, or a file
 pnpm db:generate <name>          # a migration for both dialects and both stores; never written by hand
 pnpm boot-check                  # the built server, from empty, on the database the TALLY_DB_* settings name
+pnpm build && pnpm e2e           # the browser tests on the built app, Chromium and WebKit; `pnpm e2e:fast` runs them in shards
 scripts/test-ci-changes.sh       # the CI classifier's tests, after changing scripts/ci-changes.sh
 pnpm dev                         # http://localhost:3004
 ```
 
-Still to come: `seed`, `e2e`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
+Still to come: `seed`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
 `format:check`, `lint`, `typecheck` and `test` pass; a data-layer change also runs `test` and `boot-check` on sqld, a file and PostgreSQL
-(`TALLY_TEST_*`, as CI's `tests` legs set them).
+(`TALLY_TEST_*`, as CI's `tests` legs set them), and a change a person would see runs `pnpm e2e`.
 
 ## Layout
 
