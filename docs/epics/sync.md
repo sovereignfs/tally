@@ -22,7 +22,7 @@ several people (`DESIGN.md` §11.3). Each task says what it took from Tusk and w
 
 **Technical:** session and `Origin` checked; a bounded body; a protocol version; the outbox applied in order through 5.2, each answered applied or
 refused with its reason; then, for the account's current groups (membership read in the statement), rows whose `seq` is past each cursor, paged at
-`seq` boundaries, tombstones included; groups the account is no longer in named as gone; the key exchange of 15.3 folded in (wraps the device lacks,
+`seq` boundaries, tombstones included; groups the account is no longer in named as gone; the key exchange of 15.3 folded in (wraps the account lacks,
 wraps it is asked for); a rate limit. Shape from Tusk's `src/sync/`, with cursors per group.
 
 **Accepts when:** a device starting at zero gets each group whole; a cursor gets only what is new; a group left between two syncs is named gone and its

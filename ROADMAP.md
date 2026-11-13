@@ -48,14 +48,14 @@ A person signs in, makes a group and is its owner, and every statement carries t
 
 | #   | ID                               | Task                             | Priority | Depends on     | Status |
 | --- | -------------------------------- | -------------------------------- | -------- | -------------- | ------ |
-| 11  | [2.1](docs/epics/accounts.md)    | Local sign-in                    | P0       | 1.5, 1.8       | 📋     |
-| 12  | [3.1](docs/epics/groups.md)      | Persons                          | P0       | 2.1            | 📋     |
-| 13  | [4.1](docs/epics/money.md)       | Money and currencies             | P0       | 1.5            | 📋     |
-| 14  | [15.1](docs/epics/encryption.md) | The cipher                       | P0       | 1.2            | 📋     |
-| 15  | [15.2](docs/epics/encryption.md) | Devices                          | P0       | 15.1, 2.1, 1.5 | 📋     |
+| 11  | [15.1](docs/epics/encryption.md) | The cipher                       | P0       | 1.2            | 📋     |
+| 12  | [2.1](docs/epics/accounts.md)    | Local sign-in                    | P0       | 1.5, 1.8, 15.1 | 📋     |
+| 13  | [3.1](docs/epics/groups.md)      | Persons                          | P0       | 2.1            | 📋     |
+| 14  | [4.1](docs/epics/money.md)       | Money and currencies             | P0       | 1.5            | 📋     |
+| 15  | [15.2](docs/epics/encryption.md) | Account keys and unlocking       | P0       | 15.1, 2.1      | 📋     |
 | 16  | [3.2](docs/epics/groups.md)      | Groups, members and access       | P0       | 3.1, 4.1, 15.2 | 📋     |
 | 17  | [15.3](docs/epics/encryption.md) | Group keys and granting          | P0       | 15.2, 3.2      | 📋     |
-| 18  | [15.4](docs/epics/encryption.md) | The recovery key                 | P1       | 15.3           | 📋     |
+| 18  | [15.4](docs/epics/encryption.md) | The recovery key                 | P1       | 15.2           | 📋     |
 | 19  | [2.2](docs/epics/accounts.md)    | Landing page and the address `/` | P1       | 2.1            | 📋     |
 | 20  | [2.5](docs/epics/accounts.md)    | Deleting a person                | P0       | 3.2            | 📋     |
 | 21  | [2.6](docs/epics/accounts.md)    | Settings                         | P1       | 2.1, 1.8, 3.1  | 📋     |

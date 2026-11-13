@@ -32,7 +32,7 @@ address appears in any log line.
 **Goal:** one field to add anyone. **Design:** §6.2, §6.1. **Depends on:** 7.9, 3.1.
 
 **Technical:** the Add people field in a group's settings: names of people the adder shares a group with and their own placeholders; an exact email of
-an account here adds its person, another email makes a placeholder with it (rate-limited per account and hour); "Add as not on Tally yet" for a name
+an account here adds its person, the adder's device wrapping the group key to their account key in the same operation (15.3), another email makes a placeholder with it (rate-limited per account and hour); "Add as not on Tally yet" for a name
 alone; any member may add (`DESIGN.md` §24); placeholders editable by whoever added them and owners; the
 operation writes activity and, for an account, the `added_to_group` notice (once 9.1 is in). The directory joins in 11.2.
 

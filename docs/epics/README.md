@@ -25,20 +25,20 @@ _Status key: ✅ Done · ⏳ In progress · 📋 Planned · 🚧 Waits on a deci
 
 ## Epics
 
-| #   | Epic                                    | What it holds                                                                                           | Tasks |
-| --- | --------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----- |
-| 1   | [Foundation](foundation.md)             | Tooling, CI, configuration, the database, jobs, the shell, the image, the PWA                           | 11    |
-| 2   | [Accounts and sign-in](accounts.md)     | Local and Sovereign sign-in, the sign-up policy, notices, deleting a person, the landing page, Settings | 6     |
-| 3   | [People and groups](groups.md)          | Persons, groups and access, the lifecycle, merging                                                      | 4     |
-| 4   | [Money and balances](money.md)          | Currencies, splitting and rounding, balances, across groups                                             | 4     |
-| 5   | [Expenses and payments](expenses.md)    | Actions and validators, the write path with history, comments, activity                                 | 4     |
-| 6   | [Offline and sync](sync.md)             | The endpoint, the device's store, Couldn't sync, opening offline, pruning                               | 5     |
-| 7   | [Screens](screens.md)                   | The shell's places, adding an expense, a group, payments, an expense, Home, people, settings, the phone | 11    |
-| 8   | [Bringing people in](invites.md)        | Mail, adding people and placeholders, invitations and claiming                                          | 3     |
-| 9   | [Notices and reminders](notices.md)     | Notices and the bell, preferences and email, reminders                                                  | 3     |
-| 10  | [Insights](insights.md)                 | Spending figures and their screens                                                                      | 2     |
-| 11  | [The suite](suite.md)                   | Core's bell, email, activity and directory                                                              | 2     |
-| 12  | [Portability](portability.md)           | Export and import                                                                                       | 2     |
-| 13  | [Release](release.md)                   | Seed, security review, documents, the first release, hosting                                            | 5     |
-| 14  | [Upstream, in `sovereign`](upstream.md) | Charts, `AvatarStack`, a floating button, `MoneyInput` and a currency picker, `AUTH_SIGNUP`, the port   | 6     |
-| 15  | [Encryption](encryption.md)             | The cipher, devices, group keys and granting, the recovery key, keys in invitation links, rotation      | 6     |
+| #   | Epic                                    | What it holds                                                                                            | Tasks |
+| --- | --------------------------------------- | -------------------------------------------------------------------------------------------------------- | ----- |
+| 1   | [Foundation](foundation.md)             | Tooling, CI, configuration, the database, jobs, the shell, the image, the PWA                            | 11    |
+| 2   | [Accounts and sign-in](accounts.md)     | Local and Sovereign sign-in, the sign-up policy, notices, deleting a person, the landing page, Settings  | 6     |
+| 3   | [People and groups](groups.md)          | Persons, groups and access, the lifecycle, merging                                                       | 4     |
+| 4   | [Money and balances](money.md)          | Currencies, splitting and rounding, balances, across groups                                              | 4     |
+| 5   | [Expenses and payments](expenses.md)    | Actions and validators, the write path with history, comments, activity                                  | 4     |
+| 6   | [Offline and sync](sync.md)             | The endpoint, the device's store, Couldn't sync, opening offline, pruning                                | 5     |
+| 7   | [Screens](screens.md)                   | The shell's places, adding an expense, a group, payments, an expense, Home, people, settings, the phone  | 11    |
+| 8   | [Bringing people in](invites.md)        | Mail, adding people and placeholders, invitations and claiming                                           | 3     |
+| 9   | [Notices and reminders](notices.md)     | Notices and the bell, preferences and email, reminders                                                   | 3     |
+| 10  | [Insights](insights.md)                 | Spending figures and their screens                                                                       | 2     |
+| 11  | [The suite](suite.md)                   | Core's bell, email, activity and directory                                                               | 2     |
+| 12  | [Portability](portability.md)           | Export and import                                                                                        | 2     |
+| 13  | [Release](release.md)                   | Seed, security review, documents, the first release, hosting                                             | 5     |
+| 14  | [Upstream, in `sovereign`](upstream.md) | Charts, `AvatarStack`, a floating button, `MoneyInput` and a currency picker, `AUTH_SIGNUP`, the port    | 6     |
+| 15  | [Encryption](encryption.md)             | The cipher, account keys and unlocking, group keys, the recovery key, keys in invitation links, rotation | 6     |

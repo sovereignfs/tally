@@ -88,9 +88,8 @@ The plugin's task numbers are not used here. This table is how to check nothing 
 10. **Close the trip.** Everyone is settled. Kasun closes _Lisbon_; it is read-only, and can be reopened.
 11. **Look back.** Insights shows what each of them spent on the trip by category, and Kasun's own share of everything this year by month.
 12. **Leave.** Sam deletes their account. Their email and sign-in are gone; past expenses still say "Sam", and nobody's numbers change.
-13. **A new phone.** Thulana signs in on a new phone. _Lisbon_ is there at once with every amount and balance, and its descriptions a moment later,
-    unlocked by her laptop or by Kasun's phone without her doing anything (§5.3). Had every other device been off, her recovery key would have
-    unlocked it.
+13. **A new phone.** Thulana signs in on a new phone with her passkey, while nobody else has Tally open. _Lisbon_ is there at once, every word of it:
+    the passkey that signed her in also unlocked it (§5.3). She was asked nothing else.
 
 ## 4. Terminology
 
@@ -174,8 +173,8 @@ As Tusk's: `app/` for routes, `src/` for everything else, tests beside the code.
 | `src/portability/`        | The file format, export and import (§17)                                                                                 |
 | `src/sovereign/`          | Core's notices, `People.deletePerson`, the bell, email, activity and directory calls (§14, §18) — **from Tusk**          |
 | `src/jobs/`               | The runner and claims — **copied from Tusk**                                                                             |
-| `src/cipher/`             | Device keys, group keys, the recovery key and the field cipher, in the browser (§5.3) — **copied from Tusk**             |
-| `src/keys/`               | Devices, key wraps and granting, on the server and the device (§5.3)                                                     |
+| `src/cipher/`             | Account keys, group keys, unlocking, the recovery key and the field cipher, in the browser (§5.3) — **copied from Tusk** |
+| `src/keys/`               | Account keys and their wraps, group key wraps and granting, on the server and the device (§5.3)                          |
 | `src/crypto/`             | The instance key and envelope encryption — **copied from Tusk**, for core's refresh tokens (§14.4)                       |
 | `src/mail/`               | The SMTP mailer and the mail outbox — the mailer **copied from Tusk**                                                    |
 | `src/sw/`                 | The service worker: the shell by allow-list, the offline shell page, Background Sync — **from Tusk**                     |
@@ -203,8 +202,8 @@ the same group's, in the same statement. An owner's operation adds `AND m.role =
 ### 5.3 Encryption
 
 **What people write in a group is sealed on their devices, and the server keeps only ciphertext of it.** The operator, a database dump or a backup
-shows the numbers and whom they are between, never the words. **Nobody makes, chooses, types or carries a key to use Tally:** keys are made and passed
-between devices unseen, and the one thing a person is offered to keep is a recovery key. It is on for every group, always; there is no setting.
+shows the numbers and whom they are between, never the words. **Nobody makes, chooses, types or carries a key to use Tally:** keys are made in the browser
+unseen, a new device unlocks with the same password or passkey that signs it in, and the one thing a person is offered to keep is a recovery key. It is on for every group, always; there is no setting.
 
 | Sealed (the server holds ciphertext)                                                                                                        | Readable by the server                                                                                                                                                                                                  |
 | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -215,41 +214,52 @@ reminding with the amount; and people's names and addresses are what accounts, i
 
 **The keys:**
 
-- **A device key**, an age X25519 identity made by the browser when it first signs in, kept in IndexedDB as a non-extractable key where the platform
-  allows (Tusk's `src/cipher/device.ts`). Its public half is registered with the server (`device`). Signing out deletes it, and the server deletes its
-  wraps. A device is never asked anything to have one.
+- **An account key**, an age X25519 identity made by the browser when the account is made (Tusk's `src/cipher/identity.ts`). Its public half is on the
+  server (`account_key`); the private half is on the account's devices, kept in IndexedDB as a non-extractable key where the platform allows (Tusk's
+  `src/cipher/device.ts`), and on the server only **wrapped** by what the person signs in with (below), which the server cannot open.
 - **A group key**, 32 random bytes made by the creator's device, in **epochs** (`grp.key_epoch`; a new one on rotation). The server stores it only
-  **wrapped with age to a device** (`key_wrap`), one wrap per epoch and device of each active member and each member's recovery key, and cannot open
-  any of them. age is used for wrapping alone (Tusk's list key, renamed).
+  **wrapped with age to each active member's account key** (`key_wrap`), and cannot open any wrap. age is used for wrapping alone (Tusk's list key,
+  renamed).
 - **A sealed field** is AES-256-GCM under the group key of an epoch, with a random nonce, and the group, table, row and field in the authenticated data
   (Tusk's `src/cipher/field.ts`, with the group and epoch added to its binding), so that the server cannot move a value to another row, field or group
   and have it open. Its form is `{ "c": "<epoch>.<base64url>" }`; the empty text is sealed like any other.
 
-**Granting is automatic.** Each sync tells a device which devices of the group's active members, and which recovery keys, lack a wrap of an epoch it
-holds; the device wraps for them in the same exchange. The server accepts a wrap only for a device or recovery key of an active member of that group,
-and only from a device that is one. So:
+**A new device unlocks with what the person signs in with, at once, with nobody else online and nothing more to type.** A new device must bring
+something only the person has: if it brought nothing, only the server could unlock it, and then the operator could read everything. So the account key is
+wrapped (`account_key_wrap`) by each way the person signs in:
 
-- **A new device of yours** is unlocked by another device of yours, or by any other member's device, at its next sync: while Tally is open anywhere in
-  the group, within half a minute.
-- **A new member** is unlocked the same way once added (§6.2, §6.3); an invitation link that carries a key is quicker still (below).
-- **Until a group is unlocked on a device,** it shows with every figure and balance, which are not sealed, and its words as a quiet "…", with one line
-  saying a device will unlock it shortly, or that the recovery key does it now. What the person records meanwhile waits in the outbox and is sealed
+| Signing in with        | How the new device unlocks                                                                                                                                                                                                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A password**         | **The password itself, as it is typed to sign in.** The browser derives two values from it with Argon2id: one is what is sent to sign in (the server never receives the password), the other unwraps the account key (it never leaves the browser). Changing the password re-wraps in the browser.                       |
+| **A passkey**          | **The passkey itself,** through WebAuthn's PRF, which every current platform passkey has (iCloud Keychain, Google Password Manager, Windows Hello, the common password managers). One sign-in, one tap, unlocked. A passkey without PRF signs in and unlocks as the rows below.                                          |
+| **A Sovereign core**   | Core holds no secret for Tally, so on the first device Tally offers, once, **"Unlock Tally on new devices with Face ID or your fingerprint"**: a passkey kept for unlocking only, one tap to make. With it, as the passkey row. Without it, as the rows below.                                                           |
+| **Any, as a fallback** | **Another of your devices,** which shows "Allow your new phone to open your groups?" with one button; or **the recovery key**. If neither ever comes, Tally makes a new account key, and the group's members' devices wrap each group's key to it at their next sync, with nothing asked of anyone: only the words wait. |
+
+- **Only the fallback row ever waits.** Until a group is unlocked on a device, it shows with every figure and balance, which are not
+  sealed, and its words as a quiet "…", with one line saying what will unlock it. What the person records meanwhile waits in the outbox and is sealed
   when the key arrives. Nothing is refused for it.
+- **A forgotten password** reset by email gives a new sign-in, not the old key: the device unlocks by passkey, another device or the recovery key, or
+  by the last row's new key. The reset page says so in a sentence.
+- **Signing out** deletes the device's copy of the account key with its store; signing in again is a new device, and unlocks as the table says.
 
-**The recovery key** is made with the account and offered once, right after sign-up, as a code to copy, download or print (with a QR code). It can be
-skipped; Settings shows a quiet reminder until it is saved. It is an age identity whose public half is registered like a device and wrapped to like one.
-Entering it on a new device unlocks every group at once, with nobody else needed. **Losing it costs nothing** while another device of yours or another
-member remains, since either can unlock a new device; only a group whose every member has lost every device and their recovery key cannot be read
-again, and the offer says so in a sentence. Making a new one replaces the old, whose wraps are deleted.
+**The recovery key** is offered once, right after sign-up, as a code to copy, download or print (with a QR code). It can be skipped; Settings shows a
+quiet reminder until it is saved. It is 128 random bits that wrap the account key, and entering it on a device unlocks every group at once. **It is
+rarely needed** (a lost password with no other device and no passkey), and losing it costs nothing while another member of each group remains; only a
+group whose every member has lost every way in cannot be read again, and the offer says so. Making a new one replaces the old wrap.
 
-**An invitation link carries a key** in its fragment (`/invite/<token>#<secret>`), which browsers never send to a server: the inviter's device wraps the
-group key to that secret (`invitation.key_wrap`), so whoever opens a copied link reads the group at once and wraps it to their own device. **An emailed
-link has no fragment,** since the server sends that mail; its person is unlocked as any new member is. The invitation page shows the group's name only
-when its link carries the key; otherwise it names the inviter alone.
+**New members are unlocked by whoever adds them.** Adding a person who has an account (§6.2) is an online operation made from the adder's device,
+which holds the group key: it wraps the key to the new member's account key in the same operation, so the group is readable on their devices at once.
+A placeholder has no account key; it is unlocked when claimed:
 
-**Rotation.** When a member leaves or is removed, the next device of a remaining member to sync makes a new epoch and wraps it for the remaining
-members; from then on, what is written is sealed under it. Earlier text stays under its epoch, which the remaining members keep. Removing one of your
-devices from Settings deletes its wraps.
+- **An invitation link carries a key** in its fragment (`/invite/<token>#<secret>`), which browsers never send to a server: the inviter's device wraps the
+  group key to that secret (`invitation.key_wrap`), so whoever opens the link reads the group at once and wraps it to their own account key. The
+  invitation dialog offers the link to copy first, for that reason.
+- **An emailed link has no fragment,** since the server sends that mail and must not hold the key. Its person sees the group's figures at once, and its
+  words once any member's device next syncs, which wraps the key to them unasked; the invitation page says so in a sentence.
+- The invitation page shows the group's name only when its link carries the key; otherwise it names the inviter alone.
+
+**Rotation.** When a member leaves or is removed, the next device of a remaining member to sync makes a new epoch and wraps it to the remaining
+members' account keys; from then on, what is written is sealed under it. Earlier text stays under its epoch, which the remaining members keep.
 
 **The server's part:** it accepts a sealed field only in the sealed form and within a ceiling on its length (the limits of §8 are on the text, checked
 on the device); it never logs, mails or sends to core a sealed field. An email says "Kasun added an expense of €84.00 in a group on Tally"; the bell in
@@ -258,9 +268,10 @@ export opens the sealed fields in the browser, and import seals them there (§17
 
 **What it protects against:** reading the database, its dumps and backups, and the server's logs and mail, by anyone, the operator included. **What it
 does not:** an operator who changes the server. One who serves altered code can take a key from the browser, as from every web app that encrypts in the
-browser (Tusk says the same); one who adds a device to an account, or a person to a group, has it unlocked by the members' devices, which is the price
-of nobody handling keys. A person added to a group shows in its people and its activity, so that one can be seen; a device added to an account is
-listed in that account's Settings. Running the server yourself, or trusting whoever does, is the answer, and the user's documentation says so.
+browser (Tusk says the same), including the password as it is typed; one who adds a person to a group, or replaces an account's key, has it unlocked
+by the members' devices, which is the price of nobody being locked out. A person added to a group shows in its people and its activity, and a
+member's new account key is a line in the group's activity, so either can be seen. A wrapped account key on the server can be attacked by guessing the
+password offline, which Argon2id makes slow and a long password makes futile; a passkey's wrap cannot. Running the server yourself, or trusting whoever does, is the answer, and the user's documentation says so.
 
 ## 6. People
 
@@ -525,8 +536,8 @@ changes, with an id.
 ### 11.3 The endpoint
 
 `POST /api/sync`, with the session cookie and `Origin` checked. A request carries the outbox in order, and a cursor per group; the answer carries what
-was applied, what was refused and why, the account's current list of groups, and the changes since each cursor. It also carries the keys: the wraps
-for the device's own key that it lacks, and the devices it is asked to wrap for; the next request carries those wraps (§5.3).
+was applied, what was refused and why, the account's current list of groups, and the changes since each cursor. It also carries the keys: the group key wraps
+for the account that the device lacks, and the members it is asked to wrap for; the next request carries those wraps (§5.3).
 
 - **Order is a counter per group** (`grp.seq`), not per account as on Tusk's Desk, since several people write to one group. Applying a mutation is one
   short transaction: increment the group's `seq`, stamp each changed row with it, write the revision and activity, record the mutation id. The increment
@@ -567,7 +578,7 @@ refused comment is undone with a toast that says why.
 
 Stated in the app and in the user's documentation:
 
-- **Signing in, and the first load on a device,** whose groups' words wait for another device or the recovery key to unlock them (§5.3).
+- **Signing in, and the first load on a device,** which unlocks the groups' words as it signs in (§5.3).
 - **Creating a group, adding and removing people, invitations, roles, closing, reopening and deleting** (`/api/ops`, which answers at once and is
   undone with a toast on a refusal, as a Tusk board is). Offering these offline is phase 2 (§21.6).
 - **Settings, notices, export and import, an expense's history.** Each says so offline, and changes nothing.
@@ -679,7 +690,8 @@ for four is a quarter of it spent. Every figure is per currency, never converted
 **As Tusk's §6, with `TALLY_` for `TUSK_`, and two additions** (§6.4, §14.2): better-auth in a store of its own; local accounts (password, passkey,
 authenticator app with backup codes) when `TALLY_AUTH_LOCAL=1`; a Sovereign core through `genericOAuth` with PKCE when `TALLY_CORE_*` are set;
 either or both, from one image, and **both may be on when hosted.** Email is verified and passwords reset only with mail set up. A person is their
-better-auth user id.
+better-auth user id. **A change from Tusk:** the browser never sends the password itself. It derives, with Argon2id, the value better-auth stores
+and checks as the password, and a second value that unwraps the account key; and a passkey's sign-in asks for its PRF as well (§5.3).
 
 ### 14.2 Persons and identities
 
@@ -915,7 +927,9 @@ The sentence of choices (§15.9) is Tally's own composition of `Button`, `Popove
 - **Notifications:** each kind (§12.2) by channel (email, core's bell when hosted; Push in phase 2), with what is not available said plainly. What
   is heard of each group is chosen in that group's settings (§12.2), and this section links to them.
 - **Recovery key:** saved or not, made again, and a sentence on what it is for (§5.3).
-- **Devices:** every device that can read the person's groups, with when it was added and last synced; removing one signs it out and deletes its keys.
+- **Devices:** every signed-in device, with when it signed in and last synced; removing one signs it out, and its copy of the key is deleted when it
+  next reaches the server.
+- **Unlocking:** which ways in unlock a new device (password, passkeys, the passkey kept for unlocking), with the offer for a Sovereign-only account.
 - **This device:** when it last synced, **Couldn't sync** (§11.5), and "Reset this device" (sends the outbox, then reloads every group).
 - **Sign-in:** the account sections Tusk has: password, passkeys, two-factor, linking core.
 - **Data:** export, import (§17), delete account (§18).
@@ -945,7 +959,7 @@ record, so that the other members' numbers still add up. One routine, safe to ru
   other account left** is deleted, with everything of it.
 - **Their comments stay**, as text on the shared record, shown by their name (§24).
 - **Removed:** notices for them, their notice preferences, reminders by and to them, invitations they made (revoked), placeholders they added that were
-  in no group, their devices, recovery key and every key wrap for them (§5.3), their device subscriptions (phase 2), their stored core token, rate counters, mail queued to them, and better-auth's rows: passkeys,
+  in no group, their account key with every wrap of it and every group key wrap for them (§5.3), their device subscriptions (phase 2), their stored core token, rate counters, mail queued to them, and better-auth's rows: passkeys,
   two-factor, sessions, sign-ins, and the account.
 
 A test seeds one row of every table, for the person and for a second person sharing a group with them, and finds nothing personal of the first after
@@ -994,8 +1008,9 @@ Beyond better-auth's, in the auth store.
 | `mail_outbox`              | `id`, `account_id` or `to_address`, `template`, `data` (JSON), `attempts`, `next_attempt_at`, `sent_at`, `failure_kind`, `created_at`                                                                                             |
 | `applied_mutation`         | `account_id`, `id`, `group_id`, when (§11.8)                                                                                                                                                                                      |
 | `tombstone`                | `table`, `id`, `group_id`, `seq`, when (§11.8)                                                                                                                                                                                    |
-| `device`                   | `id`, `account_id`, `kind` (`browser`, `recovery`), `public_key` (an age recipient), `label`, `created_at`, `last_seen_at` (§5.3)                                                                                                 |
-| `key_wrap`                 | `group_id`, `epoch`, `device_id` (the key), `wrapped`, `wrapped_by_device_id`, `created_at` (§5.3)                                                                                                                                |
+| `account_key`              | `account_id` (the key), `public_key` (an age recipient), `created_at`, `replaced_at` (§5.3)                                                                                                                                       |
+| `account_key_wrap`         | `id`, `account_id`, `method` (`password`, `passkey`, `recovery`, `device`), `credential_id` (a passkey's), `salt`, `params`, `wrapped`, `created_at` (§5.3)                                                                       |
+| `key_wrap`                 | `group_id`, `epoch`, `account_id` (the key), `wrapped`, `wrapped_by`, `created_at` (§5.3)                                                                                                                                         |
 | `credential`               | As Tusk's: core refresh tokens under envelope encryption (§14.4)                                                                                                                                                                  |
 | `notice_seen`              | A core notice's `jti` and when (§14.3)                                                                                                                                                                                            |
 | `job_claim`, `rate_bucket` | As Tusk's                                                                                                                                                                                                                         |
@@ -1003,10 +1018,10 @@ Beyond better-auth's, in the auth store.
 **A sealed column holds only the sealed form,** in every table and inside JSON (`snapshot`, `details`): a test writes through every path and
 finds no plain text in one. Indexes follow the queries: members by person (an account's groups) and by group; expenses and payments by `(group_id, seq)` for pull and by
 `(group_id, date)`; payers and shares by expense; revisions and comments by subject; activity by group and time; notices by account and time;
-invitations by placeholder; the mail outbox by `next_attempt_at`; key wraps by device and by `(group_id, epoch)`; devices by account.
+invitations by placeholder; the mail outbox by `next_attempt_at`; key wraps by account and by `(group_id, epoch)`; account key wraps by account.
 
 **The device's store** holds, per group, the group, its members with their names, expenses with payers and shares, payments and comments, and per
-account the cursors, the outbox, Couldn't sync, the last-synced unread count, the defaults remembered for the add sheet, the device key and the group
+account the cursors, the outbox, Couldn't sync, the last-synced unread count, the defaults remembered for the add sheet, the account key and the group
 keys it has unwrapped (non-extractable where the platform allows, §5.3). Nothing else.
 
 ## 20. Security, deployment, testing
@@ -1096,10 +1111,10 @@ Creating a group and adding placeholders offline, as mutations, with invitations
 
 Server-sent events per group in place of the 30-second pull (§11.3).
 
-### 21.8 Verifying devices
+### 21.8 Verifying members' keys
 
-Each member's devices shown with a short code that two people can compare in person, and a device warning when a member's devices change, so that a
-device an operator added can be caught (§5.3). Unlocking with a passkey's PRF where the platform has it, in place of the recovery key on a new device.
+Each member's account key shown as a short code that two people can compare in person, and a warning on every member's device when one changes, so that
+a key an operator replaced can be caught (§5.3).
 
 ## 22. Not settled in the platform
 
@@ -1117,33 +1132,33 @@ None. The four left open by the first draft were settled on 2026-11-09 and are i
 
 ## 24. Decision log
 
-| Date       | Decision                                                                                                                         | Why                                                                                                       |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| 2026-11-09 | An app of its own, Tusk's shape: local and core sign-in, three database forms; **every feature works alone**                     | The owner's golden rule for every app: core is optional, and an app never fully depends on it             |
-| 2026-11-09 | Name **Tally**, prefix `tally`, port 3004                                                                                        | Kept from the plugin; 3003 is Ledger's                                                                    |
-| 2026-11-09 | **Tally keeps its own `person`**, with name and email, for accounts and placeholders                                             | People with no account, and names that outlive an account; no dependence on core for who someone is       |
-| 2026-11-09 | **Placeholders and invitations** in place of guests; a claim takes over the placeholder's history                                | Splitwise's way in for people outside, and the plugin's open question of claiming a guest                 |
-| 2026-11-09 | Local sign-up **by invitation** by default, through `TALLY_AUTH_SIGNUP`                                                          | People must be able to join a group without opening the server to everyone; changeable by setting         |
-| 2026-11-09 | **Core sign-in and local accounts may both be on when hosted**                                                                   | People not on the instance can still join                                                                 |
-| 2026-11-09 | Mail through **Tally's own SMTP** alone; core's email for linked accounts when hosted                                            | It works alone; core is an addition                                                                       |
-| 2026-11-09 | Deleting an account **keeps the name** and removes email and everything else personal                                            | The others' balances depend on the shared record                                                          |
-| 2026-11-09 | **Offline first for expenses, payments and comments,** background sync with a counter per group; online for membership           | Recording must never wait; a membership change must be decided at once                                    |
-| 2026-11-09 | An edit **replaces the whole expense,** later wins, the replaced version kept and its author told                                | Amounts and splits must add up; nothing anyone typed is lost                                              |
-| 2026-11-09 | **Per-expense history** and **comments** in phase 1                                                                              | Conflicts need history; comments are what Splitwise people use                                            |
-| 2026-11-09 | ~~**No end-to-end encryption**~~ — superseded on 2026-11-13, below                                                               | The server must check sums and send reminders                                                             |
-| 2026-11-09 | **Never convert currencies** in phase 1                                                                                          | Deferred to phase 2 (§21.2)                                                                               |
-| 2026-11-09 | **Fixed categories**                                                                                                             | Enough for phase 1                                                                                        |
-| 2026-11-09 | **Charts, `AvatarStack`, a floating button, `MoneyInput` and a currency picker** built in `@sovereignfs/ui` first                | The suite's design-system-first rule                                                                      |
-| 2026-11-09 | **Receipts in phase 2,** stored by Tally                                                                                         | Scope; file storage is the app's concern, never core's                                                    |
-| 2026-11-09 | **Push planned, not in the MVP**                                                                                                 | Scope; the channel is designed now so that adding it changes nothing else                                 |
-| 2026-11-09 | Interface **designed anew**                                                                                                      | The owner's direction                                                                                     |
-| 2026-11-09 | Start and end dates of a group **dropped**                                                                                       | Nothing used them                                                                                         |
-| 2026-11-09 | **No migration** from the plugin                                                                                                 | No data needs to move                                                                                     |
-| 2026-11-09 | A deleted account's **comments stay**, as text by their name                                                                     | Part of the shared record, as Tusk keeps comments                                                         |
-| 2026-11-09 | **Any member can add people** and invite; removing and roles are owners'                                                         | Splitwise's way; adding someone to a trip should not wait for an owner                                    |
-| 2026-11-09 | An invitation is **claimed by whoever holds the link**, whatever address it was sent to                                          | A link sent through a chat must work; it is single-use, expiring, and the inviter is told                 |
-| 2026-11-09 | **Limits:** 50 members a group, 200 groups an account                                                                            | Accepted as a start; changed by a task if real use needs it                                               |
-| 2026-11-13 | **What people write is sealed per group** (names of groups, descriptions, notes, comments); figures stay readable                | The operator must not read what people write; the server must still check sums, guard balances and remind |
-| 2026-11-13 | **Keys are handled by devices, unseen:** granted automatically by any device of a member; a recovery key offered, not required   | Anyone must be able to use Tally without knowing what a key is; the price is stated (§5.3)                |
-| 2026-11-13 | **An invitation link carries the group's key in its fragment;** an emailed one does not                                          | A copied link opens the group at once; the server sends mail, so it must not hold the key                 |
-| 2026-11-13 | **Every member is notified of the group's changes by default,** each choosing per group: everything, what involves them, nothing | The owner's direction: a group's people should hear what happens in it, and each can quieten it           |
+| Date       | Decision                                                                                                                                      | Why                                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 2026-11-09 | An app of its own, Tusk's shape: local and core sign-in, three database forms; **every feature works alone**                                  | The owner's golden rule for every app: core is optional, and an app never fully depends on it             |
+| 2026-11-09 | Name **Tally**, prefix `tally`, port 3004                                                                                                     | Kept from the plugin; 3003 is Ledger's                                                                    |
+| 2026-11-09 | **Tally keeps its own `person`**, with name and email, for accounts and placeholders                                                          | People with no account, and names that outlive an account; no dependence on core for who someone is       |
+| 2026-11-09 | **Placeholders and invitations** in place of guests; a claim takes over the placeholder's history                                             | Splitwise's way in for people outside, and the plugin's open question of claiming a guest                 |
+| 2026-11-09 | Local sign-up **by invitation** by default, through `TALLY_AUTH_SIGNUP`                                                                       | People must be able to join a group without opening the server to everyone; changeable by setting         |
+| 2026-11-09 | **Core sign-in and local accounts may both be on when hosted**                                                                                | People not on the instance can still join                                                                 |
+| 2026-11-09 | Mail through **Tally's own SMTP** alone; core's email for linked accounts when hosted                                                         | It works alone; core is an addition                                                                       |
+| 2026-11-09 | Deleting an account **keeps the name** and removes email and everything else personal                                                         | The others' balances depend on the shared record                                                          |
+| 2026-11-09 | **Offline first for expenses, payments and comments,** background sync with a counter per group; online for membership                        | Recording must never wait; a membership change must be decided at once                                    |
+| 2026-11-09 | An edit **replaces the whole expense,** later wins, the replaced version kept and its author told                                             | Amounts and splits must add up; nothing anyone typed is lost                                              |
+| 2026-11-09 | **Per-expense history** and **comments** in phase 1                                                                                           | Conflicts need history; comments are what Splitwise people use                                            |
+| 2026-11-09 | ~~**No end-to-end encryption**~~ — superseded on 2026-11-13, below                                                                            | The server must check sums and send reminders                                                             |
+| 2026-11-09 | **Never convert currencies** in phase 1                                                                                                       | Deferred to phase 2 (§21.2)                                                                               |
+| 2026-11-09 | **Fixed categories**                                                                                                                          | Enough for phase 1                                                                                        |
+| 2026-11-09 | **Charts, `AvatarStack`, a floating button, `MoneyInput` and a currency picker** built in `@sovereignfs/ui` first                             | The suite's design-system-first rule                                                                      |
+| 2026-11-09 | **Receipts in phase 2,** stored by Tally                                                                                                      | Scope; file storage is the app's concern, never core's                                                    |
+| 2026-11-09 | **Push planned, not in the MVP**                                                                                                              | Scope; the channel is designed now so that adding it changes nothing else                                 |
+| 2026-11-09 | Interface **designed anew**                                                                                                                   | The owner's direction                                                                                     |
+| 2026-11-09 | Start and end dates of a group **dropped**                                                                                                    | Nothing used them                                                                                         |
+| 2026-11-09 | **No migration** from the plugin                                                                                                              | No data needs to move                                                                                     |
+| 2026-11-09 | A deleted account's **comments stay**, as text by their name                                                                                  | Part of the shared record, as Tusk keeps comments                                                         |
+| 2026-11-09 | **Any member can add people** and invite; removing and roles are owners'                                                                      | Splitwise's way; adding someone to a trip should not wait for an owner                                    |
+| 2026-11-09 | An invitation is **claimed by whoever holds the link**, whatever address it was sent to                                                       | A link sent through a chat must work; it is single-use, expiring, and the inviter is told                 |
+| 2026-11-09 | **Limits:** 50 members a group, 200 groups an account                                                                                         | Accepted as a start; changed by a task if real use needs it                                               |
+| 2026-11-13 | **What people write is sealed per group** (names of groups, descriptions, notes, comments); figures stay readable                             | The operator must not read what people write; the server must still check sums, guard balances and remind |
+| 2026-11-13 | **A new device unlocks with what signs it in** (password, passkey); another device and a recovery key as fallbacks; adders unlock new members | Anyone must be able to use Tally on a new device at once, with nothing extra to type or keep              |
+| 2026-11-13 | **An invitation link carries the group's key in its fragment;** an emailed one does not                                                       | A copied link opens the group at once; the server sends mail, so it must not hold the key                 |
+| 2026-11-13 | **Every member is notified of the group's changes by default,** each choosing per group: everything, what involves them, nothing              | The owner's direction: a group's people should hear what happens in it, and each can quieten it           |

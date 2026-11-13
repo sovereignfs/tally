@@ -18,11 +18,13 @@ trimmed (`DESIGN.md` §5.1).
 
 #### 📋 2.1 — Local sign-in
 
-**Goal:** accounts of the app's own. **Design:** §14.1, §6.4. **Depends on:** 1.5, 1.8.
+**Goal:** accounts of the app's own. **Design:** §14.1, §6.4, §5.3. **Depends on:** 1.5, 1.8, 15.1.
 
 **Technical:** better-auth 1.7 in the `tally_auth` store with its own migrations; password, passkeys, authenticator app with backup codes, when
 `TALLY_AUTH_LOCAL` is `1` or `true` (404 otherwise); `TALLY_AUTH_SIGNUP` with `open` and `closed` in the user-creation hook (the hook is shaped so
-that 8.3 adds `invite` without moving it); email verification and reset only with SMTP; the `Auth` components; `getSession`, `requireAccount`. Copied:
+that 8.3 adds `invite` without moving it); **the password never sent:** every form that takes one (sign-up, sign-in, change, reset) sends the
+Argon2id sign-in value of 15.1 in its place, and the minimum length is checked in the browser (a change from Tusk); email verification and reset only
+with SMTP; the `Auth` components; `getSession`, `requireAccount`. Copied:
 Tusk's `src/auth/`, `src/mail/` (the mailer only), `src/limits/`.
 
 **Accepts when:** the first account can register and the second is refused with sign-up closed; sign-in works on all three databases over real
@@ -67,7 +69,7 @@ them and every other member's balances unchanged, and a replayed `jti` is refuse
 **Technical:** `People.deletePerson` in `src/sovereign/people.ts`: the person kept as a name only (`account_id`, `email`, `core_sub` cleared,
 `deleted_at` set); memberships ended where the balance is zero (once 4.3 is in; until then, kept); a group's ownership passed to its longest-standing
 member with an account (`owner_passed` once 9.1 is in); a group with no other account deleted by `group_id`; and the rows listed in §18 removed,
-devices, the recovery key and key wraps included once 15.2 is in;
+the account key, its wraps and its group key wraps included once 15.2 is in;
 better-auth's rows and the account; the `sub` link last; safe to run twice. `/api/account/delete` after the password or a fresh session. The test seeds
 one row of every table for the person and for a second person sharing a group, and fails for a table nobody decided about. Each later task that adds a
 table extends it.
@@ -81,6 +83,6 @@ group; the second person's balances are unchanged; a second run succeeds.
 
 **Technical:** `/settings` with Profile (name and email, written to the account and the person together; primary currency in `account_settings`), the
 account sections Tusk has (sign-in methods, passkeys, two-factor, linking core), and Data holding delete account. Notifications arrive with 9.2, Devices
-with 15.2, Recovery key with 15.4, This device with 6.3, export and import with 12.1 and 12.2.
+and Unlocking with 15.2, Recovery key with 15.4, This device with 6.3, export and import with 12.1 and 12.2.
 
 **Accepts when:** each section works on all three databases; changing the name changes it on every group the person is in.
