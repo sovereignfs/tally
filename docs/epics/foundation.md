@@ -117,13 +117,23 @@ billing stopped the last run).
 
 **Accepts when:** a job's work is done once when two processes run it; SIGTERM stops the runner and the server cleanly.
 
-#### 📋 1.7 — Security headers
+#### ✅ 1.7 — Security headers
 
 **Goal:** the CSP and headers every response has. **Design:** §20 Security. **Depends on:** 1.4.
 
 **Technical:** copy Tusk's `proxy.ts` and `src/security/` (nonce CSP, `connect-src 'self'`, no `'unsafe-inline'`, HSTS over https, Edge discipline).
 
 **Accepts when:** every response, including errors and redirects, carries the policy; a test fails if `'unsafe-inline'` appears in `script-src`.
+
+**Done as:** copied from Ledger's same task (Tusk's `src/security/csp.ts` and its tests, `proxy.ts` written for Ledger) and renamed: a nonce per
+request, `script-src 'self' 'nonce-…' 'strict-dynamic'` and never `'unsafe-inline'`, `connect-src 'self'`, HSTS over https only, the static headers
+from `next.config.ts`, any nonce or policy the client sent replaced, `/api/` treated as data (no policy, no nonce). The policy's comment says why it
+matters more here: a page holds the keys that open a group's sealed text (§5.3). **A change from Ledger:** Next's own trailing-slash redirect is
+answered before the proxy and the configured headers, so it went out with none; `skipTrailingSlashRedirect` turns it off and the proxy makes the
+same 308 with every header, tested. Seen on the built server: a page, a 404, an API, a page's and an API's redirect, and https, each with the headers
+it should have; in the browser pane under the production policy, the theme script ran, the font loaded, a client navigation worked, and the console
+was empty. A planted `'unsafe-inline'` in `script-src` failed four tests. **Left out:** `'wasm-unsafe-eval'`, which 15.1 adds if its Argon2id is
+WebAssembly.
 
 #### ✅ 1.8 — Design system boundary and shell
 

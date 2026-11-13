@@ -1,0 +1,67 @@
+import { type NextRequest, NextResponse } from 'next/server';
+import { edgeSettings } from './src/config/edge';
+import { HSTS, SECURITY_HEADERS, contentSecurityPolicy, newNonce } from './src/security/csp';
+
+/**
+ * **Every page is sent with a Content-Security-Policy** with a nonce of its own (`src/security/csp.ts`), so every page is rendered per request, the
+ * landing page too. The proxy makes the nonce and puts the policy on the request, where Next reads it and puts the nonce on the scripts and styles
+ * it makes, and the layout puts it on the theme script (`x-nonce`); it puts the policy on the response too, where the browser enforces it. An API's
+ * answer is data, with no page to protect, so it gets only the headers every response has (`next.config.ts`).
+ *
+ * It keeps the Edge discipline: no Node built-ins and no database. It only looks at the request, so a session is for the page to check, and a
+ * proxy is never the only thing standing in the way (DESIGN.md §5.2). Sign-in's addresses (task 2.1) and the front address (task 2.2) join it.
+ */
+export function proxy(request: NextRequest) {
+  const { secure, development } = edgeSettings();
+  const page = !request.nextUrl.pathname.startsWith('/api/');
+  const nonce = newNonce();
+  const policy = contentSecurityPolicy({ nonce, secure, development });
+
+  // `/people/` is `/people`, as Next would answer it, but from here, so that the redirect carries the headers too (next.config.ts turns Next's off).
+  const slashless = withoutTrailingSlash(request.nextUrl.pathname);
+  if (slashless !== request.nextUrl.pathname) {
+    // A plain URL: NextURL formats the path by the app's trailing-slash rule, and would put the slash back.
+    const target = new URL(request.url);
+    target.pathname = slashless;
+    const redirect = NextResponse.redirect(target, 308);
+    for (const { key, value } of SECURITY_HEADERS) redirect.headers.set(key, value);
+    if (page) redirect.headers.set('content-security-policy', policy);
+    if (secure) redirect.headers.set('strict-transport-security', HSTS);
+    return redirect;
+  }
+
+  const requestHeaders = new Headers(request.headers);
+  // Set, never trusted: a nonce or a policy the client sent is replaced here, and an API's request carries neither.
+  if (page) {
+    requestHeaders.set('x-nonce', nonce);
+    requestHeaders.set('content-security-policy', policy);
+  } else {
+    requestHeaders.delete('x-nonce');
+    requestHeaders.delete('content-security-policy');
+  }
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  if (page) response.headers.set('content-security-policy', policy);
+  if (secure) response.headers.set('strict-transport-security', HSTS);
+  return response;
+}
+
+/** A path without its trailing slashes, `/` itself aside. */
+export function withoutTrailingSlash(pathname: string): string {
+  const trimmed = pathname.replace(/\/+$/, '');
+  return trimmed === '' ? '/' : trimmed;
+}
+
+/** Everything but the build's own static files, which are not pages and are the same for everyone (and cannot carry a nonce), and prefetches. */
+export const config = {
+  matcher: [
+    {
+      source:
+        '/((?!_next/static|_next/image|favicon.ico|icon.svg|icons/|sw.js|manifest.webmanifest).*)',
+      missing: [
+        { type: 'header', key: 'next-router-prefetch' },
+        { type: 'header', key: 'purpose', value: 'prefetch' },
+      ],
+    },
+  ],
+};
