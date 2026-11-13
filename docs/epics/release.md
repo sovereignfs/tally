@@ -29,7 +29,7 @@ written through the one path (5.2), never around it; `--reset`.
 **Goal:** phase 1 reviewed before it is released. **Design:** §20 Security. **Depends on:** 12.2, 9.3, 11.2.
 
 **Technical:** written up in `docs/security-review.md`: access in every statement (§5.2), sync and what the server re-checks (§11.5), invitations and
-claiming (§6.3), emails' visibility (§6.1), deletion (§18), encryption (§5.3: granting, the link's fragment, no sealed field in plain text in any
+claiming (§6.3), emails' visibility (§6.1), deletion (§18), encryption (§5.3: granting, the link's fragment, no sealed text in plain text in any
 table, log or mail), the CSP, logs, rate limits, the refresh token; findings fixed or recorded with a decision.
 
 **Accepts when:** the review is merged with no open finding of high severity.

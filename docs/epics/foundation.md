@@ -8,7 +8,7 @@
 
 The repository that can hold Tally as `DESIGN.md` designs it: a Next.js app that runs alone or hosted, on three forms of database. Nothing a person
 would notice. **Tusk is the model throughout, and its infrastructure is copied** (`DESIGN.md` §5.1), renamed to `TALLY_`, and trimmed of what Tally
-does not use (workspaces, the Desk's personal key and the operator-key mode, backup to git). Tusk's `src/cipher/` is kept, and copied in 15.1. Ledger made the same copy days earlier; where Ledger already trimmed a file the same way, its
+does not use (workspaces, the Desk's personal key and the operator-key mode, the cipher, backup to git). Tally's encryption is its own (epic 15). Ledger made the same copy days earlier; where Ledger already trimmed a file the same way, its
 copy may be the starting point, and the task says so. Each task says which files it copied.
 
 ## Related

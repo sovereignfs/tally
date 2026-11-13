@@ -18,7 +18,7 @@ A person can take their groups with them, and bring them into a Tally as new gro
 
 **Goal:** one file of what is the person's to take. **Design:** §17. **Depends on:** 5.3, 3.3.
 
-**Technical:** `src/portability/`, made in the browser from the device's store with its sealed fields opened (the server cannot open them,
+**Technical:** `src/portability/`, made in the browser from the device's store with its sealed rows opened (the server cannot open them,
 `DESIGN.md` §5.3), the screen saying the file is plain: the person's profile and settings, and every group they are in, whole (members by name, expenses with payers,
 shares and comments, payments), with no other person's email; `format` and `version`; ids kept; Settings > Data downloads it; the activity line on core
 when hosted (11.1).

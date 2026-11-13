@@ -9,29 +9,32 @@
 What people write in a group (its name, descriptions, notes, comments) is sealed on the members' devices under the group's key, and the server holds
 only ciphertext of it; the figures stay readable so that the server remains the referee. Nobody handles a key: each account has one, made in the
 browser, and **a new device unlocks with the same password or passkey that signs it in**, with nobody else online; adders unlock new members; another
-device and a recovery key are the fallbacks (`DESIGN.md` §5.3). The cipher is Tusk's, copied and changed: its list key becomes the group key, bound to
-the group and its epoch, and its opt-in personal key and operator-key mode are left out.
+device and a recovery key are the fallbacks (`DESIGN.md` §5.3). **It is designed for Tally and copies nothing:** WebCrypto for everything but
+Argon2id, HPKE for wraps, one sealed blob per row. Tally is never described as "zero-knowledge": its figures are readable by design.
 
 ## Related
 
-[`DESIGN.md`](../../DESIGN.md) §5.3, §6.3, §11.2, §11.3, §12.2, §14.1, §17, §18, §19.3 · Tusk's `DESIGN.md` §9, `docs/encryption.md`, `src/cipher/`
+[`DESIGN.md`](../../DESIGN.md) §5.3, §6.3, §11.2, §11.3, §12.2, §14.1, §17, §18, §19.3, §21.1 · RFC 9180 (HPKE) · RFC 9106 (Argon2)
 
 ## Tasks
 
 #### 📋 15.1 — The cipher
 
-**Goal:** the primitives every sealed field and every key goes through, pure and tested. **Design:** §5.3. **Depends on:** 1.2.
+**Goal:** the primitives every sealed row and every key goes through, pure and tested. **Design:** §5.3. **Depends on:** 1.2.
 
-**Technical:** `src/cipher/`, copied from Tusk: `base64`, `bech32`, `errors`, `identity` (age X25519), `device` (an identity kept as a non-extractable
-key, or sealed under one where X25519 cannot be stored), `field` (AES-256-GCM, random nonce, the binding in the authenticated data) and `list-key`
-renamed `group-key`; `testing`. Changed: the binding adds the group and the epoch, and the sealed form carries the epoch (`<epoch>.<base64url>`). New:
-`password` (Argon2id with a salt and stored parameters, giving the sign-in value and the unwrapping value as two separate outputs); `prf` (an
-AES-GCM key from a WebAuthn PRF output, through HKDF); `recovery` (128 random bits as a code to copy, download or print, with a QR made in the browser
-and no third-party load, read back forgivingly: case, spaces, dashes). `age-encryption` and the Argon2id implementation pinned exactly; if the
-implementation is WebAssembly, the CSP's `wasm-unsafe-eval` is added for it and the security headers task says so.
+**Technical:** `src/cipher/`, written for Tally on WebCrypto: `seal` (a row's sealed JSON, padded to 32 bytes, AES-256-GCM under a group key with
+`["tally/sealed/1", group, table, row, epoch]` as authenticated data, the form `s1.<epoch>.<base64url>`); `hpke` (RFC 9180 base mode, X25519,
+HKDF-SHA-256, AES-256-GCM, for wrapping to a public key); `secret-wrap` (AES-256-GCM under an HKDF-derived key, for the password, a PRF output, the
+recovery code and an invitation's secret); `password` (Argon2id, 64 MiB, 3 passes, parallelism 4, salted with a hash of the instance's address and the
+email in lower case, 64 bytes split into the sign-in value and the unwrapping value; the protocol version carries the parameters); `prf` (a WebAuthn PRF
+output into a wrapping key); `recovery` (128 random bits as a code to copy, download or print, with a QR made in the browser, read back forgivingly:
+case, spaces, dashes); `vault` (keys kept in IndexedDB sealed under a non-extractable AES key made per device); errors that tell a wrong key from a
+damaged value. One library, an Argon2id implementation, pinned exactly; if it is WebAssembly, 1.7 adds `wasm-unsafe-eval` to the CSP and says so. Pure,
+run in the browser and in Vitest, imported by nothing on the server but the form checks.
 
-**Accepts when:** a field opens only with its own group, table, row, field and epoch, and a tampered one is refused; a wrap opens only with its key, and
-a wrong key is told apart from a damaged value; the two password outputs differ and neither gives the other; a recovery code survives being retyped
+**Accepts when:** a sealed row opens only with its own group, table, row and epoch, and a tampered one is refused; `hpke` passes RFC 9180's test
+vectors for its suite; a wrap opens only with its key, and a wrong key is told apart from a damaged value; two texts whose lengths fall in one bucket
+seal to the same length; the two password outputs differ and neither gives the other; a recovery code survives being retyped
 with spaces and lower case; Argon2id takes under a second on a mid-range phone with the chosen parameters; the module imports nothing from the server.
 
 #### 📋 15.2 — Account keys and unlocking
@@ -60,7 +63,7 @@ account (8.2) carries the wrap to their account key, made by the adder's device,
 `/api/sync` once 6.1 is in) answering the wraps the account lacks and the members whose account key lacks a wrap of an epoch the device holds (a
 claimed placeholder, a replaced account key), and accepting a wrap only for an active member of that group from a device of one (the permission in the
 statement); a group not yet unlocked shows its figures and "…" for its words with one line saying what will unlock it; sealing in the outbox deferred
-until the key arrives.
+until the key arrives; `grp`, `expense`, `payment` and `comment` carry `sealed` in place of their text columns from their first migration.
 
 **Accepts when:** a member added by an adder reads the group's words on first load; a replaced account key is re-wrapped by another member's device
 within one sync; a wrap for someone not in the group is refused as not found; a mutation recorded on a device before it was unlocked is sealed and

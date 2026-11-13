@@ -82,7 +82,8 @@ Tusk's rules, as they apply here, and Tally's own. They describe the app as `DES
   group's, in the same statement. **A refusal reads as not found.** A route, operation or mutation finds the session first, checks `Origin` on a write,
   is listed in `src/access/routes.ts`, and has a test calling it as a second person.
 - **What people write in a group is sealed on the device** (`DESIGN.md` §5.3): a group's name, descriptions, notes and comments travel and are stored
-  only as ciphertext under the group's key, through `src/cipher/`. The server never holds a key that opens them, and never puts a sealed field in a
+  only as one sealed blob per row under the group's key, through `src/cipher/` (Tally's own; nothing of it is copied). Tally is never called
+  "zero-knowledge". The server never holds a key that opens them, and never puts sealed text in a
   log, a mail or a call to core. Nobody is asked to handle a key: a new device unlocks with the password or passkey that signs it in, the browser never sends the password
   itself, and the recovery key is offered, never required.
 - **Every member hears of a group's changes by default;** each chooses per group (`member.notify`), and the server works out who is involved.

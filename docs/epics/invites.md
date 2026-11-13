@@ -20,7 +20,7 @@ recorded for them. Mail is Tally's own, sent in the background; with no mail set
 **Goal:** mail sent in the background, reliably and quietly. **Design:** §12.3. **Depends on:** 1.6.
 
 **Technical:** `mail_outbox` written in the transaction of the change that causes it; a mail job that claims due rows, renders the template (plain text
-and simple HTML, the instance's name, no remote image, and never a sealed field: no group's name, description or comment, `DESIGN.md` §5.3), sends through Tally's SMTP (`src/mail/`, copied in 2.1), and retries with backoff up to a
+and simple HTML, the instance's name, no remote image, and never sealed text: no group's name, description or comment, `DESIGN.md` §5.3), sends through Tally's SMTP (`src/mail/`, copied in 2.1), and retries with backoff up to a
 limit, recording a failure kind; nothing about a message logged but its id and failure kind; with no SMTP set, rows are not written and callers are told
 mail is off.
 

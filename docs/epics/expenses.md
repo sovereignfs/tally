@@ -22,8 +22,8 @@ expense, a payment or a comment.
 
 **Technical:** `src/actions/`: add, edit, delete and restore an expense; the same for a payment; add and delete a comment; each from intent and the
 current rows to a mutation (ids made by the caller, `baseVersion` for edits); `src/actions/validate.ts`: sizes, the category list, known currencies,
-members of the group, payers and shares adding up, shares matching the method (`split.ts`), a payment between two different members, a sealed field's
-text within its limit on the device and its sealed form and length on the server (`DESIGN.md` §5.3); one result type
+members of the group, payers and shares adding up, shares matching the method (`split.ts`), a payment between two different members, the sealed
+text within its limits on the device and the `sealed` blob's form and length on the server (`DESIGN.md` §5.3); one result type
 of refusals with a reason the screen can say.
 
 **Accepts when:** each action builds the mutation the design's example shows; each refusal in §11.5 has a test; the module imports nothing from the

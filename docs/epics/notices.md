@@ -35,7 +35,7 @@ otherwise; reading on one device reads on another.
 
 **Technical:** `notice_pref` with the defaults of §12.3 and channels `email`, `core_bell` (used by 11.1) and `push` (reserved for phase 2, not shown);
 Settings > Notifications, saying plainly what is not available (no mail, no core), and linking to each group's choice; `raise` writes the mail outbox
-for kinds with email on, with no sealed field in it ("Kasun added an expense of €84.00 in a group on Tally").
+for kinds with email on, with no sealed text in it ("Kasun added an expense of €84.00 in a group on Tally").
 
 **Accepts when:** turning a kind's email off stops its mail and keeps its bell; with no mail set up, Settings says so and nothing fails.
 
