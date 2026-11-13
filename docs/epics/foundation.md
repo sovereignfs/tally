@@ -35,7 +35,7 @@ guide, pull request template (with Tally's checks: the one write path, sealed te
 Ledger; their scripts are made to pass in 1.2. **Left out:** `@sovereignfs/config`, `sdk` and `manifest`, added by the tasks that use them (1.4, 2.3,
 1.10), as Ledger did. A placeholder page keeps `next typegen` honest until the shell (1.8).
 
-#### 📋 1.2 — Format, lint and test tooling
+#### ✅ 1.2 — Format, lint and test tooling
 
 **Goal:** the checks every later task runs. **Design:** §20 Testing. **Depends on:** 1.1.
 
@@ -44,6 +44,12 @@ Ledger; their scripts are made to pass in 1.2. **Left out:** `@sovereignfs/confi
 one real test.
 
 **Accepts when:** each check passes, and each is seen to fail on a planted fault.
+
+**Done as:** Prettier and ESLint with Tusk's configuration, arrived with 1.1's copy (strict TypeScript rules, jsx-a11y, allowed on ESLint 10 by one
+named peer rule); `vitest.config.ts` copied from Ledger's same task (the design system inlined for its CSS Modules, files one after another, the `@/`
+alias); `fake-indexeddb` 6.2 as a dev dependency, unused until 6.2 imports it per test file as Tusk does; `src/smoke.test.ts` reads `package.json`, so
+a runner that finds nothing cannot pass. Each of `format:check`, `lint` (an unused variable, and an image with no `alt`), `typecheck` and `test` was
+seen to fail on a planted fault and pass once it was removed. **Left out:** git hooks, as in Ledger.
 
 #### 📋 1.3 — Continuous integration
 

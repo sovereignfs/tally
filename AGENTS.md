@@ -141,13 +141,15 @@ Milestone A brings Tusk's set, and this list is where they are written as they l
 
 ```bash
 pnpm install --frozen-lockfile   # every routine install
+pnpm format:check                # Prettier; `pnpm format` writes
+pnpm lint                        # ESLint, strict TypeScript and jsx-a11y; `pnpm lint:fix`
 pnpm typecheck                   # next typegen && tsc --noEmit
-pnpm exec prettier --check .     # until 1.2 brings `pnpm format:check`
+pnpm test                        # Vitest, files one after another
 pnpm dev                         # http://localhost:3004
 ```
 
-Still to come: `format`, `lint`, `test` (1.2), `db:generate`, `db:dev` (1.5), `seed`, `boot-check`, `e2e`, `manifest:check`, `build`,
-`scripts/deploy-check.sh`. Until `lint` and `test` exist, `verify` means the above pass and every relative link in the Markdown resolves.
+Still to come: `db:generate`, `db:dev` (1.5), `seed`, `boot-check`, `e2e`, `manifest:check`, `build`, `scripts/deploy-check.sh`. **`verify` means**
+`format:check`, `lint`, `typecheck` and `test` pass.
 
 ## Layout
 
