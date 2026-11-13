@@ -125,7 +125,7 @@ billing stopped the last run).
 
 **Accepts when:** every response, including errors and redirects, carries the policy; a test fails if `'unsafe-inline'` appears in `script-src`.
 
-#### 📋 1.8 — Design system boundary and shell
+#### ✅ 1.8 — Design system boundary and shell
 
 **Goal:** `@sovereignfs/ui` wired in, with the app's frame. **Design:** §15.1, §15.2. **Depends on:** 1.2.
 
@@ -135,6 +135,19 @@ the device; `MobileFooter` at a phone's width; the app's CSS check (only `--sv-*
 The places are filled by epic 7.
 
 **Accepts when:** the shell renders in light and dark at desktop and phone widths, with no literal colour anywhere.
+
+**Done as:** from Ledger's same task (itself Tusk's) and renamed: the root layout (`@sovereignfs/ui` tokens, Hanken Grotesk from the package, the
+theme script with the proxy's nonce once 1.7 makes one, `ToastProvider`), `globals.css`, `src/theme/`, `src/ui/design-tokens.ts` and its test (no
+literal colour, no undefined token; seen to fail on a planted `#ff0000`), `no-fork.test.ts`, the not-found, error and loading pages; `@dnd-kit/core`
+and `sortable` added as the design system's peers. Tally's own: `src/ui/nav.ts`, the one list of places (Home, Groups, People, Activity, Insights,
+tested), and `AppShell` with the header (the sidebar's ☰, the wordmark _tally._, slots for the bell and the avatar menu), the sidebar (Add expense,
+Home, People, Activity, Insights, then Groups with _New group_), and on a phone `MobileFooter` with Home and Groups left, People and Activity right,
+its middle button opening a drawer with Add expense and Insights. **The sidebar is full or a rail of icons**, chosen with ☰ and kept in this browser
+(`tally.sidebar`), put on the page as `data-sidebar` by the theme script before first paint; its rows are the app's own, as Tusk's are, since
+`NavList` has no rail. `TallyMark` and `public/icons/icon.svg` are a tally of five. A placeholder page for each place. Seen in the browser pane: light
+and dark, at 1280px and 375px, the rail kept across a reload, the drawer open, the not-found page; no console error but that page's own 404.
+**Left out:** Add expense and New group are drawn disabled until 7.2 and 7.1; the design system has no chart icon, so Insights uses
+`layout-dashboard` until the charts (14.1) bring one; the PNG icons come with the PWA (1.11).
 
 #### 📋 1.9 — Browser tests
 

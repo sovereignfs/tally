@@ -153,11 +153,11 @@ scripts/test-ci-changes.sh       # the CI classifier's tests, after changing scr
 pnpm dev                         # http://localhost:3004
 ```
 
-Still to come: `seed`, `boot-check`, `e2e`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
+Still to come: `seed`, `e2e`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
 `format:check`, `lint`, `typecheck` and `test` pass; a data-layer change also runs `test` and `boot-check` on sqld, a file and PostgreSQL
 (`TALLY_TEST_*`, as CI's `tests` legs set them).
 
 ## Layout
 
-`DESIGN.md` §5.1 is where things go as the app is built. Today the repository holds the documents, the repository's conventions, and a placeholder
-page in `app/` that the shell (1.8) and the landing page (2.2) replace.
+`DESIGN.md` §5.1 is where things go as the app is built. Today it holds the documents, the repository's conventions, the settings (`src/config/`), the
+database (`src/db/`), the theme (`src/theme/`) and the shell (`src/ui/`, `app/(app)/`), whose places are empty until epic 7 fills them.
