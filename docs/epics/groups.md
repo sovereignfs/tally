@@ -28,10 +28,10 @@ test checks for each read.
 
 #### 📋 3.2 — Groups, members and access
 
-**Goal:** a person makes a group, is its owner, and nobody else can reach it. **Design:** §5.2, §7.1, §7.2. **Depends on:** 3.1, 4.1.
+**Goal:** a person makes a group, is its owner, and nobody else can reach it. **Design:** §5.2, §5.3, §7.1, §7.2. **Depends on:** 3.1, 4.1, 15.2.
 
 **Technical:** `grp` and `member`; `/api/ops` (session, `Origin`, one handler per operation, answering at once with the group's new state or a refusal
-that reads as not found); operations: create (name, colour, default currency from the person's primary currency), rename and recolour, change currency,
+that reads as not found); operations: create (name sealed on the device with the group's first key epoch, wrapped to the creator's devices and recovery key, 15.3; colour; default currency from the person's primary currency), rename and recolour, change currency,
 simplify debts on or off, make and unmake owner (the last owner held); the membership condition as one SQL fragment in `src/access/` used by every
 statement; `src/access/routes.ts` and the second-person test; limits (§7.3).
 
@@ -44,7 +44,8 @@ sentence.
 
 **Technical:** operations leave, remove (owners), close and reopen (owners), delete (owners; only with no expense or payment row, deleted ones
 included); the guards read balances through `src/balances/` on the server, in the same transaction; a closed group refuses every mutation (5.2) and
-every operation but reopen; deleting names every table by `group_id`, in one transaction. A member who left keeps their row.
+every operation but reopen; deleting names every table by `group_id`, `key_wrap` included, in one transaction. A member who left keeps their row; their
+leaving makes the group due a new key epoch (15.6).
 
 **Accepts when:** leave, remove and close are refused with the amounts while a balance is not zero; a closed group refuses an expense through sync; a
 group with one deleted expense cannot be deleted; deleting a group leaves no row of it in any table.

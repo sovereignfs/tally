@@ -20,7 +20,7 @@ recorded for them. Mail is Tally's own, sent in the background; with no mail set
 **Goal:** mail sent in the background, reliably and quietly. **Design:** §12.3. **Depends on:** 1.6.
 
 **Technical:** `mail_outbox` written in the transaction of the change that causes it; a mail job that claims due rows, renders the template (plain text
-and simple HTML, the instance's name, no remote image), sends through Tally's SMTP (`src/mail/`, copied in 2.1), and retries with backoff up to a
+and simple HTML, the instance's name, no remote image, and never a sealed field: no group's name, description or comment, `DESIGN.md` §5.3), sends through Tally's SMTP (`src/mail/`, copied in 2.1), and retries with backoff up to a
 limit, recording a failure kind; nothing about a message logged but its id and failure kind; with no SMTP set, rows are not written and callers are told
 mail is off.
 
@@ -44,8 +44,8 @@ member cannot see a placeholder's email.
 **Goal:** a placeholder's place taken by a real account. **Design:** §6.3, §6.4. **Depends on:** 8.1, 8.2, 14.5.
 
 **Technical:** `invitation`: 32 random bytes, stored as a hash, constant-time comparison, 14 days, single use, one live per placeholder, revocable,
-Resend at most once an hour; sent through 8.1 when there is an email and mail, always available as a link (`CopyButton`); `/invite/<token>` showing the
-group and inviter only, with sign-in, sign-up (and core when set); `TALLY_AUTH_SIGNUP=invite` as the default, accepting an invitation as the reason to
+Resend at most once an hour; sent through 8.1 when there is an email and mail, always available as a link (`CopyButton`; the key in its fragment
+joins with 15.5); `/invite/<token>` showing the inviter only (and the group's name once 15.5 opens it from the fragment), with sign-in, sign-up (and core when set); `TALLY_AUTH_SIGNUP=invite` as the default, accepting an invitation as the reason to
 allow a local sign-up; the claim in one transaction (members repointed, the placeholder's email dropped, the placeholder deleted, the group's `seq`
 incremented so devices pull the change, activity and `invite_accepted`); refused for a group the account is already in. Every invalid link shows the
 same page.

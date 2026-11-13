@@ -22,8 +22,8 @@ several people (`DESIGN.md` §11.3). Each task says what it took from Tusk and w
 
 **Technical:** session and `Origin` checked; a bounded body; a protocol version; the outbox applied in order through 5.2, each answered applied or
 refused with its reason; then, for the account's current groups (membership read in the statement), rows whose `seq` is past each cursor, paged at
-`seq` boundaries, tombstones included; groups the account is no longer in named as gone; a rate limit. Shape from Tusk's `src/sync/`, with cursors per
-group.
+`seq` boundaries, tombstones included; groups the account is no longer in named as gone; the key exchange of 15.3 folded in (wraps the device lacks,
+wraps it is asked for); a rate limit. Shape from Tusk's `src/sync/`, with cursors per group.
 
 **Accepts when:** a device starting at zero gets each group whole; a cursor gets only what is new; a group left between two syncs is named gone and its
 rows stop; a lost answer retried applies nothing twice.
@@ -33,7 +33,8 @@ rows stop; a lost answer retried applies nothing twice.
 **Goal:** screens read and write the device, and the loop syncs. **Design:** §11.1, §11.3, §11.7. **Depends on:** 6.1.
 
 **Technical:** `src/local/`: IndexedDB through `idb`, one database per account (`tally-<account id>`), the group tables of §19.3's device store; a
-write applies to the store and the outbox in one IndexedDB transaction, through the actions of 5.1; a store reader with change events for React; the
+write applies to the store and the outbox in one IndexedDB transaction, through the actions of 5.1, its text sealed under the group's newest epoch, or
+sealed once the key arrives (15.3); sealed fields kept as they arrived and opened in memory; a store reader with change events for React; the
 loop (after a write, debounced; on load, focus, coming online; every 30 seconds while visible), one tab at a time (Web Locks), others told
 (BroadcastChannel); server rows replace local ones on pull, and outbox entries still pending are re-applied on top; sign-out deletes the database
 after trying to send; an ended session keeps the outbox; `navigator.storage.persist()`. Shape from Tusk's Desk.

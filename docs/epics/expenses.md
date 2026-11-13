@@ -22,7 +22,8 @@ expense, a payment or a comment.
 
 **Technical:** `src/actions/`: add, edit, delete and restore an expense; the same for a payment; add and delete a comment; each from intent and the
 current rows to a mutation (ids made by the caller, `baseVersion` for edits); `src/actions/validate.ts`: sizes, the category list, known currencies,
-members of the group, payers and shares adding up, shares matching the method (`split.ts`), a payment between two different members; one result type
+members of the group, payers and shares adding up, shares matching the method (`split.ts`), a payment between two different members, a sealed field's
+text within its limit on the device and its sealed form and length on the server (`DESIGN.md` §5.3); one result type
 of refusals with a reason the screen can say.
 
 **Accepts when:** each action builds the mutation the design's example shows; each refusal in §11.5 has a test; the module imports nothing from the
@@ -56,7 +57,8 @@ allowed; refused in a closed group; plain text, at most 2,000 characters.
 
 **Technical:** `activity` written in the transaction of every applied mutation (5.2) and every operation (3.2, 3.3, 8.2, 8.3); `GET` of a group's
 activity and of every group's (paged, filters by group, person and kind, the permission in the statement); `src/activity/describe.ts`, one pure
-function giving each line in words from the reader's point of view, with a test per kind.
+function giving each line in words from the reader's point of view, run on the device, which opens the sealed text the line's details carry
+(`DESIGN.md` §5.3), with a test per kind.
 
 **Accepts when:** every kind in §12.1 is written by the change that causes it, in its transaction; a member who left no longer reads the group's
 activity; the words say "You" for the reader.

@@ -17,7 +17,7 @@ the task is corrected.
   mutation is in `src/access/routes.ts` with a test calling it as a second person (once 3.2 is in); a new table is handled by `People.deletePerson`
   (once 2.5 is in) and by export and import (once 12.1 is in); a write goes through the one path and keeps the arithmetic's invariants (once 5.2 is
   in); a screen works with a keyboard, in light and dark, at a phone's width, and offline where `DESIGN.md` §11 says it does; no amount, description,
-  note, comment, name or address reaches a log; a safeguard's test was seen to fail with it switched off.
+  note, comment, name or address reaches a log; a sealed field never reaches the server, a log or a mail in plain text (once 15.1 is in); a safeguard's test was seen to fail with it switched off.
 - **Epic 14 is done in `sovereign`,** following that repository's conventions; its tasks here record what Tally needs and are marked done when the
   release that carries it is published.
 
@@ -41,3 +41,4 @@ _Status key: ✅ Done · ⏳ In progress · 📋 Planned · 🚧 Waits on a deci
 | 12  | [Portability](portability.md)           | Export and import                                                                                       | 2     |
 | 13  | [Release](release.md)                   | Seed, security review, documents, the first release, hosting                                            | 5     |
 | 14  | [Upstream, in `sovereign`](upstream.md) | Charts, `AvatarStack`, a floating button, `MoneyInput` and a currency picker, `AUTH_SIGNUP`, the port   | 6     |
+| 15  | [Encryption](encryption.md)             | The cipher, devices, group keys and granting, the recovery key, keys in invitation links, rotation      | 6     |

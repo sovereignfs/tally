@@ -81,6 +81,10 @@ Tusk's rules, as they apply here, and Tally's own. They describe the app as `DES
   (`DESIGN.md` §5.2), never checked first and then touched; an owner's operation adds the role to it. Anything a change points at must be the same
   group's, in the same statement. **A refusal reads as not found.** A route, operation or mutation finds the session first, checks `Origin` on a write,
   is listed in `src/access/routes.ts`, and has a test calling it as a second person.
+- **What people write in a group is sealed on the device** (`DESIGN.md` §5.3): a group's name, descriptions, notes and comments travel and are stored
+  only as ciphertext under the group's key, through `src/cipher/`. The server never holds a key that opens them, and never puts a sealed field in a
+  log, a mail or a call to core. Nobody is asked to handle a key: devices unlock each other, and the recovery key is offered, never required.
+- **Every member hears of a group's changes by default;** each chooses per group (`member.notify`), and the server works out who is involved.
 - **Money is integer minor units of its currency, always** (`DESIGN.md` §8.7). No floating point touches an amount. **Nothing converts between
   currencies, and no figure blends two.**
 - **A split has one rounding rule,** `src/money/split.ts`, used by the browser, the server, the seed and import; the server recomputes shares and

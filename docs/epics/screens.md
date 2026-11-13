@@ -102,7 +102,8 @@ both took part in, with their group; for a placeholder the reader added, Invite 
 **Goal:** the group's details, people and lifecycle. **Design:** §7, §15.3. **Depends on:** 7.3, 3.3.
 
 **Technical:** `/g/<id>/settings`: details (owners), simplify debts (owners), people with roles (owners change them; the last owner held, with the
-reason shown), Add people (8.2), invitations (8.3), Leave, Remove (owners), Close and Reopen, Delete (only when allowed, §7.3); each an online
+reason shown), Add people (8.2), invitations (8.3), Notifications for this group, for every member (everything by default, only what involves me,
+nothing; `DESIGN.md` §12.2), Leave, Remove (owners), Close and Reopen, Delete (only when allowed, §7.3); each an online
 operation with its refusal in a sentence; every disabled control says why.
 
 **Accepts when:** every refusal of 3.3 shows its sentence; Delete is absent once an expense exists.

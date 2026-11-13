@@ -66,7 +66,8 @@ them and every other member's balances unchanged, and a replayed `jti` is refuse
 
 **Technical:** `People.deletePerson` in `src/sovereign/people.ts`: the person kept as a name only (`account_id`, `email`, `core_sub` cleared,
 `deleted_at` set); memberships ended where the balance is zero (once 4.3 is in; until then, kept); a group's ownership passed to its longest-standing
-member with an account (`owner_passed` once 9.1 is in); a group with no other account deleted by `group_id`; and the rows listed in §18 removed;
+member with an account (`owner_passed` once 9.1 is in); a group with no other account deleted by `group_id`; and the rows listed in §18 removed,
+devices, the recovery key and key wraps included once 15.2 is in;
 better-auth's rows and the account; the `sub` link last; safe to run twice. `/api/account/delete` after the password or a fresh session. The test seeds
 one row of every table for the person and for a second person sharing a group, and fails for a table nobody decided about. Each later task that adds a
 table extends it.
@@ -79,7 +80,7 @@ group; the second person's balances are unchanged; a second run succeeds.
 **Goal:** Settings as a page and from the avatar menu. **Design:** §16. **Depends on:** 2.1, 1.8, 3.1.
 
 **Technical:** `/settings` with Profile (name and email, written to the account and the person together; primary currency in `account_settings`), the
-account sections Tusk has (sign-in methods, passkeys, two-factor, linking core), and Data holding delete account. Notifications arrive with 9.2, This
-device with 6.3, export and import with 12.1 and 12.2.
+account sections Tusk has (sign-in methods, passkeys, two-factor, linking core), and Data holding delete account. Notifications arrive with 9.2, Devices
+with 15.2, Recovery key with 15.4, This device with 6.3, export and import with 12.1 and 12.2.
 
 **Accepts when:** each section works on all three databases; changing the name changes it on every group the person is in.
