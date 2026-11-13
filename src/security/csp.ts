@@ -3,8 +3,8 @@
  *
  * Descriptions, notes, comments and names come from people, a page shows money, and **a page holds the keys that open a group's sealed text**
  * (DESIGN.md §5.3): a script that ran there could read them. So it must stay safe even if a way to put markup in what people write were found:
- * nothing may run that the server did not mark, and nothing third-party may load or be reached (`connect-src 'self'`). The Argon2id of task 15.1
- * adds `'wasm-unsafe-eval'` here if it is WebAssembly, and says so.
+ * nothing may run that the server did not mark, and nothing third-party may load or be reached (`connect-src 'self'`). The one allowance is
+ * `'wasm-unsafe-eval'`, for the WebAssembly of Argon2id (task 15.1): it compiles WebAssembly the page itself carries, and runs no JavaScript.
  *
  *  - **Scripts** run only with this request's nonce, or when a script that has it loads them (`'strict-dynamic'`): the bundles Next adds, and the
  *    theme script in the layout. No inline handler, no `javascript:` address, no `eval` (but in development, where React wants it).
@@ -33,7 +33,8 @@ export function contentSecurityPolicy({ nonce, secure, development }: PolicyOpti
   const styles = development ? "'self' 'unsafe-inline'" : `'self' 'nonce-${nonce}'`;
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development ? " 'unsafe-eval'" : ''}`,
+    // `'wasm-unsafe-eval'` lets WebAssembly compile, and nothing else: Argon2id is WebAssembly (`src/cipher/password.ts`). It is not `eval`.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${development ? " 'unsafe-eval'" : ''}`,
     `style-src ${styles}`,
     `style-src-elem ${styles}`,
     "style-src-attr 'unsafe-inline'",

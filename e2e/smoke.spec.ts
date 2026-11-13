@@ -224,3 +224,18 @@ test('offline, a request fails and the browser says it is offline; after, it is 
   expect(await page.evaluate(() => navigator.onLine)).toBe(true);
   expect(await reach()).toBe(200);
 });
+
+test('WebAssembly compiles under the policy, for Argon2id', async ({ page }) => {
+  await page.goto('/');
+  // The smallest module there is: the magic number and the version.
+  const compiled = await page.evaluate(async () => {
+    try {
+      await WebAssembly.compile(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
+      return 'compiled';
+    } catch (error) {
+      return String(error);
+    }
+  });
+  expect(compiled).toBe('compiled');
+  // That eval stays refused is the policy's unit test (src/security/csp.test.ts): Playwright's own evaluation is not held to the page's policy.
+});

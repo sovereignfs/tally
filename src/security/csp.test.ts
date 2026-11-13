@@ -17,11 +17,14 @@ describe('the Content-Security-Policy', () => {
     expect(scripts).toContain("'strict-dynamic'");
     expect(scripts).not.toContain("'unsafe-inline'");
     expect(scripts).not.toContain("'unsafe-eval'");
-    expect(scripts).not.toContain("'wasm-unsafe-eval'");
+    // WebAssembly may compile, for Argon2id (src/cipher/password.ts), and that is the one allowance.
+    expect(scripts).toEqual(["'self'", "'nonce-NONCE'", "'strict-dynamic'", "'wasm-unsafe-eval'"]);
   });
 
   it('never allows an inline script, a handler or eval, in production', () => {
-    expect(policy()).not.toMatch(/unsafe-inline.*script|script-src[^;]*unsafe/);
+    expect(policy().replace("'wasm-unsafe-eval'", '')).not.toMatch(
+      /unsafe-inline.*script|script-src[^;]*unsafe/,
+    );
   });
 
   it('allows eval in development only, because React asks for it there', () => {
@@ -87,5 +90,15 @@ describe('the headers every response has', () => {
 
   it('has a year of HSTS for the subdomains too', () => {
     expect(HSTS).toBe('max-age=31536000; includeSubDomains');
+  });
+});
+
+describe('WebAssembly', () => {
+  it('may compile, for Argon2id, while eval stays refused outside development', () => {
+    const policy = contentSecurityPolicy({ nonce: 'n', secure: true, development: false });
+    const scripts =
+      policy.split('; ').find((directive) => directive.startsWith('script-src ')) ?? '';
+    expect(scripts).toContain("'wasm-unsafe-eval'");
+    expect(scripts.split(' ')).not.toContain("'unsafe-eval'");
   });
 });

@@ -18,7 +18,7 @@ Argon2id, HPKE for wraps, one sealed blob per row. Tally is never described as "
 
 ## Tasks
 
-#### 📋 15.1 — The cipher
+#### ✅ 15.1 — The cipher
 
 **Goal:** the primitives every sealed row and every key goes through, pure and tested. **Design:** §5.3. **Depends on:** 1.2.
 
@@ -36,6 +36,16 @@ run in the browser and in Vitest, imported by nothing on the server but the form
 vectors for its suite; a wrap opens only with its key, and a wrong key is told apart from a damaged value; two texts whose lengths fall in one bucket
 seal to the same length; the two password outputs differ and neither gives the other; a recovery code survives being retyped
 with spaces and lower case; Argon2id takes under a second on a mid-range phone with the chosen parameters; the module imports nothing from the server.
+
+**Done as:** `src/cipher/`, Tally's own on WebCrypto: `bytes` (base64url with one form per value, hex, I2OSP), `errors` (`malformed`, `wrong_key`,
+`tampered`, `unsupported`), `hpke` (RFC 9180 base mode, single-shot; HKDF built from HMAC, since HPKE labels Extract and Expand apart), `seal`
+(`s1.<epoch>.<…>`, padded to 32 bytes), `wrap` (`h1.` to a public key, `w1.` to a secret, each to a binding), `password` (Argon2id from `hash-wasm`
+4.13.0, exact-pinned, the one library), `prf`, `recovery` (Crockford base32 in groups of four, **with two check characters** so a typo is told apart
+from another account's code), `vault` (IndexedDB per account, sealed under a non-extractable AES key per device). `hpke` matches RFC 9180's vectors for
+X25519 with AES-128-GCM and AES-256-GCM on every intermediate value and the ciphertext (`hpke.vectors.json`, taken from the CFRG draft's
+`test-vectors.json`). The policy gains `'wasm-unsafe-eval'` for Argon2id, Tusk's test that forbade it changed to allow exactly that, and a browser test
+that WebAssembly compiles under the policy, which failed without it. Argon2id takes about 150 ms in Node here; a mid-range phone, at three to five
+times slower, is estimated at 0.5–0.8 s and is measured in a browser with 2.1. **Left out:** the QR of the recovery code, which is 15.4's screen.
 
 #### 📋 15.2 — Account keys and unlocking
 
