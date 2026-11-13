@@ -191,7 +191,7 @@ pass in Chromium and WebKit on a SQLite file; the smoke spec in Chromium on sqld
 test failed with the pre-paint line taken out of the theme script. **Left out:** CI has not run it on GitHub (billing); instances for core and
 passkeys join with 2.3 and 2.1.
 
-#### 📋 1.10 — The image and deployment setups
+#### ✅ 1.10 — The image and deployment setups
 
 **Goal:** one image, three Compose setups. **Design:** §14.4, §20 Deployment. **Depends on:** 1.5, 1.6.
 
@@ -200,6 +200,18 @@ passkeys join with 2.3 and 2.1.
 PostgreSQL; `scripts/deploy-check.sh`; `publish.yml` on a `vX.Y.Z` tag.
 
 **Accepts when:** `scripts/deploy-check.sh` boots every setup from nothing and as an instance would host it, answering `/api/health` with `200`.
+
+**Done as:** copied from Ledger's same task (itself Tusk's, minus the operator tools, backup and GitHub) and renamed: `sovereign.manifest.json`
+(port 3004, checked by `pnpm manifest:check` and held to the code by `src/sovereign-manifest.test.ts`), the Dockerfile (Debian, `USER node`, a
+required `ARG PORT`, migrations beside the server, the licences), `.dockerignore`, `deploy/` (sqld, a file, PostgreSQL, README and `.env.example`),
+`scripts/deploy-check.sh`, `src/deploy.test.ts`, `publish.yml` on a `vX.Y.Z` tag, and CI's `manifest:check`. Changed: Tally's description; the
+deploy README and `.env.example` lose Ledger's exchange rates and gain what the operator cannot read (§5.3); **the manifest asks only for `openid`,
+`profile` and `email`**, and `offline_access` and `directory` join it with 11.2, which uses them (§14.4 says so). **A fix beyond Ledger:**
+`deploy-check.sh` piped `docker compose logs` into `grep -q` under `pipefail`, which fails when grep stops at its match while the logs are still
+written; it failed here once on PostgreSQL, and the logs are now read whole first. Built as an operator builds it (`sovereign-manifest docker-args`;
+162 MB, user `node`, port 3004) and run through every setup twice, all passing: sqld, a file, PostgreSQL, the one `docker run`, an instance's way of
+hosting it, and a wrong setting. **Left out:** the sign-in page and core's notices are not checked by the script yet (TODO for 2.3 and 2.4, where
+those routes are built); CI's image job and `publish.yml` have not run on GitHub.
 
 #### 📋 1.11 — The PWA
 

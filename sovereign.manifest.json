@@ -1,0 +1,19 @@
+{
+  "manifest": 2,
+  "prefix": "tally",
+  "name": "Tally",
+  "description": "Split shared expenses with the people you share them with, and see who owes whom",
+  "icon": "/icons/icon.svg",
+  "port": 3004,
+  "health": "/api/health",
+  "launch": "/",
+  "signIn": {
+    "redirect": ["/api/auth/callback/sovereign"],
+    "backChannel": "/api/sovereign/backchannel-logout",
+    "accountDeleted": "/api/sovereign/account-deleted",
+    "scopes": ["openid", "profile", "email"]
+  },
+  "database": true,
+  "generate": ["TALLY_AUTH_SECRET", { "name": "TALLY_ENCRYPTION_KEY", "bytes": 32 }],
+  "core": ">=0.57.0 <1.0.0"
+}

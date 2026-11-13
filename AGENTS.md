@@ -150,13 +150,16 @@ pnpm db:dev sqld|sqlite|postgres  # a development database in Docker, or a file
 pnpm db:generate <name>          # a migration for both dialects and both stores; never written by hand
 pnpm boot-check                  # the built server, from empty, on the database the TALLY_DB_* settings name
 pnpm build && pnpm e2e           # the browser tests on the built app, Chromium and WebKit; `pnpm e2e:fast` runs them in shards
+pnpm manifest:check              # sovereign.manifest.json is a valid manifest
+eval "docker build $(pnpm exec sovereign-manifest docker-args) -t tally:ci ." && TALLY_IMAGE=tally:ci scripts/deploy-check.sh
+                                 # the image, built as an operator builds it, through every setup in deploy/
 scripts/test-ci-changes.sh       # the CI classifier's tests, after changing scripts/ci-changes.sh
 pnpm dev                         # http://localhost:3004
 ```
 
-Still to come: `seed`, `manifest:check`, `scripts/deploy-check.sh`. **`verify` means**
+Still to come: `seed` (13.1). **`verify` means**
 `format:check`, `lint`, `typecheck` and `test` pass; a data-layer change also runs `test` and `boot-check` on sqld, a file and PostgreSQL
-(`TALLY_TEST_*`, as CI's `tests` legs set them), and a change a person would see runs `pnpm e2e`.
+(`TALLY_TEST_*`, as CI's `tests` legs set them), and a change a person would see runs `pnpm e2e`; a change to the image, `deploy/` or a setting runs the deploy check.
 
 ## Layout
 

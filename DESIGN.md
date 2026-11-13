@@ -746,7 +746,8 @@ Back-channel logout at `/api/sovereign/backchannel-logout` ends every session of
 }
 ```
 
-- **`directory` and `offline_access`** are for finding people in core's directory, which the SDK does as the person (`sv.as({ sub })`) with their
+- **`directory` and `offline_access`** join the manifest with the task that uses them (11.2); until then it asks for `openid`, `profile` and `email`
+  alone. They are for finding people in core's directory, which the SDK does as the person (`sv.as({ sub })`) with their
   refresh token. That token is a credential, so it is kept only through envelope encryption under `TALLY_ENCRYPTION_KEY` (`src/crypto/`), in the SDK's
   `tokenStore`. How better-auth's `genericOAuth` hands the refresh token to that store is checked in the task that builds it (11.2, §22); if a core
   refuses the scopes, or the person did not grant them, adding people works exactly as alone.

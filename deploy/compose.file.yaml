@@ -1,0 +1,31 @@
+# The smallest setup: one container, and the database is a file on a volume (DESIGN.md §20, Deployment).
+#
+#   cp .env.example .env     # then edit it: at least TALLY_URL, TALLY_AUTH_SECRET and TALLY_ENCRYPTION_KEY
+#   docker compose -f compose.file.yaml up -d --build
+#
+# One process, so there is nothing to wait for and nothing else to run. It suits one person or a small group; a second instance cannot
+# share the file, so this setup does not scale out. The file must stay on a local disk, never a network filesystem.
+name: tally
+
+services:
+  web:
+    build:
+      context: ..
+      # The port is written in sovereign.manifest.json, which Compose cannot read; a test holds this to it.
+      args:
+        PORT: '3004'
+    image: ${TALLY_IMAGE:-tally}
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TALLY_DB_DIALECT: sqlite
+      TALLY_SQLITE_URL: file:/data/tally.db
+    volumes:
+      - tally-data:/data
+    ports:
+      - '127.0.0.1:${TALLY_PORT:-3004}:3004'
+
+volumes:
+  tally-data:
