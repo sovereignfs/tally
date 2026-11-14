@@ -84,7 +84,7 @@ could overlap the loop's (not reproduced as a loss in a test, so kept as a guard
 three times each: the page after adding, the reader's part, search and filters in the address and back after a reload, a thousand expenses painted
 from the device within the time with no progress bar, and not found.
 
-#### 📋 7.4 — A group: balances
+#### ✅ 7.4 — A group: balances
 
 **Goal:** who owes whom in a group. **Design:** §15.5, §10. **Depends on:** 7.3, 4.3.
 
@@ -93,6 +93,15 @@ wired in 9.3); the line saying whether debts are simplified, an owner's link to 
 (`SplitPane`).
 
 **Accepts when:** the figures match 4.3's fixtures seeded into a group; turning simplify on changes the pairs on every device at its next pull.
+
+**Done as:** `src/screens/BalancesView.tsx`, the group's Balances view (`?view=balances`, so the group's views are now tabs): each member's balance
+per currency in words ("you are owed €10.00", "owes €10.00", "settled up", a member who left marked), then who owes whom from `src/balances/` by the
+group's setting (`readGroupView` now carries `suggestions`), each pair involving the reader with Settle up, which opens the payment sheet filled in
+(7.5), and the line saying whether debts are simplified, with an owner's link to the group's settings (7.9). **Not done:** Remind (9.3), and the
+column beside Expenses on a wide screen (`SplitPane`), which can follow. Members other than the maker exist only once adding people does (Milestone F),
+so the browser tests seed placeholders straight into their own SQLite file (`e2e/seed.ts`, a fixture, moving the group's `seq` on as an operation
+would). Tests in Playwright, Chromium and WebKit: a hand-worked case (you pay for you and Sam, Sam pays for Sam and Lee) gives each balance and the
+two pairs, and turning simplify on gives the one payment that settles everyone.
 
 #### 📋 7.5 — Payments and settling up
 

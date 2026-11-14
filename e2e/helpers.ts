@@ -1,4 +1,10 @@
-import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import {
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 
 /**
  * What the browser tests share. The sync tests (epic 6) need two people's browsers at once and a browser with no network; these are the ways to
@@ -187,13 +193,37 @@ export async function addExpense(
   amount: string,
   description: string,
   category?: string,
+  choose?: (form: Locator) => Promise<void>,
 ) {
+  // The last sheet's closing has reached the address before this one opens: the router updates it after a moment.
+  await expect(page).not.toHaveURL(/add=expense/);
   await page.locator('body').click({ position: { x: 1, y: 1 } });
   await page.keyboard.press('n');
   const form = page.getByRole('form', { name: 'Add expense' });
   await form.getByLabel('Amount', { exact: true }).fill(amount);
   await form.getByLabel('Description').fill(description);
   if (category) await form.getByLabel('Category').selectOption({ label: category });
+  if (choose) await choose(form);
   await form.getByLabel('Description').press('Enter');
   await expect(form).toHaveCount(0);
+  await expect(page).not.toHaveURL(/add=expense/);
+}
+
+/** The id of the group whose page this is. */
+export const groupIdOf = (page: Page): string => /\/g\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? '';
+
+/** Reloads until the device has pulled the group's members named (a seeded change reaches a device at its next sync, and a load is one). */
+export async function untilMembers(page: Page, names: readonly string[]) {
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        await page.getByRole('img', { name: /^Members/ }).waitFor();
+        const label =
+          (await page.getByRole('img', { name: /^Members/ }).getAttribute('aria-label')) ?? '';
+        return names.every((name) => label.includes(name));
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
 }

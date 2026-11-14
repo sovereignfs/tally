@@ -1,4 +1,4 @@
-import { type Balances, balances } from '../balances';
+import { type Balances, type Debt, type GroupRows, balances, suggestedPayments } from '../balances';
 import type {
   LocalDatabase,
   LocalExpense,
@@ -24,6 +24,8 @@ export interface GroupView {
   /** The reader's membership, if they are in it. */
   me: LocalMember | undefined;
   balances: Balances;
+  /** Who owes whom, by the group's setting (§10.2, §10.3): what Settle up offers. */
+  suggestions: Debt[];
 }
 
 export async function readGroupView(
@@ -37,6 +39,21 @@ export async function readGroupView(
   const me =
     rows.members.find((m) => m.personId === personId && m.leftAt === null) ??
     rows.members.find((m) => m.personId === personId);
+  const groupRows: GroupRows = {
+    expenses: rows.expenses.map((e) => ({
+      currency: e.currency,
+      deleted: e.deletedAt !== null,
+      payers: e.payers.map((p) => ({ memberId: p.memberId, amount: toMinor(p.amount) })),
+      shares: e.shares.map((s) => ({ memberId: s.memberId, amount: toMinor(s.amount) })),
+    })),
+    payments: rows.payments.map((p) => ({
+      currency: p.currency,
+      deleted: p.deletedAt !== null,
+      fromId: p.fromMemberId,
+      toId: p.toMemberId,
+      amount: toMinor(p.amount),
+    })),
+  };
   return {
     group: rows.group,
     members: rows.members.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)),
@@ -44,24 +61,8 @@ export async function readGroupView(
     payments: rows.payments,
     order,
     me,
-    balances: balances(
-      {
-        expenses: rows.expenses.map((e) => ({
-          currency: e.currency,
-          deleted: e.deletedAt !== null,
-          payers: e.payers.map((p) => ({ memberId: p.memberId, amount: toMinor(p.amount) })),
-          shares: e.shares.map((s) => ({ memberId: s.memberId, amount: toMinor(s.amount) })),
-        })),
-        payments: rows.payments.map((p) => ({
-          currency: p.currency,
-          deleted: p.deletedAt !== null,
-          fromId: p.fromMemberId,
-          toId: p.toMemberId,
-          amount: toMinor(p.amount),
-        })),
-      },
-      order,
-    ),
+    balances: balances(groupRows, order),
+    suggestions: suggestedPayments(groupRows, order, rows.group.simplifyDebts),
   };
 }
 
