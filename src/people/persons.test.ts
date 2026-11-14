@@ -6,7 +6,13 @@ import { dbRun } from '../db/exec';
 import { tables } from '../db/tables';
 import { openStoreBesideAuth } from '../db/test-store';
 import { testTarget } from '../db/test-support';
-import { allPersons, cleanName, ensurePerson, personOfAccount } from './persons';
+import {
+  allPersons,
+  cleanName,
+  ensurePerson,
+  personOfAccount,
+  updatePersonFromAccount,
+} from './persons';
 import { emailVisible, viewPerson } from './visibility';
 
 const { leg } = testTarget();
@@ -18,10 +24,17 @@ describe(`persons (${leg})`, () => {
   beforeAll(async () => {
     // The auth store first, then the app's beside it (src/db/test-store.ts), and the hook makes the person in the app's.
     const app: { database?: Database } = {};
-    t = await makeAuth({ signUp: 'open' }, undefined, async (account) => {
-      if (!app.database) throw new Error('the app store is not open yet');
-      await ensurePerson(app.database, account);
-    });
+    t = await makeAuth(
+      { signUp: 'open' },
+      undefined,
+      async (account) => {
+        if (!app.database) throw new Error('the app store is not open yet');
+        await ensurePerson(app.database, account);
+      },
+      async (account) => {
+        if (app.database) await updatePersonFromAccount(app.database, account);
+      },
+    );
     store = await openStoreBesideAuth();
     app.database = store.database;
     await dbRun(store.database, sql`DELETE FROM ${tables(store.database).person}`);
@@ -45,6 +58,22 @@ describe(`persons (${leg})`, () => {
     expect(
       (await allPersons(store.database)).filter((p) => p.accountId === accountId),
     ).toHaveLength(1);
+  });
+
+  it('keeps its name in step when the account’s is changed in Settings, and the name is read from it', async () => {
+    const client = t.client();
+    const reply = await client.post('/api/auth/sign-up/email', {
+      name: 'Thulana',
+      email: 'thulana@example.com',
+      password: 'correct horse battery',
+    });
+    const accountId = reply.body.user.id as string;
+    expect(
+      (await client.post('/api/auth/update-user', { name: '  Thulana   Perera ' })).status,
+    ).toBe(200);
+    expect(await personOfAccount(store.database, accountId)).toMatchObject({
+      name: 'Thulana Perera',
+    });
   });
 
   it('is made once, however many times and from however many places it is asked for at once', async () => {

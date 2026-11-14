@@ -12,6 +12,7 @@ import { tables } from '../db/tables';
 import { testTarget } from '../db/test-support';
 import { createAccountKey, createRequest } from '../keys/store';
 import { RateLimiter } from '../limits/rate';
+import { setPrimaryCurrency } from '../account/settings';
 import { ensurePerson, personById } from '../people/persons';
 import { deleteAccount, deletionPreview, type DeleteDeps } from './delete-account';
 import { ACCOUNT_TABLES, GROUP_TABLES, SHARED_TABLES, deletePerson } from './people';
@@ -116,6 +117,7 @@ describe(`deleting a person (${leg})`, () => {
         { method: 'password', params: 'argon2id:1', wrapped: wrap(c) },
       ]);
       await createRequest(t.database, who, pk(c), 'Phone');
+      await setPrimaryCurrency(t.database, who, 'JPY');
       await dbRun(
         t.database,
         sql`INSERT INTO ${tables(t.database).rateBucket} ("key", window_start, "count") VALUES (${`sign-in:${who}`}, 1, 1)`,
@@ -188,6 +190,7 @@ describe(`deleting a person (${leg})`, () => {
       [db.accountKeyWrap, 'account_id'],
       [db.keyRequest, 'account_id'],
       [db.keyWrap, 'account_id'],
+      [db.accountSettings, 'account_id'],
     ] as const) {
       expect(await count(table, sql`${sql.raw(column)} = ${t.ada.id}`)).toBe(0);
     }
@@ -230,6 +233,7 @@ describe(`deleting a person (${leg})`, () => {
     expect(await count(db.accountKey, sql`account_id = ${t.grace.id}`)).toBe(1);
     expect(await count(db.accountKeyWrap, sql`account_id = ${t.grace.id}`)).toBe(1);
     expect(await count(db.keyRequest, sql`account_id = ${t.grace.id}`)).toBe(1);
+    expect(await count(db.accountSettings, sql`account_id = ${t.grace.id}`)).toBe(1);
     expect(await count(db.rateBucket, sql`"key" = ${`sign-in:${t.grace.id}`}`)).toBe(1);
     expect(await personById(t.database, gracePerson)).toMatchObject({
       accountId: t.grace.id,

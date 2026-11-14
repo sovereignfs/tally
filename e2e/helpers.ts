@@ -126,3 +126,44 @@ export async function signOut(page: Page) {
   await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
   await page.waitForLoadState('load');
 }
+
+/** Whether this device's vault holds the account's key: the record is sealed under the device's key, so only its presence is read. */
+export async function holdsKey(page: Page): Promise<boolean> {
+  // A page still on its way somewhere (just after signing in) cannot answer yet: "not yet", so that a poll asks again.
+  return holdsKeyNow(page).catch(() => false);
+}
+
+async function holdsKeyNow(page: Page): Promise<boolean> {
+  return page.evaluate(async () => {
+    const session = (await (await fetch('/api/auth/get-session')).json()) as {
+      user?: { id: string };
+    } | null;
+    const id = session?.user?.id;
+    if (!id) return false;
+    return new Promise<boolean>((resolve) => {
+      const open = indexedDB.open(`tally-vault-${id}`);
+      open.onupgradeneeded = () => {
+        open.transaction?.abort();
+        resolve(false);
+      };
+      open.onerror = () => resolve(false);
+      open.onsuccess = () => {
+        const db = open.result;
+        if (!db.objectStoreNames.contains('keys')) {
+          db.close();
+          return resolve(false);
+        }
+        const get = db.transaction('keys').objectStore('keys').get('secret:account-key');
+        // Closed after reading, so that this test's look does not hold up a sign-out deleting the vault.
+        get.onsuccess = () => {
+          resolve(get.result !== undefined);
+          db.close();
+        };
+        get.onerror = () => {
+          resolve(false);
+          db.close();
+        };
+      };
+    });
+  });
+}

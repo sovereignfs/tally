@@ -6,7 +6,7 @@ import { authClient } from '../client';
 import { deleteVault } from '../../cipher/vault';
 
 /**
- * The avatar menu at the right of the header: who the person is (name and address) and *Sign out*. Settings joins this menu with task 2.6. Signing
+ * The avatar menu at the right of the header: who the person is (name and address) and *Sign out*. Signing
  * out needs the server, so that no one else can use the session: a failure to reach it is said, and the person stays signed in.
  */
 export function AccountMenu({
@@ -40,6 +40,11 @@ export function AccountMenu({
       size="sm"
       aria-label="User menu"
       items={[
+        {
+          label: 'Settings',
+          icon: 'settings',
+          onSelect: () => window.location.assign('/settings'),
+        },
         {
           label: leaving ? 'Signing out…' : 'Sign out',
           icon: 'log-out',

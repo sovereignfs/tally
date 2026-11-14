@@ -2,7 +2,7 @@
 
 The order of work. **This file tracks progress; it does not define behaviour.** [`DESIGN.md`](DESIGN.md) says what Tally does, and where it disagrees with this file, this file is stale and should be corrected. The detail of every task, with its technical notes and what makes it done, is in [`docs/epics/`](docs/epics/). How a task is run is in [`AGENTS.md`](AGENTS.md).
 
-State as of 2026-11-13: **Milestone A built** (1.1 to 1.10 done; CI not yet seen to run on GitHub); group encryption added to the design (epic 15). The developer assigns each task; the first row not done, with its dependencies met, is what the order recommends.
+State as of 2026-11-13: **Milestones A and B built** (CI not yet seen to run on GitHub); group encryption added to the design (epic 15). The developer assigns each task; the first row not done, with its dependencies met, is what the order recommends.
 
 _Status key: ✅ Done · ⏳ In progress · 📋 Planned · 🚧 Waits on a decision · ➖ Superseded_
 
@@ -58,7 +58,7 @@ A person signs in, makes a group and is its owner, and every statement carries t
 | 18  | [15.4](docs/epics/encryption.md) | The recovery key                 | P1       | 15.2           | ✅     |
 | 19  | [2.2](docs/epics/accounts.md)    | Landing page and the address `/` | P1       | 2.1            | ✅     |
 | 20  | [2.5](docs/epics/accounts.md)    | Deleting a person                | P0       | 3.2            | ✅     |
-| 21  | [2.6](docs/epics/accounts.md)    | Settings                         | P1       | 2.1, 1.8, 3.1  | 📋     |
+| 21  | [2.6](docs/epics/accounts.md)    | Settings                         | P1       | 2.1, 1.8, 3.1  | ✅     |
 
 ### Milestone C — The arithmetic and the write path
 

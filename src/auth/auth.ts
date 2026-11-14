@@ -34,6 +34,9 @@ export interface AuthDependencies {
    */
   onAccountCreated?:
     ((account: { id: string; name: string; email: string }) => Promise<void>) | undefined;
+  /** Called once better-auth has changed an account's name or email (Settings): the app keeps the person's in step (`src/people/persons.ts`). */
+  onAccountUpdated?:
+    ((account: { id: string; name: string; email: string }) => Promise<void>) | undefined;
 }
 
 /** The prefix of better-auth's cookies, so that ours do not collide with another app's on localhost. */
@@ -51,6 +54,7 @@ export function createAuth({
   database,
   mailer,
   onAccountCreated,
+  onAccountUpdated,
 }: AuthDependencies) {
   const schema = database.dialect === 'postgres' ? postgresAuth : sqliteAuth;
   const { local } = settings;
@@ -151,6 +155,13 @@ export function createAuth({
     },
     databaseHooks: {
       user: {
+        update: {
+          after: async (user) => {
+            await onAccountUpdated?.({ id: user.id, name: user.name, email: user.email }).catch(
+              () => undefined,
+            );
+          },
+        },
         create: {
           // One policy for every way an account can come to be (DESIGN.md §6), here and not in a route, so that it holds for all of them.
           after: async (user) => {

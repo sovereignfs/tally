@@ -84,3 +84,21 @@ export async function allPersons(database: Database): Promise<Person[]> {
     sql`SELECT ${COLUMNS} FROM ${tables(database).person} ORDER BY created_at, id`,
   );
 }
+
+/**
+ * Keeps the account's person in step when the name is changed in Settings (DESIGN.md §6.1): the name is the person's everywhere, read from here. The
+ * email follows the account's too. A person whose account is gone is not touched.
+ */
+export async function updatePersonFromAccount(
+  database: Database,
+  account: { id: string; name: string; email: string },
+  now: number = Date.now(),
+): Promise<void> {
+  const name = cleanName(account.name);
+  if (!name) return;
+  await dbRun(
+    database,
+    sql`UPDATE ${tables(database).person} SET name = ${name}, email = ${account.email.trim().toLowerCase()}, updated_at = ${now}
+        WHERE account_id = ${account.id}`,
+  );
+}

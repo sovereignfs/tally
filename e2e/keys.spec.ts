@@ -3,6 +3,7 @@ import {
   EMAIL,
   PASSWORD,
   ensureAccount,
+  holdsKey,
   hydrated,
   secondBrowser,
   signOut,
@@ -14,42 +15,6 @@ import {
  * An account's key on a device (DESIGN.md §5.3), in a browser: the password that signs in also unlocks, with nobody else there; a device it cannot
  * unlock asks another, which allows it; signing out takes the key off the device.
  */
-
-/** Whether this device's vault holds the account's key: the record is sealed under the device's key, so only its presence is read. */
-async function holdsKey(page: Page): Promise<boolean> {
-  return page.evaluate(async () => {
-    const session = (await (await fetch('/api/auth/get-session')).json()) as {
-      user?: { id: string };
-    } | null;
-    const id = session?.user?.id;
-    if (!id) return false;
-    return new Promise<boolean>((resolve) => {
-      const open = indexedDB.open(`tally-vault-${id}`);
-      open.onupgradeneeded = () => {
-        open.transaction?.abort();
-        resolve(false);
-      };
-      open.onerror = () => resolve(false);
-      open.onsuccess = () => {
-        const db = open.result;
-        if (!db.objectStoreNames.contains('keys')) {
-          db.close();
-          return resolve(false);
-        }
-        const get = db.transaction('keys').objectStore('keys').get('secret:account-key');
-        // Closed after reading, so that this test's look does not hold up a sign-out deleting the vault.
-        get.onsuccess = () => {
-          resolve(get.result !== undefined);
-          db.close();
-        };
-        get.onerror = () => {
-          resolve(false);
-          db.close();
-        };
-      };
-    });
-  });
-}
 
 const locked = (page: Page) => page.getByRole('region', { name: 'This device is locked' });
 
@@ -101,7 +66,8 @@ test('a device the password cannot unlock asks another, and is unlocked once tha
   // The first device, unlocked, is asked when it next looks (here, a reload).
   await page.reload();
   const ask = page.getByRole('dialog', { name: 'Allow your new device to open your groups?' });
-  await expect(ask).toBeVisible();
+  // The key gate asks once its look at the server, and the exchange of group keys, is done.
+  await expect(ask).toBeVisible({ timeout: 15_000 });
   await ask.getByRole('button', { name: 'Allow' }).click();
 
   await expect.poll(() => holdsKey(phone.page), { timeout: 15_000 }).toBe(true);
@@ -113,10 +79,10 @@ test('signing out takes the key off the device', async ({ page }) => {
   await ensureAccount(page);
   await trySignIn(page, EMAIL, PASSWORD);
   await expect.poll(() => holdsKey(page)).toBe(true);
-  const accountId = await page.evaluate(
-    async () =>
-      ((await (await fetch('/api/auth/get-session')).json()) as { user: { id: string } }).user.id,
-  );
+  // Asked outside the page, which may still be settling after signing in.
+  const accountId = (
+    (await (await page.request.get('/api/auth/get-session')).json()) as { user: { id: string } }
+  ).user.id;
   await signOut(page);
   const names = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
   expect(names).not.toContain(`tally-vault-${accountId}`);

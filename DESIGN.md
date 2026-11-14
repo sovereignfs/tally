@@ -939,14 +939,15 @@ The sentence of choices (§15.9) is Tally's own composition of `Button`, `Popove
 
 `/settings`, also from the avatar menu:
 
-- **Profile:** name (which is the person's name everywhere, §6.1) and email; **primary currency** (pre-fills new groups, and orders figures in more than
+- **Profile:** name (which is the person's name everywhere, §6.1) and email (shown; changing it re-derives the password's value and re-wraps the key, a
+  task of its own); **primary currency** (pre-fills new groups, and orders figures in more than
   one currency; Tally never converts, and the setting says so).
 - **Notifications:** each kind (§12.2) by channel (email, core's bell when hosted; Push in phase 2), with what is not available said plainly. What
   is heard of each group is chosen in that group's settings (§12.2), and this section links to them.
-- **Recovery key:** saved or not, made again, and a sentence on what it is for (§5.3).
+- **Unlocking:** what opens a new device (the password, each passkey that can, another device), with the passkey offer for a Sovereign-only account,
+  and the recovery key: saved or not, made again (§5.3).
 - **Devices:** every signed-in device, with when it signed in and last synced; removing one signs it out, and its copy of the key is deleted when it
   next reaches the server.
-- **Unlocking:** which ways in unlock a new device (password, passkeys, the passkey kept for unlocking), with the offer for a Sovereign-only account.
 - **This device:** when it last synced, **Couldn't sync** (§11.5), and "Reset this device" (sends the outbox, then reloads every group).
 - **Sign-in:** the account sections Tusk has: password, passkeys, two-factor, linking core.
 - **Data:** export, import (§17), delete account (§18).

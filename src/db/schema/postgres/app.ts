@@ -134,3 +134,11 @@ export const keyWrap = app.table(
     index('key_wrap_account_idx').on(table.accountId),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const accountSettings = app.table('account_settings', {
+  accountId: id('account_id'),
+  primaryCurrency: text('primary_currency').notNull(),
+  createdAt: epochMs('created_at').notNull(),
+  updatedAt: epochMs('updated_at').notNull(),
+});

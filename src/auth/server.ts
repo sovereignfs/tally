@@ -1,6 +1,6 @@
 import { getConfig } from '../config/current';
 import { getAuthDatabase, getDatabase } from '../db/boot';
-import { ensurePerson } from '../people/persons';
+import { ensurePerson, updatePersonFromAccount } from '../people/persons';
 import { smtpMailer } from '../mail/smtp';
 import { site } from '../site';
 import { type Auth, createAuth } from './auth';
@@ -35,6 +35,9 @@ export function getAuth(): Promise<Auth | null> {
         mailer: mail ? smtpMailer(mail) : undefined,
         onAccountCreated: async (account) => {
           await ensurePerson(await getDatabase(), account);
+        },
+        onAccountUpdated: async (account) => {
+          await updatePersonFromAccount(await getDatabase(), account);
         },
       });
     })

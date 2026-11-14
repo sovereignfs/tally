@@ -53,6 +53,10 @@ export const ROUTES: RouteRule[] = [
   },
   // Deleting the account (DESIGN.md §18): what it would do, and doing it, with the password or a fresh session.
   { route: '/api/account/delete', methods: { GET: account, POST: account } },
+  // An account's own settings (DESIGN.md §16).
+  { route: '/api/account/settings', methods: { PATCH: account } },
+  // Settings (DESIGN.md §16), for someone signed in.
+  { route: '/settings', page: account },
   // The online operations of groups (DESIGN.md §11.6): each carries the account's membership, or an owner's role, in its own statements.
   { route: '/api/ops', methods: { POST: account } },
   // The account's key and its wraps, and a new device's request to be given it (DESIGN.md §5.3): each the account's own, by its session.

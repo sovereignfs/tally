@@ -107,7 +107,7 @@ are sealed. Run here: one row of everything for Ada and Grace, Ada deleted: noth
 group passed to Grace, Grace whole, a second run harmless; 410 tests on sqld and a file, 409 on PostgreSQL; the key step taken out failed the test.
 **Left out:** the `owner_passed` notice (9.1); the page that asks for the password (Settings > Data, 2.6).
 
-#### 📋 2.6 — Settings
+#### ✅ 2.6 — Settings
 
 **Goal:** Settings as a page and from the avatar menu. **Design:** §16. **Depends on:** 2.1, 1.8, 3.1.
 
@@ -116,3 +116,18 @@ account sections Tusk has (sign-in methods, passkeys, two-factor, linking core),
 and Unlocking with 15.2, Recovery key with 15.4, This device with 6.3, export and import with 12.1 and 12.2.
 
 **Accepts when:** each section works on all three databases; changing the name changes it on every group the person is in.
+
+**Done as:** copied from Ledger's same task (itself Tusk's): `src/account/` (the shell, `query.ts`, Profile, Security with the password, the
+authenticator app, passkeys and the signed-in devices, Preferences with the theme, Data with deleting the account) and the page, here at
+**`/settings`** (§15.3), from the avatar menu's new _Settings_. Changed for Tally: **every password field sends its derived value** (§14.1), and
+changing the password re-wraps the account key with the new one (`rewrapPassword`), so it unlocks a new device as the old one did; **a passkey is made
+with PRF asked for**, and the account key is wrapped to it as it is added (from the registration's output, or with one more touch), so it unlocks by
+itself, and removing it removes its wrap (`src/keys/passkey-unlock.ts`); a new **Unlocking** section says what opens a new device and keeps or renews
+the recovery key (15.4's offer); Profile has the **primary currency** (`account_settings`, migration `0004_add_account_settings`, decided in
+`deletePerson`) and keeps the person's name in step through a better-auth after-update hook (`updatePersonFromAccount`); Data's deletion says what
+stays and what goes by groups, and clears the device's vault. Sovereign's link panel waits for 2.3. Run here: 61 browser tests in Chromium and
+WebKit, three times (the name kept; a new password unlocking a second browser; a passkey on a device holding nothing signing in and unlocking in one
+touch, with Chromium's virtual authenticator, and then removed; the recovery key from Unlocking; a wrong password deleting nothing); the unit suite on
+the three forms. **Left out:** changing the email, which re-derives the password's value and re-wraps the key across two stores, and is a task of its
+own (§16 is to be read with that); Notifications (9.2), This device (6.3), export and import (12.1, 12.2), linking core (2.3). The passkey test
+stands in for a synced passkey with the same authenticator, since Chromium's credential export does not carry the PRF secret.

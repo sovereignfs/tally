@@ -18,7 +18,7 @@ import { personOfAccount } from '../people/persons';
  *     expenses and payments it carries still add up (ending it where the balance is zero joins with balances, 4.3). The group's order moves on.
  *  2. **Their keys** (§5.3): the account key, its wraps, its requests and every group key wrapped to them.
  *  3. **Their person**: `account_id`, `email` and `core_sub` cleared and `deleted_at` set; the name stays. Placeholders they added that are in no group go.
- *  4. What was kept for them in the app's store: the counters of rate limits, keyed `kind:account`.
+ *  4. What was kept for them in the app's store: their settings, and the counters of rate limits, keyed `kind:account`.
  *  5. **The sign-in store**: sessions, sign-ins, second factors, passkeys, pending verifications, and then the account.
  *
  * `people.test.ts` seeds a row in every table for the person and for a second person, finds nothing personal of the first after (the name aside), the
@@ -33,7 +33,13 @@ export interface PeopleDeps {
 /** The tables whose every row belongs to one group, deleted by `group_id` with a group that goes (the group's own row, `grp`, last). */
 export const GROUP_TABLES = ['key_wrap', 'member'] as const;
 /** The tables that hold something of an account, cleared by step 2 or 3. */
-export const ACCOUNT_TABLES = ['account_key', 'account_key_wrap', 'key_request', 'person'] as const;
+export const ACCOUNT_TABLES = [
+  'account_key',
+  'account_key_wrap',
+  'account_settings',
+  'key_request',
+  'person',
+] as const;
 /** The tables that hold nothing of a person, or only an id that is not theirs to take: decided, and left. */
 export const SHARED_TABLES = ['grp', 'rate_bucket'] as const;
 
@@ -149,7 +155,11 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
     });
   }
 
-  // 4. What was kept for them in the app's store. Counters are keyed `kind:account`.
+  // 4. What was kept for them in the app's store: their settings, and the counters of rate limits, keyed `kind:account`.
+  await dbAll(
+    database,
+    sql`DELETE FROM ${t.accountSettings} WHERE account_id = ${accountId} RETURNING account_id`,
+  );
   await dbAll(
     database,
     sql`DELETE FROM ${t.rateBucket} WHERE "key" LIKE ${`%:${accountId}`} RETURNING "key"`,

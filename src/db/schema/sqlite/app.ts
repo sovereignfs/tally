@@ -156,3 +156,11 @@ export const keyWrap = sqliteTable(
     index('key_wrap_account_idx').on(table.accountId),
   ],
 );
+
+/** **An account's own settings** (DESIGN.md §16): its primary currency, which new groups take and which figures in several currencies list first. */
+export const accountSettings = sqliteTable('account_settings', {
+  accountId: id('account_id'),
+  primaryCurrency: text('primary_currency').notNull(),
+  createdAt: epochMs('created_at').notNull(),
+  updatedAt: epochMs('updated_at').notNull(),
+});
