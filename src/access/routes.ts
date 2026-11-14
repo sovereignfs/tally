@@ -40,6 +40,9 @@ export const ROUTES: RouteRule[] = [
   { route: '/reset-password', page: { kind: 'public' } },
   // The instance asks it before it sends anyone to the app, and a container's health check does: it says only whether the database answers.
   { route: '/api/health', methods: { GET: { kind: 'public' } } },
+  // The PWA (DESIGN.md §15.11): the one page the service worker keeps, which holds nothing of a person, and the worker itself.
+  { route: '/shell', page: { kind: 'public' } },
+  { route: '/sw.js', methods: { GET: { kind: 'public' } } },
   // better-auth's own: it checks `Origin` and the session cookie itself, and rate-limits sign-in (src/auth/auth.ts). Absent, with a 404, when sign-in is off.
   {
     route: '/api/auth/[...all]',

@@ -84,7 +84,7 @@ The device holds every group and records without a network. **Done when** two br
 | 30  | [6.1](docs/epics/sync.md)        | The sync endpoint                   | P0       | 5.2        | ✅     |
 | 31  | [6.2](docs/epics/sync.md)        | The device's store, outbox and loop | P0       | 6.1        | ✅     |
 | 32  | [6.3](docs/epics/sync.md)        | Couldn't sync                       | P1       | 6.2        | ✅     |
-| 33  | [1.11](docs/epics/foundation.md) | The PWA                             | P1       | 1.8        | 📋     |
+| 33  | [1.11](docs/epics/foundation.md) | The PWA                             | P1       | 1.8        | ✅     |
 | 34  | [6.4](docs/epics/sync.md)        | Opening offline                     | P1       | 6.2, 1.11  | 📋     |
 | 35  | [6.5](docs/epics/sync.md)        | Keeping the history small           | P2       | 6.1, 1.6   | 📋     |
 

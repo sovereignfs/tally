@@ -213,7 +213,7 @@ written; it failed here once on PostgreSQL, and the logs are now read whole firs
 hosting it, and a wrong setting. **Left out:** the sign-in page and core's notices are not checked by the script yet (TODO for 2.3 and 2.4, where
 those routes are built); CI's image job and `publish.yml` have not run on GitHub.
 
-#### 📋 1.11 — The PWA
+#### ✅ 1.11 — The PWA
 
 **Goal:** installable, with a service worker that keeps the shell only. **Design:** §15.11. **Depends on:** 1.8.
 
@@ -222,3 +222,13 @@ files and icons; the public shell page holding nothing of a person; an offline p
 6.4.
 
 **Accepts when:** the app installs in Chromium; a test of the worker's source shows it caches nothing outside the allow-list.
+
+**Done as:** copied from Tusk: `src/sw/source.ts` and its test (the worker as served text, evaluated by the test), `app/sw.js/route.ts`,
+`RegisterWorker` (in `src/ui/`, mounted by the root layout) and `app/manifest.ts`. **Changed:** Tally's cache name, offline words and the signed-in
+addresses the shell answers offline (`/`, `/home`, `/groups`, `/g/…`, `/people/…`, `/activity`, `/insights`); Web Push and the wake are not copied
+(phase 2, §21.4). `/shell` (`app/shell/page.tsx`) holds nothing of a person; until 6.4 it only says it is offline. The PNG icons (192, 512, a maskable
+512 with the glyph in the safe zone, and the iPhone's 180) are rendered from `public/icons/icon.svg` by `scripts/generate-icons.mjs` with
+Playwright's Chromium, so no image tool is needed, and committed. `/shell` and `/sw.js` are public in `src/access/routes.ts`. Tests: the worker
+keeps only the shell, the build's files, the icons and the manifest after a signed-in tour, answers signed-in addresses offline with the shell
+(headers and all) and anything else with a page that needs a connection; in Playwright, the manifest is installable and the caches after a visit
+hold nothing of a person.
