@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { sheetHref } from '../screens/AddSheet';
 import { useState } from 'react';
 import { Icon } from '@sovereignfs/ui';
 import { GroupDot } from '../screens/Balance';
@@ -20,24 +21,31 @@ import styles from './AppShell.module.css';
  * as the label and the tooltip. Its rows are the app's own, as Tusk's are, since the design system's `NavList` has no rail.
  *
  * The groups are read from the device's store: open ones by latest activity, with the dot and the person's balance in it, closed ones after, dimmed.
- * Add expense is drawn disabled until the add sheet (7.2) exists.
+ * Add expense opens the add sheet over the page (`?add=expense`).
  */
 export function SidebarNav() {
   const pathname = usePathname();
   const current = placeOf(pathname)?.id;
   const [making, setMaking] = useState(false);
+  const params = useSearchParams();
+  // Opened over the page, with this page's group filled in when it is one (§15.9).
+  const inGroup = /^\/g\/([^/]+)/.exec(pathname)?.[1];
+  const addHref = sheetHref(pathname, new URLSearchParams(params.toString()), {
+    add: 'expense',
+    ...(inGroup ? { g: inGroup } : {}),
+  });
   return (
     <nav className={styles.sidebar} aria-label="Main">
-      <button
-        type="button"
+      <Link
+        href={addHref}
+        scroll={false}
         className={`${styles.row} ${styles.add}`}
-        disabled
         aria-label="Add expense"
-        title="Adding an expense arrives with the add sheet"
+        title="Add expense (N)"
       >
         <Icon name="plus" aria-hidden />
         <span className={styles.label}>Add expense</span>
-      </button>
+      </Link>
       <ul className={styles.list}>
         {SIDEBAR_PLACES.map((id) => {
           const place = placeById(id);

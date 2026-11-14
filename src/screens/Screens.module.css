@@ -72,3 +72,12 @@
 .small {
   font-size: var(--sv-font-size-sm);
 }
+
+/* The content of a sheet or drawer: room from its edges, and a readable width on a wide screen. */
+.sheet {
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--sv-space-4);
+  box-sizing: border-box;
+}

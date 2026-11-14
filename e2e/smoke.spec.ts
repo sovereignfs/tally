@@ -45,14 +45,19 @@ test('the page is the shell: a header with the wordmark, the places, and the mai
   await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible();
   // The sidebar: Add expense first, the four places, then the groups' section with its own link.
   const sidebar = page.getByRole('navigation', { name: 'Main' }).first();
-  await expect(sidebar.getByRole('button', { name: 'Add expense' })).toBeVisible();
-  await expect(sidebar.getByRole('link')).toHaveText([
+  await expect(sidebar.getByRole('link', { name: 'Add expense' })).toBeVisible();
+  // The places, in order; the groups' section has its own heading link, and the groups the account has (which other tests make) after it.
+  await expect(sidebar.getByRole('list').first().getByRole('link')).toHaveText([
     'Home',
     'People',
     'Activity',
     'Insights',
-    'Groups',
   ]);
+  await expect(
+    sidebar
+      .getByRole('region', { name: 'Groups' })
+      .getByRole('link', { name: 'Groups', exact: true }),
+  ).toBeVisible();
   await expect(sidebar.getByRole('button', { name: 'New group' })).toBeVisible();
   expect(await violations()).toEqual([]);
   expect(errors.filter((text) => !/favicon|Failed to load resource/.test(text))).toEqual([]);

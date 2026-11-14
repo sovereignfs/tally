@@ -1,9 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   EMAIL,
   PASSWORD,
   hydrated,
   holdsKey,
+  newGroup,
   offline,
   secondBrowser,
   signedIn,
@@ -14,17 +15,6 @@ import {
  * The shell's places and the groups list (DESIGN.md §15.2, §15.3): a group made from the sidebar is there at once, in the sidebar and on `/groups`, and
  * on a second device at its next sync; making one offline says it needs a connection.
  */
-export async function newGroup(page: Page, name: string) {
-  await expect.poll(() => holdsKey(page)).toBe(true);
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'New group' })
-    .click();
-  const form = page.getByRole('form', { name: 'New group' });
-  await form.getByLabel('Name').fill(name);
-  await form.getByRole('button', { name: 'Make the group' }).click();
-  await expect(form).toHaveCount(0);
-}
 
 test('a new group is in the sidebar and on /groups at once, and on another device at its next sync', async ({
   page,

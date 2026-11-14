@@ -9,6 +9,7 @@ import { readGroups } from '../local/store';
 import { site } from '../site';
 import { SyncProvider, useGroupKeys, useStoreChanges, useSync } from '../sync/react';
 import { AppShell } from './AppShell';
+import { AddSheet } from '../screens/AddSheet';
 
 /**
  * **The groups with no server document** (DESIGN.md §15.11). The service worker answers a signed-in address with the one page it keeps, `/shell`, which
@@ -40,6 +41,7 @@ export function OfflineShell() {
         account={<AccountMenu accountId={who.id} name={who.name} email={who.email} />}
       >
         <DeviceGroups />
+        <AddSheet />
       </AppShell>
     </SyncProvider>
   );

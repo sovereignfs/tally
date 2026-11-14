@@ -98,7 +98,7 @@ The interface of `DESIGN.md` §15 on the device's data. **Done when** people wit
 | 37  | [14.2](docs/epics/upstream.md) | `AvatarStack` (`sovereign`)                      | P1       | —              | ✅     |
 | 38  | [14.3](docs/epics/upstream.md) | A floating action button (`sovereign`)           | P1       | —              | ✅     |
 | 39  | [7.1](docs/epics/screens.md)   | The shell's places and the groups list           | P1       | 6.2, 3.2       | ✅     |
-| 40  | [7.2](docs/epics/screens.md)   | Adding an expense                                | P1       | 7.1, 6.2, 14.4 | 📋     |
+| 40  | [7.2](docs/epics/screens.md)   | Adding an expense                                | P1       | 7.1, 6.2, 14.4 | ✅     |
 | 41  | [7.3](docs/epics/screens.md)   | A group: expenses                                | P1       | 7.2            | 📋     |
 | 42  | [7.4](docs/epics/screens.md)   | A group: balances                                | P1       | 7.3, 4.3       | 📋     |
 | 43  | [7.5](docs/epics/screens.md)   | Payments and settling up                         | P1       | 7.4            | 📋     |

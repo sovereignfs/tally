@@ -8,6 +8,7 @@ import { SyncProvider } from '@/src/sync/react';
 import { settingsOf } from '@/src/account/settings';
 import { getDatabase } from '@/src/db/boot';
 import { RememberIdentity } from '@/src/ui/RememberIdentity';
+import { AddSheet } from '@/src/screens/AddSheet';
 
 // Every page here is for someone signed in, so it is decided per request, from the cookie.
 export const dynamic = 'force-dynamic';
@@ -36,6 +37,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           email={person.email ?? ''}
         />
         {children}
+        <AddSheet />
       </AppShell>
     </SyncProvider>
   );

@@ -167,3 +167,16 @@ async function holdsKeyNow(page: Page): Promise<boolean> {
     });
   });
 }
+
+/** Makes a group from the sidebar's New group, as a person does (DESIGN.md §7.1), and waits for the dialog to close. */
+export async function newGroup(page: Page, name: string) {
+  await expect.poll(() => holdsKey(page)).toBe(true);
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'New group' })
+    .click();
+  const form = page.getByRole('form', { name: 'New group' });
+  await form.getByLabel('Name').fill(name);
+  await form.getByRole('button', { name: 'Make the group' }).click();
+  await expect(form).toHaveCount(0);
+}

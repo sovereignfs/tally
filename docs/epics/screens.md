@@ -37,7 +37,7 @@ way: a group's key arriving in a sync now tells the screens, so names opened on 
 tasks. A group's page is 7.3, so New group goes to `/groups` for now. Tests in Playwright, Chromium and WebKit: a new group in the sidebar and on
 `/groups` at once and on a second device at its next sync, and offline, "Making a group needs a connection."
 
-#### 📋 7.2 — Adding an expense
+#### ✅ 7.2 — Adding an expense
 
 **Goal:** the sheet everything is built to make quick. **Design:** §15.9. **Depends on:** 7.1, 6.2, 14.4.
 
@@ -48,6 +48,19 @@ defaults remembered per group on the device; Enter saves; Save and add another; 
 
 **Accepts when:** in Playwright, an expense with each method, and one with two payers, is added by keyboard alone, offline and online; a split that
 does not add up cannot be saved and says why.
+
+**Done as:** `src/screens/AddExpense.tsx` (the form) and `AddSheet.tsx` (`?add=expense`, `&g=`, `&e=` to edit; a `Sheet` wide and a `Drawer`
+narrow through `ResponsiveSurface`, the same content; `N` wherever no field has focus), mounted by the signed-in layout and the offline shell; the
+sidebar's Add expense opens it over the page, with the page's group filled in. The amount first, in the interim `MoneyInput` (`src/ui/`, exact parsing
+through `parseAmount`, focused once the sheet has placed its own focus), with its currency from the interim `CurrencyPicker`; then the description,
+then the group, date, category, who paid (one, or several with an amount each) and the split (`SplitMethodSelector`, `MemberMultiSelect` with an input
+per member: amounts, percentages as basis points parsed exactly, shares with `QuantityStepper`); the result always shown with what is left, by
+`computeShares`; Save disabled until it adds up and the description is there. Saving seals `{description, note}` under the group's newest key
+(`GroupKeys.sealText`) and commits through the device; a locked group says it unlocks by itself. Defaults per group (category, payer, method,
+members) and the last group are kept in `localStorage`. **Changed from the design:** the sentence's choices are native selects and a date field rather
+than buttons opening popovers, which keeps it quick by keyboard; a `Popover` sentence can follow. **Not yet:** two payers in Playwright, since a group
+has only its maker until adding people (Milestone F); the form supports several payers and the unit tests of the split cover it. Tests in Playwright,
+Chromium and WebKit: an expense with each method added by keyboard alone, one of them offline, and a split that does not add up refused with its reason.
 
 #### 📋 7.3 — A group: expenses
 
