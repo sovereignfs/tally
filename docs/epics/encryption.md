@@ -81,7 +81,7 @@ knows Chromium's word for an interrupted navigation. **Left out:** the passkey's
 the Sovereign-only passkey offer (2.3); Settings > Devices and Unlocking (2.6); the activity line of a replaced key (15.3, which has groups);
 `People.deletePerson` removing these rows (2.5).
 
-#### 📋 15.3 — Group keys and granting
+#### ✅ 15.3 — Group keys and granting
 
 **Goal:** a group's key reaches every member's account, and nothing else's. **Design:** §5.3, §6.2, §11.3. **Depends on:** 15.2, 3.2.
 
@@ -95,6 +95,20 @@ until the key arrives; `grp`, `expense`, `payment` and `comment` carry `sealed` 
 **Accepts when:** a member added by an adder reads the group's words on first load; a replaced account key is re-wrapped by another member's device
 within one sync; a wrap for someone not in the group is refused as not found; a mutation recorded on a device before it was unlocked is sealed and
 applied once the key arrives.
+
+**Done as:** `key_wrap` and `grp.key_epoch` came with 3.2, whose creation already stores the creator's wrap. `src/keys/grants.ts` and
+`GET`/`POST /api/keys/groups` (in `routes.ts`): the wraps an account has of its groups, and **the members its device should wrap for** (active, with an
+account key, lacking a wrap of an epoch the device holds); a grant is stored only from an active member who holds that epoch, for an active member of
+the same group with an account key, **all in the insert's own statement**, and otherwise counted as refused. Replacing an account key (15.2) now
+deletes that account's group wraps, so its groups are wrapped to the new key by the other members' devices. In the browser, `src/keys/groups.ts`
+(`GroupKeys`: `sync`, `keyFor`, `prepareGroup` (an id, the name sealed under epoch 1, the key wrapped to the account's own and kept in the vault first),
+`sealName`, `openName`, which is undefined while a group is not unlocked here); the key gate runs the exchange at each of its looks. Run here: an
+integration test of two devices (the browser's own code and crypto over the real routes and database): a new member's group opens at the next
+exchange of another member's device with nobody doing anything, and again after their key is replaced; a grant for a non-member, from a non-member,
+or of an epoch not held, is refused. 397 tests on sqld and a file, 396 on PostgreSQL; 44 browser tests. Planted faults (the receiver's membership
+taken out of the insert; a replaced key's wraps kept) each failed their test. **Left out:** the "…" of a group not yet unlocked, which is the screens'
+(7.1); sealing in the outbox once the key arrives, which is the outbox's (6.2); adding a person carrying the adder's wrap (8.2); the activity line of a
+replaced key (5.4).
 
 #### 📋 15.4 — The recovery key
 

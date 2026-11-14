@@ -54,6 +54,8 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/keys', methods: { GET: account, POST: account, PUT: account } },
   { route: '/api/keys/wraps', methods: { POST: account } },
   { route: '/api/keys/wraps/[id]', methods: { DELETE: account } },
+  // A group's key wrapped to each member (DESIGN.md §5.3): taken only between active members of the same group, in the statement.
+  { route: '/api/keys/groups', methods: { GET: account, POST: account } },
   { route: '/api/keys/requests', methods: { POST: account } },
   { route: '/api/keys/requests/[id]', methods: { GET: account, POST: account, DELETE: account } },
 ];

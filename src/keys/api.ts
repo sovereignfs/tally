@@ -17,12 +17,13 @@ import {
   requestOf,
   wrapsOf,
 } from './store';
+import { MAX_GRANTS, myGroupWraps, neededGrants, storeGrants, type Grant } from './grants';
 
 /**
  * The routes of an account's key (DESIGN.md §5.3), each the account's own by its session (`accountRoute`): what the browser needs to unlock, and to
  * let another of its devices in. Every answer about another account's row is 404, as a row that is not there.
  */
-const MAX_BODY = 16 * 1024;
+const MAX_BODY = 256 * 1024;
 
 const STATUS: Record<KeyError['code'], number> = {
   invalid: 400,
@@ -159,6 +160,37 @@ export function keyHandlers(databaseOf: DatabaseOf = getDatabase) {
           String(input.wrapped ?? ''),
         );
         return new Response(null, { status: 204 });
+      }),
+    /** The group keys wrapped to this account, and the members this account's device should wrap for (DESIGN.md §5.3). */
+    groupGrants: (context: AccountContext) =>
+      run(async (db) =>
+        Response.json({
+          wraps: await myGroupWraps(db, context.accountId),
+          needed: await neededGrants(db, context.accountId),
+        }),
+      ),
+    putGroupGrants: (context: AccountContext) =>
+      run(async (db) => {
+        const input = await body(context.request);
+        const raw = Array.isArray(input.grants) ? input.grants : [];
+        if (raw.length > MAX_GRANTS) throw new KeyError('too_many');
+        const grants: Grant[] = raw.map((value) => {
+          const grant = (value ?? {}) as Record<string, unknown>;
+          if (
+            typeof grant.groupId !== 'string' ||
+            typeof grant.accountId !== 'string' ||
+            typeof grant.epoch !== 'number'
+          ) {
+            throw new KeyError('invalid');
+          }
+          return {
+            groupId: grant.groupId,
+            accountId: grant.accountId,
+            epoch: grant.epoch,
+            wrapped: String(grant.wrapped ?? ''),
+          };
+        });
+        return Response.json(await storeGrants(db, context.accountId, grants));
       }),
     deleteRequest: (context: AccountContext) =>
       run(async (db) => {

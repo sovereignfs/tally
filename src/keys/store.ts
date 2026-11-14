@@ -176,6 +176,8 @@ export async function replaceAccountKey(
     );
     if (moved.length === 0) throw new KeyError('not_found');
     await dbRun(tx, sql`DELETE FROM ${tables(tx).accountKeyWrap} WHERE account_id = ${accountId}`);
+    // The group keys wrapped to the old key open nothing now: gone, so that the account is one a group's members wrap them to again (§5.3).
+    await dbRun(tx, sql`DELETE FROM ${tables(tx).keyWrap} WHERE account_id = ${accountId}`);
     for (const wrap of wraps) await insertWrap(tx, accountId, next, wrap, now);
     return { publicKey, version: next };
   });

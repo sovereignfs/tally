@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, ConfirmDialog } from '@sovereignfs/ui';
+import { GroupKeys, httpGrantsApi } from './groups';
 import { AccountKeys, httpKeyApi, type ServerKeys } from './unlock';
 
 /**
  * **The account's key on this device, as the shell shows it** (DESIGN.md §5.3). Almost always nothing at all: the password or passkey that signed in
  * unlocked it. Otherwise one quiet line with what will unlock it (another of your devices, or starting afresh), and nothing is refused meanwhile. On an
- * unlocked device, it checks every thirty seconds while the page is visible whether a new device of the account is asking, and asks the person:
- * "Allow your new device to open your groups?"
+ * unlocked device, it looks every thirty seconds while the page is visible: whether a new device of the account is asking ("Allow your new device to
+ * open your groups?"), and the exchange of group keys, which unlocks a new member's groups by itself (`groups.ts`).
  */
 type State =
   | { kind: 'checking' }
@@ -72,6 +73,8 @@ export function KeyGate({ accountId }: { accountId: string }) {
       if (await k.current()) {
         setState({ kind: 'unlocked' });
         setRequests(server.requests);
+        // Each look is also an exchange of group keys: what this account was given is opened, and what other members lack is wrapped for them.
+        await new GroupKeys(k, httpGrantsApi).sync().catch(() => undefined);
       } else setState((now) => (now.kind === 'asking' ? now : { kind: 'locked' }));
     } catch {
       setState({ kind: 'failed' });

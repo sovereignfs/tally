@@ -114,7 +114,8 @@ export class AccountKeys {
   constructor(
     readonly accountId: string,
     private readonly api: KeyApi,
-    private readonly vault: Vault,
+    /** The device's vault, which the group keys share (`groups.ts`). */
+    readonly vault: Vault,
   ) {}
 
   static async open(accountId: string, api: KeyApi): Promise<AccountKeys> {
