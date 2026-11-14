@@ -26,7 +26,12 @@ accessible table of the same data, no chart library loaded from elsewhere. Ledge
 
 **Accepts when:** a `@sovereignfs/ui` release carrying them is published.
 
-#### 📋 14.2 — `AvatarStack`
+**Not yet, and an interim in Tally (decided by the owner on 2026-11-14):** `@sovereignfs/ui` 0.96.1 has `CurrencyInput` with a currency's own
+decimals but no picker, and it turns typed text into an amount through floating point (`Math.round(parsed * 10 ** decimals)`), which Tally's rule
+forbids. Until this task lands, Tally composes its own money input and currency picker in `src/ui/` from the published `Input` and `Combobox`, with
+`src/money/text.ts`'s exact parsing; they are to move here, and be replaced in Tally by the release, when this task is done.
+
+#### ✅ 14.2 — `AvatarStack`
 
 **Goal:** overlapping avatars with "+N". **Design:** §15.4, §15.5. **Depends on:** nothing here.
 
@@ -35,13 +40,18 @@ accessible label naming everyone.
 
 **Accepts when:** a `@sovereignfs/ui` release carrying it is published.
 
-#### 📋 14.3 — A floating action button
+**Done as:** published in `@sovereignfs/ui` 0.96.0 (`AvatarStack`); Tally takes 0.96.1, exact-pinned, its exception in `pnpm-workspace.yaml`
+moved with it.
+
+#### ✅ 14.3 — A floating action button
 
 **Goal:** the phone's Add. **Design:** §15.11. **Depends on:** nothing here.
 
 **What Tally needs:** a floating button that sits above `MobileFooter` and respects the safe area, with an icon and an accessible label.
 
 **Accepts when:** a `@sovereignfs/ui` release carrying it is published.
+
+**Done as:** published in `@sovereignfs/ui` 0.96.0 (`FloatingActionButton`); Tally takes 0.96.1.
 
 #### 📋 14.4 — `MoneyInput` and a currency picker
 

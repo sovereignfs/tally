@@ -38,7 +38,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@libsql/client": "^0.18.0",
     "@sovereignfs/config": "0.1.0",
-    "@sovereignfs/ui": "0.92.0",
+    "@sovereignfs/ui": "0.96.1",
     "better-auth": "~1.7.22",
     "drizzle-orm": "^0.45.4",
     "hash-wasm": "4.13.0",
