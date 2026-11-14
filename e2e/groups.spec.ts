@@ -24,10 +24,13 @@ test('a new group is in the sidebar and on /groups at once, and on another devic
   await hydrated(page);
   const name = `Lisbon ${Date.now()}`;
   await newGroup(page, name);
-  const sidebar = page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('region', { name: 'Groups' });
-  await expect(sidebar.getByRole('link', { name: new RegExp(`^${name}`) })).toBeVisible();
+  // The sidebar is a wide screen's.
+  if (test.info().project.name !== 'phone') {
+    const sidebar = page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('region', { name: 'Groups' });
+    await expect(sidebar.getByRole('link', { name: new RegExp(`^${name}`) })).toBeVisible();
+  }
   await page.goto('/groups');
   await expect(page.getByRole('list', { name: 'Your groups' }).getByText(name)).toBeVisible();
 
@@ -48,11 +51,10 @@ test('making a group offline says it needs a connection, and makes nothing', asy
   await hydrated(page);
   await expect.poll(() => holdsKey(page)).toBe(true);
   const name = `Offline ${Date.now()}`;
+  await page.goto('/groups');
+  await hydrated(page);
   await offline(context, async () => {
-    await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('button', { name: 'New group' })
-      .click();
+    await page.getByRole('main').getByRole('button', { name: 'New group' }).click();
     const form = page.getByRole('form', { name: 'New group' });
     await form.getByLabel('Name').fill(name);
     await form.getByRole('button', { name: 'Make the group' }).click();

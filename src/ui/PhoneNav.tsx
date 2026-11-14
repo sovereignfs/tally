@@ -1,20 +1,32 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { Button, Drawer, Icon, MobileFooter, NavList } from '@sovereignfs/ui';
+import { Button, Drawer, FloatingActionButton, Icon, MobileFooter, NavList } from '@sovereignfs/ui';
+import { goLocally, sheetHref } from '../screens/AddSheet';
 import { FOOTER_LEFT, FOOTER_RIGHT, placeById, placeOf, type Place } from './nav';
 import styles from './AppShell.module.css';
 
 /**
- * The phone's footer (DESIGN.md §15.11): Home and Groups left of the middle button, People and Activity right of it. The middle button opens a drawer
- * with Add expense and Insights until the floating Add button (14.3) and the avatar menu (2.6) take them. **The same places at the same addresses as the
+ * The phone's footer (DESIGN.md §15.11): Home and Groups left of the middle button, People and Activity right of it, and the floating **Add** above it,
+ * which opens the add sheet (a drawer at this width) with the page's group filled in. The middle button opens a drawer with Add expense and Insights
+ * (which is also in the avatar menu). **The same places at the same addresses as the
  * sidebar**: only what is drawn differs, and the shell's CSS decides at which width (`AppShell.module.css`), so nothing here asks for the width.
  */
 export function PhoneNav() {
   const [more, setMore] = useState(false);
-  const current = placeOf(usePathname())?.id;
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const current = placeOf(pathname)?.id;
+  const group = /^\/g\/([^/]+)/.exec(pathname)?.[1];
+  const add = () =>
+    goLocally(
+      sheetHref(pathname, new URLSearchParams(params.toString()), {
+        add: 'expense',
+        ...(group ? { g: group } : {}),
+      }),
+    );
   const icon = (id: Place['id']) => {
     const place = placeById(id);
     return {
@@ -27,6 +39,11 @@ export function PhoneNav() {
   const insights = placeById('insights');
   return (
     <>
+      <FloatingActionButton
+        label="Add expense"
+        icon={<Icon name="plus" aria-hidden />}
+        onClick={add}
+      />
       <MobileFooter
         aria-label="Main"
         onOpenApps={() => setMore(true)}
@@ -37,7 +54,13 @@ export function PhoneNav() {
       />
       <Drawer open={more} onClose={() => setMore(false)} aria-label="More">
         <div className={styles.more}>
-          <Button variant="primary" disabled title="Adding an expense arrives with the add sheet">
+          <Button
+            variant="primary"
+            onClick={() => {
+              setMore(false);
+              add();
+            }}
+          >
             Add expense
           </Button>
           <NavList

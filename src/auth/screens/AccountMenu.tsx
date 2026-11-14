@@ -71,6 +71,12 @@ export function AccountMenu({
               ]
             : []),
           {
+            // Insights is in the sidebar on a wide screen; on a phone, here (DESIGN.md §15.11).
+            label: 'Insights',
+            icon: 'layout-dashboard',
+            onSelect: () => window.location.assign('/insights'),
+          },
+          {
             label: 'Settings',
             icon: 'settings',
             onSelect: () => window.location.assign('/settings'),

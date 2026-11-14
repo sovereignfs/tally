@@ -1,5 +1,6 @@
 import {
   expect,
+  test,
   type Browser,
   type BrowserContext,
   type Locator,
@@ -177,10 +178,10 @@ async function holdsKeyNow(page: Page): Promise<boolean> {
 /** Makes a group from the sidebar's New group, as a person does (DESIGN.md §7.1), and waits for the dialog to close. */
 export async function newGroup(page: Page, name: string) {
   await expect.poll(() => holdsKey(page)).toBe(true);
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'New group' })
-    .click();
+  // From /groups, which every width has (the sidebar's New group is a wide screen's).
+  await page.goto('/groups');
+  await hydrated(page);
+  await page.getByRole('main').getByRole('button', { name: 'New group' }).click();
   const form = page.getByRole('form', { name: 'New group' });
   await form.getByLabel('Name').fill(name);
   await form.getByRole('button', { name: 'Make the group' }).click();
@@ -232,3 +233,15 @@ export async function untilMembers(page: Page, names: readonly string[]) {
     )
     .toBe(true);
 }
+
+/** At a phone's width, no page scrolls sideways (DESIGN.md §15.11): checked after every test of the `phone` project, on the page it ended on. */
+export async function expectNoSideScroll(page: Page) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, `${page.url()} scrolls sideways by ${overflow}px`).toBeLessThanOrEqual(1);
+}
+
+test.afterEach(async ({ page }, info) => {
+  if (info.project.name === 'phone' && info.status === 'passed') await expectNoSideScroll(page);
+});

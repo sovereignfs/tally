@@ -215,7 +215,7 @@ sealed body is bound to, so that the device can open it (`commentId`, optional, 
 `describe.test.ts` (5.4); here, in Playwright, Chromium and WebKit: an expense, a comment and the group's making in words in the group and on
 `/activity`, and a kind filter combined with a group filter.
 
-#### 📋 7.11 — The phone
+#### ✅ 7.11 — The phone
 
 **Goal:** the same app at a phone's width. **Design:** §15.11. **Depends on:** 7.7, 7.8, 14.3.
 
@@ -224,3 +224,12 @@ Notifications and Settings in the avatar menu; a group's views as tabs; full pag
 forks only; no navigation decision does.
 
 **Accepts when:** every Playwright journey of epics 7 passes at 390 pixels wide in WebKit, with no horizontal scroll.
+
+**Done as:** `PhoneNav` gains the floating **Add** (`FloatingActionButton`, published in `@sovereignfs/ui` 0.96.0), inside the footer the shell shows
+only at a phone's width, opening the add sheet locally with the page's group; the middle button's drawer has a working Add expense; Insights is in
+the avatar menu at every width. A group's views were already tabs, and an expense's page and a group's settings already have back links. Only what is
+drawn forks; the addresses and decisions are the same at every width. **Tests:** a `phone` project in `playwright.config.ts` runs every journey of
+the screens (`groups`, `expenses`, `group`, `balances`, `payments`, `record`, `people`, `group-settings`, `activity`) in WebKit at 390 by 844, and
+`e2e/helpers.ts` checks after each that the page does not scroll sideways; `phone.spec.ts` (that project only) opens the sheet from the floating Add,
+finds Insights in the avatar menu, and tours every screen for sideways scroll. The helpers make a group from `/groups`, which every width has. Touch
+itself is for the iOS Simulator, by hand.

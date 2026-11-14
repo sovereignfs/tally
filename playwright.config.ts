@@ -61,8 +61,16 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: `http://localhost:${PORT}`, trace: 'retain-on-failure' },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /phone\.spec\.ts$/ },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: /phone\.spec\.ts$/ },
+    // The phone (DESIGN.md §15.11): every journey of the screens at 390 pixels wide in WebKit, Safari's engine, with no sideways scroll (`helpers.ts`
+    // checks after each). A desktop WebKit at a phone's size: touch itself is checked in the iOS Simulator, by hand.
+    {
+      name: 'phone',
+      use: { ...devices['Desktop Safari'], viewport: { width: 390, height: 844 } },
+      testMatch:
+        /(groups|expenses|group|balances|payments|record|people|group-settings|activity|phone)\.spec\.ts$/,
+    },
   ],
   webServer: [
     {

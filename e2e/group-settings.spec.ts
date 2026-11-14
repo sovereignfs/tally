@@ -52,11 +52,8 @@ test('says why leaving, removing and closing are refused, and hides Delete once 
   await settings.getByRole('form', { name: 'Name' }).getByLabel('Name').fill(renamed);
   await settings.getByRole('button', { name: 'Rename' }).click();
   await expect(settings.getByText('The name is changed.')).toBeVisible();
-  await expect(
-    page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: new RegExp(`^${renamed}`) }),
-  ).toBeVisible();
+  await page.goto('/groups');
+  await expect(page.getByRole('list', { name: 'Your groups' }).getByText(renamed)).toBeVisible();
 });
 
 test('deletes a group that never had an expense', async ({ page }) => {
