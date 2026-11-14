@@ -80,7 +80,7 @@ answers `200` only once done. Copied: Tusk's `src/sovereign/http.ts`, `verifiers
 **Accepts when:** against `createFakeCore`, a logout notice ends every session of the person, an account-deleted notice leaves nothing personal of
 them and every other member's balances unchanged, and a replayed `jti` is refused after a restart.
 
-#### 📋 2.5 — Deleting a person
+#### ✅ 2.5 — Deleting a person
 
 **Goal:** one routine that removes everything personal of an account and keeps its name on the shared record. **Design:** §18. **Depends on:** 3.2.
 
@@ -94,6 +94,18 @@ table extends it.
 
 **Accepts when:** after deletion no table holds the person's email, sign-in or anything listed in §18; their name still shows on the second person's
 group; the second person's balances are unchanged; a second run succeeds.
+
+**Done as:** `src/sovereign/people.ts`, `deletePerson`, Tally's own in Ledger's shape (two stores, safe to run again, the account last): each group
+of the person in its own transaction, **deleted by `group_id` when no other member has an account** (decided in the statement that deletes it),
+otherwise passed to its longest-standing member with an account if they were its only owner, their own role made `member` and **their membership
+kept** (ending it where the balance is zero waits for balances, 4.3); their account key, its wraps and requests, and every group key wrapped to them;
+their person made a name only (`account_id`, `email`, `core_sub` cleared, `deleted_at` set) and their placeholders in no group deleted; their rate
+counters; and the sign-in store. `GROUP_TABLES`, `ACCOUNT_TABLES` and `SHARED_TABLES` decide every app table, and a test fails for one in none of them
+(seen, with `key_request` taken out). `/api/account/delete` and `src/sovereign/delete-account.ts` copied from Ledger (the password, which the page sends
+as its sign-in value, or a fresh session for an account with none; counted), its preview saying which groups go and which carry on, by id, since names
+are sealed. Run here: one row of everything for Ada and Grace, Ada deleted: nothing personal of her left but her name, her group alone gone, her owned
+group passed to Grace, Grace whole, a second run harmless; 410 tests on sqld and a file, 409 on PostgreSQL; the key step taken out failed the test.
+**Left out:** the `owner_passed` notice (9.1); the page that asks for the password (Settings > Data, 2.6).
 
 #### 📋 2.6 — Settings
 
