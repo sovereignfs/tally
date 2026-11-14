@@ -17,7 +17,8 @@ fully on its own, with every feature, needing no instance**: its own accounts, p
 `sovereignfs/sovereign-plugin-tally`, whose behaviour is the starting point and none of whose code, data or interface is carried over. It is a PWA on
 Next.js, with its own database (sqld, a SQLite file or PostgreSQL), signing people in locally, through a Sovereign core, or both, from one image.
 
-**Being built: Milestones A and B are done** (the foundation; accounts, people, groups and the keys that seal what is written). `DESIGN.md` is the
+**Being built: Milestones A to D are done** (the foundation; accounts, people, groups and the keys that seal what is written; the arithmetic and the
+write path; offline and sync). `DESIGN.md` is the
 design, `ROADMAP.md` the order.
 
 ## Source of truth
@@ -165,7 +166,7 @@ Still to come: `seed` (13.1). **`verify` means**
 
 `DESIGN.md` §5.1 is where things go as the app is built. Today it holds the documents, the repository's conventions, the settings (`src/config/`), the
 database (`src/db/`), sign-in (`src/auth/`), people (`src/people/`), groups (`src/groups/`), access (`src/access/`), the cipher (`src/cipher/`) and keys
-(`src/keys/`), money (`src/money/`), balances (`src/balances/`), actions and validators (`src/actions/`), the write path (`src/sync/`), activity (`src/activity/`), deletion (`src/sovereign/`), Settings (`src/account/`), the theme and the shell (`src/ui/`, `app/(app)/`).
+(`src/keys/`), money (`src/money/`), balances (`src/balances/`), actions and validators (`src/actions/`), the write path (`src/sync/`), activity (`src/activity/`), the device's store (`src/local/`), the service worker (`src/sw/`), deletion (`src/sovereign/`), Settings (`src/account/`), the theme and the shell (`src/ui/`, `app/(app)/`).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
