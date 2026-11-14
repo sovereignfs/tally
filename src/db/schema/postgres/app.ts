@@ -141,6 +141,8 @@ export const keyWrap = app.table(
 export const accountSettings = app.table('account_settings', {
   accountId: id('account_id'),
   primaryCurrency: text('primary_currency').notNull(),
+  /** "Mark all read" (DESIGN.md §12.2): every notice written up to this moment is read. */
+  inboxSeenAt: epochMs('inbox_seen_at'),
   createdAt: epochMs('created_at').notNull(),
   updatedAt: epochMs('updated_at').notNull(),
 });
@@ -350,5 +352,24 @@ export const invitation = app.table(
     uniqueIndex('invitation_token_idx').on(table.tokenHash),
     index('invitation_person_idx').on(table.personId),
     index('invitation_group_idx').on(table.groupId),
+  ],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const notice = app.table(
+  'notice',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    groupId: ref('group_id').notNull(),
+    activityId: ref('activity_id').notNull(),
+    kind: text('kind').notNull(),
+    readAt: epochMs('read_at'),
+    dismissedAt: epochMs('dismissed_at'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    index('notice_account_time_idx').on(table.accountId, table.createdAt),
+    index('notice_group_idx').on(table.groupId),
   ],
 );

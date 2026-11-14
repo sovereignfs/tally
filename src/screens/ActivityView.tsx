@@ -4,11 +4,11 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, EmptyState, PageContainer, PageHeader, Select } from '@sovereignfs/ui';
 import { describeActivity } from '../activity/describe';
+import { useMemberNames, useOpenedLines } from '../activity/opened';
 import { ACTIVITY_KINDS, type ActivityKind, type ActivityLine } from '../activity/kinds';
-import type { RowBinding } from '../cipher/seal';
 import { toMinor } from '../money/amount';
 import { formatMoney } from '../money/text';
-import { useGroupKeys, useMe, useStoreChanges } from '../sync/react';
+import { useMe, useStoreChanges } from '../sync/react';
 import { goLocally, sheetHref } from './AddSheet';
 import { GroupDot } from './Balance';
 import { useGroupNames } from './hooks';
@@ -33,7 +33,6 @@ const KIND_WORDS: Partial<Record<ActivityKind, string>> = {
 
 export function ActivityList({ groupId }: { groupId?: string }) {
   const me = useMe();
-  const keys = useGroupKeys();
   const views = useGroupViews();
   const params = useSearchParams();
   const pathname = usePathname();
@@ -45,7 +44,6 @@ export function ActivityList({ groupId }: { groupId?: string }) {
   const changes = useStoreChanges();
   const [lines, setLines] = useState<ActivityLine[] | 'offline' | null>(null);
   const [next, setNext] = useState<string | null>(null);
-  const [opened, setOpened] = useState<Map<string, Record<string, string | null>>>(new Map());
 
   const query = (before?: string) => {
     const q = new URLSearchParams();
@@ -77,62 +75,9 @@ export function ActivityList({ groupId }: { groupId?: string }) {
     // The query is the filters; a store change is a sync that may have sent something.
   }, [group, person, kind, changes]);
 
-  // The text the lines carry, opened on the device with each group's key.
-  useEffect(() => {
-    if (!keys || !Array.isArray(lines)) return;
-    let live = true;
-    const wanted: { sealed: string; binding: RowBinding }[] = [];
-    for (const line of lines) {
-      const d = line.details as unknown as Record<string, unknown>;
-      if (line.kind.startsWith('expense_') && typeof d.sealed === 'string')
-        wanted.push({
-          sealed: d.sealed,
-          binding: { group: line.groupId, table: 'expense', row: line.subjectId ?? '' },
-        });
-      if (line.kind === 'comment_added') {
-        if (typeof d.sealed === 'string' && typeof d.commentId === 'string')
-          wanted.push({
-            sealed: d.sealed,
-            binding: { group: line.groupId, table: 'comment', row: d.commentId },
-          });
-        if (typeof d.subjectSealed === 'string')
-          wanted.push({
-            sealed: d.subjectSealed,
-            binding: { group: line.groupId, table: 'expense', row: line.subjectId ?? '' },
-          });
-      }
-      if (
-        (line.kind === 'group_created' || line.kind === 'group_renamed') &&
-        typeof d.sealed === 'string'
-      )
-        wanted.push({
-          sealed: d.sealed,
-          binding: { group: line.groupId, table: 'grp', row: line.groupId },
-        });
-    }
-    void Promise.all(
-      wanted.map(async (w) => [w.sealed, await keys.openText(w.sealed, w.binding)] as const),
-    ).then((pairs) => {
-      if (!live) return;
-      const map = new Map<string, Record<string, string | null>>();
-      for (const [sealed, content] of pairs) if (content) map.set(sealed, content);
-      setOpened(map);
-    });
-    return () => {
-      live = false;
-    };
-  }, [keys, lines]);
-
-  const members = useMemo(() => {
-    const byMember = new Map<string, string>();
-    const byPerson = new Map<string, string>();
-    for (const view of views ?? [])
-      for (const m of view.members) {
-        byMember.set(m.id, m.personId);
-        byPerson.set(m.personId, m.name);
-      }
-    return { byMember, byPerson };
-  }, [views]);
+  // The text the lines carry, opened on the device with each group's key, and the members they name.
+  const opened = useOpenedLines(Array.isArray(lines) ? lines : null);
+  const members = useMemberNames();
 
   const set = (changes: Record<string, string | null>) =>
     goLocally(sheetHref(pathname, new URLSearchParams(window.location.search), changes), 'replace');

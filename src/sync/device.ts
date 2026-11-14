@@ -1,4 +1,5 @@
 import { type LocalDatabase, deleteLocal, localName, openLocal } from '../local/db';
+import { forgetUnread } from '../notices/unread';
 import { outboxSize } from '../local/store';
 import { type KeyExchange, SyncClient, type Transport, fetchTransport } from './client';
 import { onWake, registerBackgroundSync } from './background';
@@ -94,6 +95,7 @@ export async function signOutDevice(
     }
   }
   await deleteLocal(accountId, name).catch(() => undefined);
+  forgetUnread(accountId);
 }
 
 /** How many changes this device has not yet sent: what signing out warns of. */

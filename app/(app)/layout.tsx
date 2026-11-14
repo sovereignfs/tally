@@ -9,6 +9,7 @@ import { settingsOf } from '@/src/account/settings';
 import { getDatabase } from '@/src/db/boot';
 import { RememberIdentity } from '@/src/ui/RememberIdentity';
 import { AddSheet } from '@/src/screens/AddSheet';
+import { NotificationBell } from '@/src/notices/NotificationBell';
 
 // Every page here is for someone signed in, so it is decided per request, from the cookie.
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     >
       <AppShell
         name={site.name}
+        bell={<NotificationBell />}
         account={
           <AccountMenu accountId={session.user.id} name={person.name} email={person.email ?? ''} />
         }

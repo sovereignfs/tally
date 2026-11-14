@@ -15,7 +15,7 @@ channel is a value in the same preferences from the start (`DESIGN.md` §12.3, �
 
 ## Tasks
 
-#### 📋 9.1 — Notices and the bell
+#### ✅ 9.1 — Notices and the bell
 
 **Goal:** the right people told, in the app. **Design:** §12.2. **Depends on:** 5.2, 7.1.
 
@@ -28,6 +28,24 @@ kept on the device for offline.
 
 **Accepts when:** for each kind and each choice, a test shows who is told and that the actor is not; a new member hears everything until they choose
 otherwise; reading on one device reads on another.
+
+**Done as:** a `notice` (migration `0012_add_notices`) is a row per account told, pointing at the activity line it tells of (`activity_id`), so that
+what it says is the line's, sealed text still sealed, and the device says it with `describeActivity`. **`raiseNotices`** (`src/notices/raise.ts`) is
+called by `recordActivity` for every line, in the change's transaction: a group's kind (`GROUP_KIND_OF` in `src/notices/kinds.ts`) goes to every active
+member with an account but the actor, by `member.notify` (`involved` from the line's payers and shares, the payment's two people, and for a comment
+those on its expense or payment and whoever commented on it before; closing and reopening involve everyone); `added_to_group`, `edit_replaced` and
+`owner_passed` come from the line itself (a `role_changed` line with no actor, which deleting an account now writes when a group passes on), and
+`invite_accepted` is handed in by the claim. A personal notice takes the place of the group's for the same person. `reminder` is a kind with no caller
+yet (9.3). `/api/notices` lists a page with the unread count and takes read, dismiss, `read_all` (`account_settings.inbox_seen_at`) and `clear_all`,
+every statement naming the account and the group's active membership, so a group left shows and counts nothing. The bell (`src/notices/NotificationBell.tsx`,
+copied from Tusk's and changed to Tally's kinds and words) uses the design system's `NotificationsPanel`; `/notifications` lists them by day in the
+reader's zone; both read on load, on coming back into view, each minute while in view and after each sync, and the last count is kept in
+`localStorage` for offline and forgotten at sign-out. The pruning job keeps 90 days and the latest 500 an account; notices are deleted with their
+group (`GROUP_TABLES`) and with their account. Activity's opening of sealed text moved to `src/activity/opened.ts`, shared with the bell. Tests: in
+Vitest, on each database, each choice for each kind of the group, the personal kinds, the actor never told, a new member on `all`, reading across
+devices, read all, dismiss, a group left, another account's notices untouchable; wording, links, "ago" and the days; deletion's `owner_passed`. In
+Playwright, Chromium and WebKit: an expense another member recorded in the bell in words, opened and read, on `/notifications` by day, and the
+recorder told only of the invitation taken. **Left out:** export of notices joins export (12.1); delivery by email and to core's bell is 9.2.
 
 #### 📋 9.2 — Preferences and email
 

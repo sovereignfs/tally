@@ -4,6 +4,7 @@ import { dbAll, dbGet, transaction } from '../db/exec';
 import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { tables } from '../db/tables';
+import { recordActivity } from '../activity/record';
 import { personOfAccount } from '../people/persons';
 
 /**
@@ -13,12 +14,12 @@ import { personOfAccount } from '../people/persons';
  * dealt with, and the account, by which the routine finds them, goes **last**. Its shape is Ledger's; what it does is Tally's.
  *
  *  1. **Their groups**, each in a transaction of its own. A group with no other member who has an account is deleted with every row of it, by
- *     `group_id` (`GROUP_TABLES`: its members, keys, expenses with their payers and shares, payments, comments, revisions, activity and applied mutations). Otherwise, if they were its only owner, it passes to its longest-standing member with an account (who will be told,
- *     `owner_passed`, once notices exist, 9.1); their own role becomes `member`, and **their membership stays**, shown as left Tally, so that the
+ *     `group_id` (`GROUP_TABLES`: its members, keys, expenses with their payers and shares, payments, comments, revisions, activity and applied mutations). Otherwise, if they were its only owner, it passes to its longest-standing member with an account (who is told,
+ *     `owner_passed`); their own role becomes `member`, and **their membership stays**, shown as left Tally, so that the
  *     expenses and payments it carries still add up (ending it where the balance is zero joins with balances, 4.3). The group's order moves on.
  *  2. **Their keys** (§5.3): the account key, its wraps, its requests and every group key wrapped to them.
  *  3. **Their person**: `account_id`, `email` and `core_sub` cleared and `deleted_at` set; the name stays. Placeholders they added that are in no group go.
- *  4. What was kept for them in the app's store: their settings, the mutations they sent (`applied_mutation`), mail waiting for them, and the counters of rate limits, keyed
+ *  4. What was kept for them in the app's store: their settings, the mutations they sent (`applied_mutation`), their notices, mail waiting for them, and the counters of rate limits, keyed
  *     `kind:account`.
  *  5. **The sign-in store**: sessions, sign-ins, second factors, passkeys, pending verifications, and then the account.
  *
@@ -42,6 +43,7 @@ export const GROUP_TABLES = [
   'invitation',
   'key_wrap',
   'member',
+  'notice',
   'payment',
   'revision',
   'tombstone',
@@ -73,6 +75,7 @@ function groupTable(database: Database, name: (typeof GROUP_TABLES)[number]) {
     invitation: t.invitation,
     key_wrap: t.keyWrap,
     member: t.member,
+    notice: t.notice,
     payment: t.payment,
     revision: t.revision,
     tombstone: t.tombstone,
@@ -139,8 +142,8 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
             sql`UPDATE ${t.grp} SET seq = seq + 1, updated_at = ${now} WHERE id = ${groupId} RETURNING seq`,
           )
         )[0]?.seq;
-        // The only owner: the group passes to its longest-standing member with an account.
-        await dbAll(
+        // The only owner: the group passes to its longest-standing member with an account, who is told (`owner_passed`, §12.2).
+        const passed = await dbAll<{ id: string; personId: string }>(
           tx,
           sql`UPDATE ${t.member} SET role = 'owner', seq = ${seq ?? 0}
               WHERE id = (SELECT o.id FROM ${t.member} o JOIN ${t.person} op ON op.id = o.person_id
@@ -149,8 +152,17 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
                 AND NOT EXISTS (SELECT 1 FROM ${t.member} w JOIN ${t.person} wp ON wp.id = w.person_id
                                  WHERE w.group_id = ${groupId} AND w.left_at IS NULL AND w.role = 'owner' AND w.person_id <> ${person.id}
                                    AND wp.account_id IS NOT NULL)
-              RETURNING id`,
+              RETURNING id, person_id AS "personId"`,
         );
+        for (const heir of passed)
+          await recordActivity(tx, {
+            groupId,
+            actorPersonId: null,
+            kind: 'role_changed',
+            subjectId: heir.id,
+            details: { memberId: heir.id, personId: heir.personId, role: 'owner' },
+            now,
+          });
         await dbAll(
           tx,
           sql`UPDATE ${t.member} SET role = 'member', seq = ${seq ?? 0}
@@ -196,8 +208,9 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
     });
   }
 
-  // 4. What was kept for them in the app's store: their settings, the record of the mutations they sent, and the counters of rate limits, keyed
-  // `kind:account`.
+  // 4. What was kept for them in the app's store: their settings, the record of the mutations they sent, what they were told, and the counters of
+  // rate limits, keyed `kind:account`.
+  await dbAll(database, sql`DELETE FROM ${t.notice} WHERE account_id = ${accountId} RETURNING id`);
   await dbAll(
     database,
     sql`DELETE FROM ${t.appliedMutation} WHERE account_id = ${accountId} RETURNING id`,

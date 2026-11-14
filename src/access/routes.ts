@@ -67,6 +67,9 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/account/settings', methods: { PATCH: account } },
   // Settings (DESIGN.md §16), for someone signed in.
   { route: '/settings', page: account },
+  // What the account is told, and its reading of it (DESIGN.md §12.2): every statement names the account, and only its active groups' are shown.
+  { route: '/api/notices', methods: { GET: account, POST: account } },
+  { route: '/notifications', page: account },
   // The online operations of groups (DESIGN.md §11.6): each carries the account's membership, or an owner's role, in its own statements.
   { route: '/api/ops', methods: { POST: account } },
   // The account's key and its wraps, and a new device's request to be given it (DESIGN.md §5.3): each the account's own, by its session.

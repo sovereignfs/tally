@@ -218,11 +218,11 @@ export async function acceptInvitation(
       sql`SELECT key_wrap AS "keyWrap" FROM ${t.invitation} WHERE token_hash = ${hashToken(token)}`,
     );
     // Used, and so used once: the statement that marks it holds that it is live.
-    const taken = await dbAll<{ groupId: string; personId: string }>(
+    const taken = await dbAll<{ groupId: string; personId: string; createdBy: string }>(
       tx,
       sql`UPDATE ${t.invitation} SET accepted_by = ${who.personId}, accepted_at = ${now}, key_wrap = NULL
           WHERE token_hash = ${hashToken(token)} AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > ${now}
-          RETURNING group_id AS "groupId", person_id AS "personId"`,
+          RETURNING group_id AS "groupId", person_id AS "personId", created_by AS "createdBy"`,
     );
     const invitation = taken[0];
     if (!invitation) throw new OpError('not_found');
@@ -251,14 +251,20 @@ export async function acceptInvitation(
         sql`UPDATE ${t.member} SET person_id = ${who.personId}, role = CASE WHEN left_at IS NULL THEN 'member' ELSE role END, seq = ${seq}
             WHERE id = ${m.id} RETURNING id`,
       );
-      await recordActivity(tx, {
-        groupId: m.groupId,
-        actorPersonId: who.personId,
-        kind: 'member_joined',
-        subjectId: m.id,
-        details: { memberId: m.id, personId: who.personId },
-        now,
-      });
+      await recordActivity(
+        tx,
+        {
+          groupId: m.groupId,
+          actorPersonId: who.personId,
+          kind: 'member_joined',
+          subjectId: m.id,
+          details: { memberId: m.id, personId: who.personId },
+          now,
+        },
+        m.groupId === invitation.groupId
+          ? [{ personId: invitation.createdBy, kind: 'invite_accepted' }]
+          : [],
+      );
     }
     if (refused.includes(invitation.groupId))
       throw new OpError(

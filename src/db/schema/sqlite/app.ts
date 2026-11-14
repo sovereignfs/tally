@@ -165,6 +165,8 @@ export const keyWrap = sqliteTable(
 export const accountSettings = sqliteTable('account_settings', {
   accountId: id('account_id'),
   primaryCurrency: text('primary_currency').notNull(),
+  /** "Mark all read" (DESIGN.md §12.2): every notice written up to this moment is read. */
+  inboxSeenAt: epochMs('inbox_seen_at'),
   createdAt: epochMs('created_at').notNull(),
   updatedAt: epochMs('updated_at').notNull(),
 });
@@ -399,5 +401,28 @@ export const invitation = sqliteTable(
     uniqueIndex('invitation_token_idx').on(table.tokenHash),
     index('invitation_person_idx').on(table.personId),
     index('invitation_group_idx').on(table.groupId),
+  ],
+);
+
+/**
+ * **A notice** (DESIGN.md §12.2): someone told of a line of a group's activity, written in the change's transaction, never for the person who acted
+ * (`src/notices/raise.ts`). What it says is its activity line's, sealed text still sealed, said in words on the device. Read per notice (`read_at`) or
+ * all at once (`account_settings.inbox_seen_at`); dismissed is shown nowhere. Kept 90 days, at most the latest 500 an account.
+ */
+export const notice = sqliteTable(
+  'notice',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    groupId: ref('group_id').notNull(),
+    activityId: ref('activity_id').notNull(),
+    kind: text('kind').notNull(),
+    readAt: epochMs('read_at'),
+    dismissedAt: epochMs('dismissed_at'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    index('notice_account_time_idx').on(table.accountId, table.createdAt),
+    index('notice_group_idx').on(table.groupId),
   ],
 );

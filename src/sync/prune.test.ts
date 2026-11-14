@@ -152,16 +152,26 @@ describe(`pruning the history (${leg})`, () => {
       sql`UPDATE ${tables(t.database).comment} SET deleted_at = ${now - COMMENTS_AFTER_MS - DAY} WHERE id = ${old}`,
     );
 
-    expect(await prune(t.database, now)).toEqual({ comments: 1, tombstones: 0, mutations: 0 });
+    expect(await prune(t.database, now)).toEqual({
+      comments: 1,
+      tombstones: 0,
+      mutations: 0,
+      notices: 0,
+    });
     expect(await count(tables(t.database).comment, sql`id = ${old}`)).toBe(0);
     expect(
       await count(tables(t.database).tombstone, sql`id = ${old} AND row_table = 'comment'`),
     ).toBe(1);
     // A second run finds nothing left; two at once remove nothing twice.
-    expect(await prune(t.database, now)).toEqual({ comments: 0, tombstones: 0, mutations: 0 });
+    expect(await prune(t.database, now)).toEqual({
+      comments: 0,
+      tombstones: 0,
+      mutations: 0,
+      notices: 0,
+    });
     expect(await Promise.all([prune(t.database, now), prune(t.database, now)])).toEqual([
-      { comments: 0, tombstones: 0, mutations: 0 },
-      { comments: 0, tombstones: 0, mutations: 0 },
+      { comments: 0, tombstones: 0, mutations: 0, notices: 0 },
+      { comments: 0, tombstones: 0, mutations: 0, notices: 0 },
     ]);
 
     // The device that was not here learns of the removal from the tombstone, and of the other deletion as a row.

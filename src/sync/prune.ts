@@ -8,7 +8,7 @@ import type { JobDefinition } from '../jobs/runner';
  * **Keeping the history small** (DESIGN.md §11.8). Deleted comments are removed for good after 30 days and leave a tombstone of their id and the group's
  * `seq`, so that a device learns of it at its next pull. Tombstones and the record of applied mutations go after 90 days; forgetting a group's tombstones
  * raises its `pruned_through`, and a device whose cursor is older than that is answered with a fresh snapshot of the group (`pull.ts`). Deleted expenses
- * and payments stay: they are part of a group's record.
+ * and payments stay: they are part of a group's record. Notices go after 90 days, and beyond the latest 500 of an account (§12.2).
  *
  * Shaped after Tusk's `src/sync/purge.ts`, per group rather than per account. **Safe from two processes and twice:** each group's removal is one
  * transaction that first moves the group's `seq` on, as a mutation does, so two runs take turns and the second finds nothing left; forgetting tombstones
@@ -17,16 +17,18 @@ import type { JobDefinition } from '../jobs/runner';
 export const COMMENTS_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 export const KEEP_MS = 90 * 24 * 60 * 60 * 1000;
 const BATCH = 2_000;
+export const NOTICES_KEPT = 500;
 
 export interface Pruned {
   comments: number;
   tombstones: number;
   mutations: number;
+  notices: number;
 }
 
 export async function prune(database: Database, now: number): Promise<Pruned> {
   const t = tables(database);
-  const result: Pruned = { comments: 0, tombstones: 0, mutations: 0 };
+  const result: Pruned = { comments: 0, tombstones: 0, mutations: 0, notices: 0 };
 
   // 1. Comments deleted 30 days ago: removed, each leaving a tombstone, group by group.
   const commentCutoff = now - COMMENTS_AFTER_MS;
@@ -91,6 +93,24 @@ export async function prune(database: Database, now: number): Promise<Pruned> {
     await dbAll<{ id: string }>(
       database,
       sql`DELETE FROM ${t.appliedMutation} WHERE created_at < ${keepCutoff} RETURNING id`,
+    )
+  ).length;
+
+  // 4. Notices (§12.2): kept 90 days, and at most the latest `NOTICES_KEPT` of an account.
+  result.notices = (
+    await dbAll<{ id: string }>(
+      database,
+      sql`DELETE FROM ${t.notice} WHERE created_at < ${keepCutoff} RETURNING id`,
+    )
+  ).length;
+  result.notices += (
+    await dbAll<{ id: string }>(
+      database,
+      sql`DELETE FROM ${t.notice} WHERE id IN (
+            SELECT id FROM (
+              SELECT id, ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY created_at DESC, id DESC) AS place FROM ${t.notice}
+            ) ranked WHERE place > ${NOTICES_KEPT})
+          RETURNING id`,
     )
   ).length;
   return result;

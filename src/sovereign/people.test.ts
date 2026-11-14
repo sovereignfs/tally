@@ -186,6 +186,13 @@ describe(`deleting a person (${leg})`, () => {
     await placeholder(placeholders.inNoGroup, adaPerson);
     await placeholder(placeholders.inShared, adaPerson);
     await member(ids.shared, placeholders.inShared, null, 3);
+    // A notice for each of them, in a group they share.
+    for (const who of [t.ada.id, t.grace.id])
+      await dbRun(
+        t.database,
+        sql`INSERT INTO ${tables(t.database).notice} (id, account_id, group_id, activity_id, kind, read_at, dismissed_at, created_at)
+            VALUES (${crypto.randomUUID()}, ${who}, ${ids.hers}, ${crypto.randomUUID()}, 'comment', NULL, NULL, 1)`,
+      );
   });
   afterAll(async () => t.close());
 
@@ -237,6 +244,7 @@ describe(`deleting a person (${leg})`, () => {
       [db.keyWrap, 'account_id'],
       [db.accountSettings, 'account_id'],
       [db.appliedMutation, 'account_id'],
+      [db.notice, 'account_id'],
     ] as const) {
       expect(await count(table, sql`${sql.raw(column)} = ${t.ada.id}`)).toBe(0);
     }
@@ -275,9 +283,21 @@ describe(`deleting a person (${leg})`, () => {
       db.payment,
       db.revision,
       db.comment,
-      db.activity,
     ])
       expect(await count(table, sql`group_id = ${ids.shared}`)).toBe(1);
+    // Its activity too, and now a line that the group passed to Grace, who is told (owner_passed).
+    expect(await count(db.activity, sql`group_id = ${ids.shared} AND kind <> 'role_changed'`)).toBe(
+      1,
+    );
+    expect(
+      await count(
+        db.notice,
+        sql`group_id = ${ids.shared} AND account_id = ${t.grace.id} AND kind = 'owner_passed'`,
+      ),
+    ).toBe(1);
+    expect(await count(db.notice, sql`account_id = ${t.grace.id} AND group_id = ${ids.hers}`)).toBe(
+      1,
+    );
     expect(await count(db.appliedMutation, sql`account_id = ${t.grace.id}`)).toBe(1);
   });
 

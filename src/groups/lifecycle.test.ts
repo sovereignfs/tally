@@ -310,6 +310,7 @@ describe(`a group's lifecycle (${leg})`, () => {
       invitation: db().invitation,
       key_wrap: db().keyWrap,
       member: db().member,
+      notice: db().notice,
       payment: db().payment,
       revision: db().revision,
       tombstone: db().tombstone,
