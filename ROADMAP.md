@@ -106,7 +106,7 @@ The interface of `DESIGN.md` §15 on the device's data. **Done when** people wit
 | 45  | [4.4](docs/epics/money.md)     | Across groups                                    | P1       | 4.3            | ✅     |
 | 46  | [7.7](docs/epics/screens.md)   | Home                                             | P1       | 7.5, 4.4, 14.2 | ✅     |
 | 47  | [7.8](docs/epics/screens.md)   | People and a person                              | P1       | 7.5, 4.4       | ✅     |
-| 48  | [7.9](docs/epics/screens.md)   | A group's settings                               | P1       | 7.3, 3.3       | 📋     |
+| 48  | [7.9](docs/epics/screens.md)   | A group's settings                               | P1       | 7.3, 3.3       | ✅     |
 | 49  | [7.10](docs/epics/screens.md)  | Activity                                         | P1       | 5.4, 7.1       | 📋     |
 | 50  | [7.11](docs/epics/screens.md)  | The phone                                        | P1       | 7.7, 7.8, 14.3 | 📋     |
 

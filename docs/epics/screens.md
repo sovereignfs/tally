@@ -178,7 +178,7 @@ placeholder (8.2, 8.3) join with their tasks. Tests in Playwright, Chromium and 
 an expense in euros in one and in yen in the other, the figures on Home and the person's page never blended, and settling up with the person
 recording two payments and zeroing both groups.
 
-#### 📋 7.9 — A group's settings
+#### ✅ 7.9 — A group's settings
 
 **Goal:** the group's details, people and lifecycle. **Design:** §7, §15.3. **Depends on:** 7.3, 3.3.
 
@@ -188,6 +188,15 @@ nothing; `DESIGN.md` §12.2), Leave, Remove (owners), Close and Reopen, Delete (
 operation with its refusal in a sentence; every disabled control says why.
 
 **Accepts when:** every refusal of 3.3 shows its sentence; Delete is absent once an expense exists.
+
+**Done as:** `src/screens/GroupSettings.tsx` at `/g/<id>/settings`: details (rename, sealed on the device with `GroupKeys.sealName`; colour; default
+currency) and simplify debts, for owners, and for anyone else disabled with why; the people with their roles (make an owner or a member, step down,
+remove), what the reader hears of the group (read and set online through `member.notify`), and Leave, Close or Reopen, and Delete, which is there
+only while the device holds no expense or payment of the group, deleted ones included. Each is a `POST /api/ops` operation, **after a sync**, so
+that the server decides on the group as the person sees it (a close sent a moment after an expense would otherwise see none); a refusal shows the
+operation's own sentence. Leaving and deleting go back to `/groups`. **Not yet:** Add people and invitations (8.2, 8.3), said in place. Tests in
+Playwright, Chromium and WebKit: the sentences of close, leave and remove while a balance is not zero, Delete absent once an expense exists and
+deleting an empty group, and a rename seen in the sidebar.
 
 #### 📋 7.10 — Activity
 

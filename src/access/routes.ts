@@ -31,6 +31,7 @@ export const ROUTES: RouteRule[] = [
   { route: '/home', page: account },
   { route: '/groups', page: account },
   { route: '/g/[id]', page: account },
+  { route: '/g/[id]/settings', page: account },
   { route: '/g/[id]/e/[expense]', page: account },
   { route: '/g/[id]/p/[payment]', page: account },
   { route: '/people', page: account },
