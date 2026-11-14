@@ -7,6 +7,11 @@ const ON = {
   TALLY_AUTH_LOCAL: '1',
   TALLY_AUTH_SECRET: SECRET,
 };
+const CORE = {
+  TALLY_CORE_URL: 'https://sovereign.example.com',
+  TALLY_CORE_CLIENT_ID: 'tally-client',
+  TALLY_CORE_CLIENT_SECRET: 'tally-client-secret',
+};
 
 function problems(result: LoadResult): readonly string[] {
   if (result.ok) throw new Error('the settings were accepted');
@@ -34,6 +39,7 @@ describe('sign-in settings', () => {
       signUp: 'invite',
       passwordMinLength: 10,
       local: true,
+      sovereign: undefined,
     });
     expect(
       authOf(loadConfig({ ...ON, TALLY_AUTH_LOCAL: 'true', TALLY_AUTH_SIGNUP: 'OPEN' })),
@@ -79,5 +85,66 @@ describe('sign-in settings', () => {
   it('say about a wrong address only once: the address check already reported it', () => {
     const reported = problems(loadConfig({ ...ON, TALLY_URL: 'http://tally.example.com' }));
     expect(reported.filter((problem) => problem.includes('TALLY_URL'))).toHaveLength(1);
+  });
+
+  // From Tusk's `src/auth/config.test.ts`, with Tally's sign-up: it governs local accounts, and core's are made whatever it says (§6.4).
+  it('are on with a core alone: Sovereign sign-in with no password, still needing an address and a secret', () => {
+    const only = { TALLY_URL: ON.TALLY_URL, TALLY_AUTH_SECRET: SECRET, ...CORE };
+    expect(authOf(loadConfig(only))).toEqual({
+      url: 'https://tally.example.com',
+      secret: SECRET,
+      signUp: 'invite',
+      passwordMinLength: 10,
+      local: false,
+      sovereign: {
+        issuer: 'https://sovereign.example.com',
+        clientId: 'tally-client',
+        clientSecret: 'tally-client-secret',
+      },
+    });
+    expect(authOf(loadConfig({ ...only, TALLY_AUTH_LOCAL: '1' }))).toMatchObject({
+      local: true,
+      sovereign: { clientId: 'tally-client' },
+    });
+    expect(problems(loadConfig({ ...CORE, TALLY_AUTH_SECRET: SECRET })).join(' ')).toContain(
+      'Sovereign sign-in is set, so TALLY_URL',
+    );
+    expect(problems(loadConfig({ ...CORE, TALLY_URL: ON.TALLY_URL })).join(' ')).toContain(
+      'TALLY_AUTH_SECRET',
+    );
+  });
+
+  it('read the client secret from a file', () => {
+    const result = loadConfig(
+      { ...ON, ...CORE, TALLY_CORE_CLIENT_SECRET: undefined, TALLY_CORE_CLIENT_SECRET_FILE: '/s' },
+      () => 'from-a-file\n',
+    );
+    expect(authOf(result)).toMatchObject({ sovereign: { clientSecret: 'from-a-file' } });
+  });
+
+  it('stop the server on a partial set of core settings, and on a core address that would send the secret in the clear', () => {
+    for (const missing of Object.keys(CORE)) {
+      const partial = { ...ON, ...CORE, [missing]: undefined };
+      expect(problems(loadConfig(partial)).join(' ')).toContain(missing);
+    }
+    const insecure = problems(
+      loadConfig({ ...ON, ...CORE, TALLY_CORE_URL: 'http://sovereign.example.com' }),
+    ).join(' ');
+    expect(insecure).toContain('TALLY_CORE_URL must be https');
+    expect(insecure).not.toContain('tally-client-secret');
+    expect(
+      authOf(loadConfig({ ...ON, ...CORE, TALLY_CORE_URL: 'http://localhost:4000/' })),
+    ).toMatchObject({ sovereign: { issuer: 'http://localhost:4000' } });
+    expect(
+      authOf(loadConfig({ ...ON, ...CORE, TALLY_CORE_URL: 'https://core.example.com/api/auth/' })),
+    ).toMatchObject({ sovereign: { issuer: 'https://core.example.com/api/auth' } });
+    for (const bad of [
+      'not an address',
+      'https://core.example.com/?x=1',
+      'https://u:p@core.example.com',
+    ])
+      expect(problems(loadConfig({ ...ON, ...CORE, TALLY_CORE_URL: bad })).join(' ')).toContain(
+        'TALLY_CORE_URL',
+      );
   });
 });

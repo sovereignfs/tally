@@ -77,6 +77,15 @@ describe('the proxy', () => {
     expect(rewrite(proxy(request('/sign-up')))).toBeNull();
   });
 
+  it('keeps the sign-in page alone for an instance that signs in only through a core, whose other sign-in pages are not there', () => {
+    const rewrite = (response: Response) => response.headers.get('x-middleware-rewrite');
+    vi.stubEnv('TALLY_AUTH_LOCAL', '');
+    vi.stubEnv('TALLY_CORE_URL', 'https://sovereign.example.com');
+    expect(rewrite(proxy(request('/sign-in')))).toBeNull();
+    for (const path of ['/sign-up', '/forgot-password', '/reset-password'])
+      expect(rewrite(proxy(request(path))), path).toMatch(/\/not-found$/);
+  });
+
   it('does not make a page of an API: its answer is data, and has no nonce to leak', () => {
     for (const path of ['/api/health', '/api/export']) {
       const response = proxy(request(path));

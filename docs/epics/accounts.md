@@ -57,7 +57,7 @@ built (what is written is sealed; signing in, which unlocks a new device; phone 
 same helper as the trailing-slash one; signing out now lands on the landing page, and the e2e `signOut` helper waits for it. Run here: 402 tests; 52
 browser tests in Chromium and WebKit; the proxy's test failed with the rewrite off. **Left out:** nothing of the task.
 
-#### 📋 2.3 — Sign-in through core
+#### ✅ 2.3 — Sign-in through core
 
 **Goal:** a Sovereign core as a way in, beside local accounts or alone. **Design:** §14.1, §14.2. **Depends on:** 2.1, 3.1.
 
@@ -68,6 +68,25 @@ copied for tests. Capturing the refresh token for the directory is 11.2.
 
 **Accepts when:** sign-in through the fake Sovereign works with local accounts on and off; a core login whose email matches a local account is
 refused until linked from a session; a partial `TALLY_CORE_*` stops start-up; sign-up `closed` does not refuse a core sign-in.
+
+**Done as:** copied from Tusk, and said so: `resolveSovereign` and the settings in `src/auth/config.ts` (all three `TALLY_CORE_*` or none, https except
+on localhost, the secret as a file), `genericOAuth` in `src/auth/auth.ts` (PKCE, the ID token verified, the secret by basic auth, `sovereign` as the
+provider, core's logout left alone), its account linking (no implicit linking, the same address only, never the last way in, tokens encrypted), the
+sign-in page's button and `src/account/SovereignPanel.tsx` (Link and Unlink in Settings, Security), the proxy keeping `/sign-in` for a core-only
+instance, the fake Sovereign (`src/auth/testing/fake-sovereign.ts`, its recorded discovery document and test) and the tests of `sovereign.test.ts`
+and `e2e/sovereign.spec.ts`. **Changed from Tusk:** an account made through core's callback is made whatever `TALLY_AUTH_SIGNUP` says (§6.4), so
+sign-up `closed` or `invite` governs local accounts only; an account with no password keeps passkeys (they are what will unlock its new devices,
+§5.3) and loses only the authenticator app; and a core identity joined to an account (first sign-in, or linking) calls `onCoreIdentity`, which keeps
+the `sub` on the person and claims the placeholder linked to it (`linkCoreIdentity` in `src/people/persons.ts`), through the claim invitations use,
+now shared (`src/people/claim.ts`). An account that comes through core has its key made unseen on its first device, as the key gate already did; a
+second device of it is locked until another device, the recovery key or a fresh start unlocks it. Tests: the 41 copied tests and the discovery test,
+with closed sign-up admitting everyone core signs in and passkeys kept; the identity handed over once with its `sub` at first sign-in and at
+linking; the `sub` kept on the person, the placeholder claimed with its groups, an email never matched, safe twice; the settings (core alone, a
+partial set stopping the server, a secret in a file, the address checks); the proxy for a core-only instance; in Playwright, Chromium and WebKit, on a
+core-only instance and one with both ways: only Sovereign offered, two people let in with sign-up by invitation and each given a key, a second
+device locked, a decline told, a local address refused, and linking from Settings then signing in as the same account. The deploy check's
+Sovereign setup passes. **Left out:** offering a core account an unlock-only passkey on its first device (DESIGN.md §5.3's row for a Sovereign
+core) is in no task yet; core's notices are 2.4; the refresh token for the directory is 11.2.
 
 #### 📋 2.4 — Core's notices
 

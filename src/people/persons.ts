@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { Database } from '../db/client';
-import { dbAll, dbGet, dbRun } from '../db/exec';
+import { dbAll, dbGet, dbRun, transaction } from '../db/exec';
+import { claimPlaceholder } from './claim';
 import { tables } from '../db/tables';
 
 /**
@@ -101,4 +102,39 @@ export async function updatePersonFromAccount(
     sql`UPDATE ${tables(database).person} SET name = ${name}, email = ${account.email.trim().toLowerCase()}, updated_at = ${now}
         WHERE account_id = ${account.id}`,
   );
+}
+
+/**
+ * **A core identity joined to an account** (DESIGN.md §14.2): signing in through core for the first time, or linking core from Settings. The `sub`
+ * is identity: it is kept on the account's person, and the placeholder linked to it from core's directory (§6.2) is claimed, its memberships becoming
+ * the person's (`claimPlaceholder`). An email is never matched. A `sub` already the person's changes nothing, so this is safe to run twice.
+ */
+export async function linkCoreIdentity(
+  database: Database,
+  account: { id: string; name: string; email: string },
+  sub: string,
+  now: number = Date.now(),
+): Promise<void> {
+  const person = await ensurePerson(database, account, now);
+  const t = tables(database);
+  await transaction(database, async (tx) => {
+    const placeholder = await dbGet<{ id: string }>(
+      tx,
+      sql`SELECT id FROM ${t.person} WHERE core_sub = ${sub} AND account_id IS NULL AND deleted_at IS NULL AND id <> ${person.id}`,
+    );
+    if (placeholder) {
+      await dbAll(
+        tx,
+        sql`UPDATE ${t.person} SET core_sub = NULL, updated_at = ${now} WHERE id = ${placeholder.id} RETURNING id`,
+      );
+      await claimPlaceholder(tx, placeholder.id, { personId: person.id }, now);
+    }
+    await dbAll(
+      tx,
+      sql`UPDATE ${t.person} SET core_sub = ${sub}, updated_at = ${now}
+          WHERE id = ${person.id} AND (core_sub IS NULL OR core_sub <> ${sub})
+            AND NOT EXISTS (SELECT 1 FROM ${t.person} o WHERE o.core_sub = ${sub} AND o.id <> ${person.id})
+          RETURNING id`,
+    );
+  });
 }

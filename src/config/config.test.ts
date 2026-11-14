@@ -108,6 +108,9 @@ describe('loadConfig', () => {
       expect(
         loadConfig(
           {
+            // With core set, sign-in is on, which needs the address and a secret as well.
+            TALLY_URL: 'https://tally.example.com',
+            TALLY_AUTH_SECRET: 'a-secret-that-is-at-least-thirty-two-characters-long',
             TALLY_CORE_URL: 'https://core.example.com',
             TALLY_CORE_CLIENT_ID: 'a',
             TALLY_CORE_CLIENT_SECRET_FILE: '/run/secret',

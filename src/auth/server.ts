@@ -1,6 +1,6 @@
 import { getConfig } from '../config/current';
 import { getAuthDatabase, getDatabase } from '../db/boot';
-import { ensurePerson, updatePersonFromAccount } from '../people/persons';
+import { ensurePerson, linkCoreIdentity, updatePersonFromAccount } from '../people/persons';
 import { smtpMailer } from '../mail/smtp';
 import { validInvitation } from '../invites/store';
 import { site } from '../site';
@@ -41,6 +41,9 @@ export function getAuth(): Promise<Auth | null> {
         },
         onAccountUpdated: async (account) => {
           await updatePersonFromAccount(await getDatabase(), account);
+        },
+        onCoreIdentity: async (account, sub) => {
+          await linkCoreIdentity(await getDatabase(), account, sub);
         },
       });
     })

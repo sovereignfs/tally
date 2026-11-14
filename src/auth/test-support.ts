@@ -25,6 +25,7 @@ const SETTINGS: AuthSettings = {
   signUp: 'closed',
   passwordMinLength: 10,
   local: true,
+  sovereign: undefined,
 };
 
 /** What a test changes about the instance it gets. */
@@ -36,6 +37,7 @@ export async function makeAuth(
   onAccountCreated?: AuthDependencies['onAccountCreated'],
   onAccountUpdated?: AuthDependencies['onAccountUpdated'],
   invitationValid?: AuthDependencies['invitationValid'],
+  onCoreIdentity?: AuthDependencies['onCoreIdentity'],
 ): Promise<TestAuth> {
   const { database } = await freshDatabase('auth');
   await runMigrations(database);
@@ -48,6 +50,7 @@ export async function makeAuth(
     invitationValid,
     onAccountCreated,
     onAccountUpdated,
+    onCoreIdentity,
   });
   return {
     auth,

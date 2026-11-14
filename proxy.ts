@@ -17,12 +17,14 @@ import { HSTS, SECURITY_HEADERS, contentSecurityPolicy, newNonce } from './src/s
  * session itself and sends a forged cookie to sign in. The page's own address, `/home`, goes to `/`, so that there is one address for it.
  */
 const SIGN_IN_PAGES = new Set(['/sign-in', '/sign-up', '/forgot-password', '/reset-password']);
+/** What a Sovereign-only instance has of them: the page that takes a person away to sign in there. Sign-up, and resetting a password, are local. */
+const SOVEREIGN_PAGES = new Set(['/sign-in']);
 
 /** Set on the request the proxy rewrites `/` into, so that the page it is rewritten to is not sent back to `/` (which would be a loop). */
 const HOME_MARK = 'x-tally-home';
 
 export function proxy(request: NextRequest) {
-  const { secure, development, authLocal } = edgeSettings();
+  const { secure, development, authLocal, authSovereign } = edgeSettings();
   const page = !request.nextUrl.pathname.startsWith('/api/');
   const nonce = newNonce();
   const policy = contentSecurityPolicy({ nonce, secure, development });
@@ -55,9 +57,11 @@ export function proxy(request: NextRequest) {
     requestHeaders.delete('content-security-policy');
   }
 
-  // Off means off (DESIGN.md §14.1): with local sign-in off, the sign-in pages are not there. A page cannot say so itself: the root loading state has
-  // already sent a 200 by the time it would, so the proxy answers with the page that is not found, and its status.
-  const absent = !authLocal && SIGN_IN_PAGES.has(path);
+  // Off means off (DESIGN.md §14.1): with local sign-in off, the sign-in pages are not there (but the one page that takes a person to Sovereign, when
+  // that is set up). A page cannot say so itself: the root loading state has already sent a 200 by the time it would, so the proxy answers with the
+  // page that is not found, and its status.
+  const absent =
+    !authLocal && SIGN_IN_PAGES.has(path) && !(authSovereign && SOVEREIGN_PAGES.has(path));
   const signedIn = path === '/' && cookie;
   const target = absent ? '/not-found' : signedIn ? '/home' : null;
   if (signedIn && !absent) requestHeaders.set(HOME_MARK, '1');

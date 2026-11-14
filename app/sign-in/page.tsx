@@ -33,7 +33,7 @@ export default async function SignInPage({
             ? { canSignUp: await signUpAvailable(), canReset: mailAvailable() }
             : undefined
         }
-        sovereign={false}
+        sovereign={settings.sovereign !== undefined}
         failure={oauthErrorMessage(typeof error === 'string' ? error : undefined)}
         next={after}
       />

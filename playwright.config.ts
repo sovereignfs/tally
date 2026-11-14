@@ -10,7 +10,7 @@ import { PORTS } from './e2e/ports.ts';
  *
  * One instance of the app runs, on the database form the environment names: a leg of CI sets the variables an operator would set
  * (`TALLY_DB_DIALECT` and its address) and this uses them as they are, and with none it is a SQLite file in a directory of its own. The three
- * forms are three runs of this, as the data-layer tests are. Instances for the journeys that change how an account signs in (core, passkeys) join
+ * forms are three runs of this, as the data-layer tests are. Two more instances sign in through a fake core (`e2e/sovereign.spec.ts`); one for passkeys may join
  * with the tasks that build them.
  *
  * Two browsers: Chromium, and WebKit, which is Safari's engine and where iOS's scrolling and compositing differ most. WebKit here is a desktop
@@ -46,6 +46,14 @@ const BLANK = Object.fromEntries(
 
 // With no database named, a file in a directory of its own: the auth database is `tally_auth.db` beside the app's, and a developer's data is not
 // touched.
+/** A database file of one instance's own, beside the main one. */
+const own = (name: string) => join(directory, `${name}.db`);
+const CORE = {
+  TALLY_CORE_URL: `http://localhost:${PORTS.coreAuth}/api/auth`,
+  TALLY_CORE_CLIENT_ID: 'tally-e2e-client',
+  TALLY_CORE_CLIENT_SECRET: 'tally-e2e-secret',
+};
+
 const database = process.env.TALLY_DB_DIALECT
   ? {}
   : { TALLY_DB_DIALECT: 'sqlite', TALLY_SQLITE_URL: `file:${join(directory, 'tally.db')}` };
@@ -73,6 +81,13 @@ export default defineConfig({
     },
   ],
   webServer: [
+    // First, so that it is up when the instances that sign in through it start and discover it (`e2e/fake-sovereign-server.ts`).
+    {
+      command: 'node e2e/fake-sovereign-server.ts',
+      url: `http://localhost:${PORTS.coreControl}/health`,
+      timeout: 30_000,
+      reuseExistingServer: false,
+    },
     {
       command: `node scripts/serve-standalone.mjs ${PORT}`,
       url: `http://localhost:${PORT}/api/health`,
@@ -85,6 +100,39 @@ export default defineConfig({
         TALLY_AUTH_LOCAL: '1',
         TALLY_AUTH_SECRET: SECRET,
         TALLY_AUTH_SIGNUP: 'invite',
+      } as Record<string, string>,
+    },
+    // Signing in through a core (`e2e/sovereign.spec.ts`): one instance that takes only Sovereign, sign-up by invitation (which a core sign-in is not
+    // held to, DESIGN.md §6.4), and one that takes both ways.
+    {
+      command: `node scripts/serve-standalone.mjs ${PORTS.sovereign}`,
+      url: `http://localhost:${PORTS.sovereign}/api/health`,
+      timeout: 90_000,
+      reuseExistingServer: false,
+      env: {
+        ...BLANK,
+        TALLY_DB_DIALECT: 'sqlite',
+        TALLY_SQLITE_URL: `file:${own('sovereign')}`,
+        TALLY_URL: `http://localhost:${PORTS.sovereign}`,
+        TALLY_AUTH_SECRET: SECRET,
+        TALLY_AUTH_SIGNUP: 'invite',
+        ...CORE,
+      } as Record<string, string>,
+    },
+    {
+      command: `node scripts/serve-standalone.mjs ${PORTS.both}`,
+      url: `http://localhost:${PORTS.both}/api/health`,
+      timeout: 90_000,
+      reuseExistingServer: false,
+      env: {
+        ...BLANK,
+        TALLY_DB_DIALECT: 'sqlite',
+        TALLY_SQLITE_URL: `file:${own('both')}`,
+        TALLY_URL: `http://localhost:${PORTS.both}`,
+        TALLY_AUTH_LOCAL: '1',
+        TALLY_AUTH_SECRET: SECRET,
+        TALLY_AUTH_SIGNUP: 'open',
+        ...CORE,
       } as Record<string, string>,
     },
   ],

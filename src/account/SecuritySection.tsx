@@ -6,6 +6,7 @@ import { authClient } from '../auth/client';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
 import { PasskeysPanel } from './PasskeysPanel';
 import { signInValue, passwordValues } from '../auth/derive';
+import { SovereignPanel } from './SovereignPanel';
 import { AccountKeys, httpKeyApi } from '../keys/unlock';
 import { TwoFactorPanel } from './TwoFactorPanel';
 import styles from './Account.module.css';
@@ -48,12 +49,18 @@ export function SecuritySection({
   hasPassword,
   email,
   accountId,
+  sovereign,
+  result,
 }: {
   passwordMinLength: number;
   /** The account has a password. One that came in through Sovereign alone has none, and so no password, authenticator app or passkeys to manage. */
   hasPassword: boolean;
   email: string;
   accountId: string;
+  /** Sovereign sign-in is set up on this instance: whether this account has it linked (its row's id), or null. Absent where it is not set up. */
+  sovereign: { linkedAccountId: string | null } | undefined;
+  /** What came back from linking or unlinking, in the address. */
+  result: { linked: boolean; unlinked: boolean; error: string | null };
 }) {
   return (
     <>
@@ -72,6 +79,14 @@ export function SecuritySection({
           </p>
         </div>
       )}
+      {sovereign ? (
+        <SovereignPanel
+          linkedAccountId={sovereign.linkedAccountId}
+          canUnlink={hasPassword}
+          email={email}
+          result={result}
+        />
+      ) : null}
       <Devices />
     </>
   );

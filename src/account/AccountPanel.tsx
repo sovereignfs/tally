@@ -18,7 +18,7 @@ import { UnlockingSection } from './UnlockingSection';
 
 /**
  * Settings, in one place (DESIGN.md §16). The sections are server-rendered and handed to the shell, which only shows the one that is open. The name and
- * address are the person's (§6.1). Notifications are §12.3's, export and import with 12.1 and 12.2, linking core with 2.3.
+ * address are the person's (§6.1). Notifications are §12.3's, export and import with 12.1 and 12.2, linking core in Security (§14.2).
  */
 export async function AccountPanel({ query }: { query: AccountQuery }) {
   const { session, person } = await requirePerson();
@@ -45,6 +45,14 @@ export async function AccountPanel({ query }: { query: AccountQuery }) {
             hasPassword={signIns.hasPassword}
             email={address}
             accountId={accountId}
+            sovereign={
+              settings?.sovereign ? { linkedAccountId: signIns.sovereignAccountId } : undefined
+            }
+            result={{
+              linked: query.linked === '1',
+              unlinked: query.unlinked === '1',
+              error: query.error ?? null,
+            }}
           />
         ),
         unlocking: <UnlockingSection accountId={accountId} hasPassword={signIns.hasPassword} />,

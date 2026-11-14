@@ -1,7 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { claimPlaceholder } from '../people/claim';
 import { sql } from 'drizzle-orm';
 import { activeMemberOf } from '../access/membership';
-import { recordActivity } from '../activity/record';
 import type { Database } from '../db/client';
 import { dbAll, dbGet, transaction } from '../db/exec';
 import { tables } from '../db/tables';
@@ -244,66 +244,16 @@ export async function acceptInvitation(
     );
     const invitation = taken[0];
     if (!invitation) throw new OpError('not_found');
-    const placeholderId = invitation.personId;
-    const memberships = await dbAll<{ id: string; groupId: string; leftAt: number | null }>(
-      tx,
-      sql`SELECT id, group_id AS "groupId", left_at AS "leftAt" FROM ${t.member} WHERE person_id = ${placeholderId}`,
+    const refused = await claimPlaceholder(tx, invitation.personId, who, now, (groupId) =>
+      groupId === invitation.groupId
+        ? [{ personId: invitation.createdBy, kind: 'invite_accepted' }]
+        : [],
     );
-    const refused: string[] = [];
-    for (const m of memberships) {
-      const already = await dbGet<{ id: string }>(
-        tx,
-        sql`SELECT id FROM ${t.member} WHERE group_id = ${m.groupId} AND person_id = ${who.personId}`,
-      );
-      if (already) {
-        refused.push(m.groupId);
-        continue;
-      }
-      const moved = await dbAll<{ seq: number }>(
-        tx,
-        sql`UPDATE ${t.grp} SET seq = seq + 1, updated_at = ${now} WHERE id = ${m.groupId} RETURNING seq`,
-      );
-      const seq = moved[0]?.seq ?? 0;
-      await dbAll(
-        tx,
-        sql`UPDATE ${t.member} SET person_id = ${who.personId}, role = CASE WHEN left_at IS NULL THEN 'member' ELSE role END, seq = ${seq}
-            WHERE id = ${m.id} RETURNING id`,
-      );
-      await recordActivity(
-        tx,
-        {
-          groupId: m.groupId,
-          actorPersonId: who.personId,
-          kind: 'member_joined',
-          subjectId: m.id,
-          details: { memberId: m.id, personId: who.personId },
-          now,
-        },
-        m.groupId === invitation.groupId
-          ? [{ personId: invitation.createdBy, kind: 'invite_accepted' }]
-          : [],
-      );
-    }
     if (refused.includes(invitation.groupId))
       throw new OpError(
         'already_member',
         'You are in that group already. An owner can merge the two of you.',
       );
-    // The placeholder's address goes; the placeholder goes once nothing points at it, and its other invitations with it.
-    await dbAll(
-      tx,
-      sql`UPDATE ${t.person} SET email = NULL, updated_at = ${now} WHERE id = ${placeholderId} RETURNING id`,
-    );
-    if (refused.length === 0) {
-      await dbAll(
-        tx,
-        sql`UPDATE ${t.invitation} SET revoked_at = ${now}, key_wrap = NULL WHERE person_id = ${placeholderId} AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id`,
-      );
-      await dbAll(
-        tx,
-        sql`DELETE FROM ${t.person} WHERE id = ${placeholderId} AND NOT EXISTS (SELECT 1 FROM ${t.member} m WHERE m.person_id = ${placeholderId}) RETURNING id`,
-      );
-    }
     // The group's key, opened on the claimer's device from the link's fragment and wrapped to their own account key, kept with the claim, so the group
     // opens on every device of theirs at once. A wrap that is not in the wrapped form is not kept.
     if (
