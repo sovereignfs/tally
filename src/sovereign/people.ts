@@ -45,6 +45,7 @@ export const GROUP_TABLES = [
   'member',
   'notice',
   'payment',
+  'reminder',
   'revision',
   'tombstone',
 ] as const;
@@ -77,6 +78,7 @@ function groupTable(database: Database, name: (typeof GROUP_TABLES)[number]) {
     member: t.member,
     notice: t.notice,
     payment: t.payment,
+    reminder: t.reminder,
     revision: t.revision,
     tombstone: t.tombstone,
   }[name];

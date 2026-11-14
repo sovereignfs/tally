@@ -71,7 +71,7 @@ written with no mail; a choice equal to the default kept as no row, and a channe
 mail set up, Settings says the bell is the only way, the switches are there and disabled, and the group's link opens its settings. **Left out:**
 core's bell, its column and its sending are 11.1; the choices are exported with export (12.1).
 
-#### 📋 9.3 — Reminders
+#### ✅ 9.3 — Reminders
 
 **Goal:** a nudge, once a day. **Design:** §12.4. **Depends on:** 9.2, 4.3.
 
@@ -82,3 +82,21 @@ time left once used.
 
 **Accepts when:** a second reminder the same day is refused by the server, whatever the button showed; a reminder for someone who does not owe is
 refused.
+
+**Done as:** `member.remind` (`src/groups/remind.ts`) over `/api/ops`: the reader an active member of an open group and the one reminded another
+active member, in the statement; the debt derived again from the group's rows by its setting (`suggestedPayments`), refused (`not_owed`) unless that
+member owes the reader now; `reminder` (migration `0014_add_reminders`) holds one per (who reminds, who is reminded, group) and UTC day by its unique
+index, so two at once are one, and a second is refused (`already_reminded`) with the wait until the next day (`src/groups/reminder-time.ts`). An
+account is told by a `reminder` notice, and by email unless they turned it off, from a `member_reminded` line that is kept out of the group's Activity,
+since a reminder is between two people. A placeholder with an address is sent their invitation, made anew in the same transaction
+(`createInvitationIn`, now shared with `createInvitation`), saying first what they owe; one without an address, or with no mail here, is refused
+(`cannot_remind`) with a sentence that says to invite them or send the link. Remind (`src/screens/RemindButton.tsx`) is beside someone who owes the
+reader in a group's Who owes whom, on Home's To settle and on a person's page (every open group where they owe the reader), syncs the device first so
+that the server has the expense the button was shown for (and says so, sending nothing, when it cannot), and once used is disabled with the wait,
+remembered on the device. Reminders are pruned after two days and deleted with their group. **Changed from the wording above:** the device does not
+know whether a placeholder has an address, so "Invite Sam to remind them" is the server's sentence after Remind, not the button's label. Tests: in
+Vitest, on each database, a reminder for someone who does not owe refused; a second the same day refused, the next day allowed; two at once one; the
+notice and email for an account, nothing for the one who reminded, and no line in the group's Activity; the debt by the setting (refused pairwise,
+allowed simplified); a placeholder's invitation mailed with what they owe; refused without an address or mail; a stranger not found; the reminder's
+wording. Each guard seen failing when removed. In Playwright, Chromium and WebKit: Remind on Balances says it went and waits until tomorrow, still after
+a reload; the reminded person's bell says how much; a placeholder with no mail here is refused with the sentence.

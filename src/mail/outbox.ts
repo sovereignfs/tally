@@ -23,7 +23,7 @@ import { type NoticeMailData, invitationMessage, noticeMessage, noticeSentence }
 export type MailTemplate = 'invitation' | 'notice';
 
 export interface TemplateData {
-  invitation: { inviterName: string; link: string };
+  invitation: { inviterName: string; link: string; reminder?: string };
   notice: NoticeMailData;
 }
 
@@ -69,7 +69,13 @@ function render(app: string, to: string, template: string, data: unknown): Messa
   if (template === 'invitation') {
     const d = data as TemplateData['invitation'];
     if (typeof d?.inviterName !== 'string' || typeof d.link !== 'string') return undefined;
-    return invitationMessage(app, to, d.inviterName, d.link);
+    return invitationMessage(
+      app,
+      to,
+      d.inviterName,
+      d.link,
+      typeof d.reminder === 'string' ? d.reminder : undefined,
+    );
   }
   if (template === 'notice') {
     const d = data as NoticeMailData;

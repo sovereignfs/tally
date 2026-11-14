@@ -1,5 +1,6 @@
 'use client';
 
+import { RemindButton, owingGroups } from './RemindButton';
 import Link from 'next/link';
 import { Avatar, EmptyState, PageContainer, PageHeader } from '@sovereignfs/ui';
 import { betweenTwo, totalBetween } from '../balances/across';
@@ -93,7 +94,7 @@ export function PeopleList() {
 /**
  * **A person** (DESIGN.md §15.7): the name and initials, "not on Tally yet" for a placeholder, what lies between the two per currency and by group,
  * Settle up with them (one payment per group and currency), and the expenses and payments both took part in, newest first, each with its group.
- * Remind joins with 9.3; Invite and editing a placeholder with 8.2 and 8.3.
+ * Remind, in every group where they owe the reader (§12.4).
  */
 export function PersonScreen({ personId }: { personId: string }) {
   const me = useMe();
@@ -162,6 +163,7 @@ export function PersonScreen({ personId }: { personId: string }) {
         </p>
         <div className={styles.row}>
           <SettleWithPerson person={person} />
+          <RemindButton name={person.name} targets={owingGroups(person)} />
         </div>
         {between.length > 0 ? (
           <section aria-label="By group" className={styles.stack}>

@@ -96,6 +96,12 @@ export async function prune(database: Database, now: number): Promise<Pruned> {
     )
   ).length;
 
+  // Reminders (§12.4): the once-a-day check reads today's alone.
+  await dbAll(
+    database,
+    sql`DELETE FROM ${t.reminder} WHERE created_at < ${now - 2 * 24 * 60 * 60 * 1000} RETURNING id`,
+  );
+
   // 4. Notices (§12.2): kept 90 days, and at most the latest `NOTICES_KEPT` of an account.
   result.notices = (
     await dbAll<{ id: string }>(

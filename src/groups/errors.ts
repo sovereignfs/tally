@@ -14,7 +14,10 @@ export class OpError extends Error {
       | 'not_empty'
       | 'already_member'
       | 'too_many_members'
-      | 'rate_limited',
+      | 'rate_limited'
+      | 'not_owed'
+      | 'already_reminded'
+      | 'cannot_remind',
     readonly sentence?: string,
   ) {
     super(sentence ?? code);

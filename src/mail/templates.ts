@@ -65,6 +65,10 @@ export function noticeSentence(
       return `${d.actorName} changed ${d.lineKind.startsWith('payment_') ? 'a payment' : 'an expense'} in a group on ${app}, in place of your change`;
     case 'owner_passed':
       return `You are now an owner of a group on ${app}: its last owner left`;
+    case 'reminder':
+      return money
+        ? `${d.actorName} reminded you that you owe ${money} in a group on ${app}`
+        : `${d.actorName} reminded you of what you owe in a group on ${app}`;
     default:
       return undefined;
   }
@@ -93,7 +97,15 @@ export function invitationMessage(
   to: string,
   inviterName: string,
   link: string,
+  reminder?: string,
 ): Message {
+  // A reminder (§12.4) to someone not on Tally yet is their invitation, with what they owe said first.
+  if (reminder)
+    return {
+      to,
+      subject: `${inviterName} reminded you that you owe ${reminder} on ${app}`,
+      text: `${inviterName} reminded you that you owe ${reminder}, in a group on ${app} where you share expenses.\n\nSee what for, and take your place:\n\n${link}\n\nThe link works once, for 14 days. If you were not expecting this, ignore it.\n`,
+    };
   return {
     to,
     subject: `${inviterName} added you to a group on ${app}`,

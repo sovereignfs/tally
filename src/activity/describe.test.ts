@@ -173,6 +173,18 @@ describe('the words of a line', () => {
       say(line('member_merged', 'kasun', { memberId: 'ml', personId: 'lee', fromPersonId: 'pip' })),
     ).toBe('You merged Pip into Lee');
     expect(
+      say(
+        line('member_reminded', 'sam', {
+          memberId: 'mk',
+          personId: 'kasun',
+          amounts: [
+            { amount: 1_200, currency: 'EUR' },
+            { amount: 300, currency: 'JPY' },
+          ],
+        }),
+      ),
+    ).toBe('Sam reminded you that you owe €12.00 and ¥300');
+    expect(
       say(line('role_changed', 'sam', { memberId: 'mk', personId: 'kasun', role: 'owner' })),
     ).toBe('Sam made you an owner');
     expect(

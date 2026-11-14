@@ -312,6 +312,7 @@ describe(`a group's lifecycle (${leg})`, () => {
       member: db().member,
       notice: db().notice,
       payment: db().payment,
+      reminder: db().reminder,
       revision: db().revision,
       tombstone: db().tombstone,
     };

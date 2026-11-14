@@ -137,6 +137,12 @@ export function describeActivity(line: ActivityLine, c: DescribeContext): string
       return `${actor.subject} removed ${who(line.details.personId).object}`;
     case 'member_merged':
       return `${actor.subject} merged ${who(line.details.fromPersonId).object} into ${who(line.details.personId).object}`;
+    case 'member_reminded': {
+      const owed = line.details.amounts.map((a) => c.money(a.amount, a.currency));
+      return line.details.personId === c.readerPersonId
+        ? `${actor.subject} reminded you that you owe ${list(owed)}`
+        : `${actor.subject} reminded ${who(line.details.personId).object} of ${list(owed)}`;
+    }
     case 'role_changed':
       return `${actor.subject} made ${who(line.details.personId).object} ${line.details.role === 'owner' ? 'an owner' : 'a member'}`;
   }

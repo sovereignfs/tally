@@ -41,7 +41,11 @@ export function activityHandler(databaseOf: () => Promise<Database> = getDatabas
 
     const database = await databaseOf();
     const t = tables(database);
-    const where: SQL[] = [activeMemberOf(database, sql`a.group_id`, accountId)];
+    // A reminder is between two people: its line is kept for the notice of the one reminded, and is not in the group's Activity (§12.4).
+    const where: SQL[] = [
+      activeMemberOf(database, sql`a.group_id`, accountId),
+      sql`a.kind <> 'member_reminded'`,
+    ];
     if (group !== null) where.push(sql`a.group_id = ${group}`);
     if (person !== null) where.push(sql`a.actor_person_id = ${person}`);
     if (kind !== null) where.push(sql`a.kind = ${kind}`);

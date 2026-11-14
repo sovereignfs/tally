@@ -54,13 +54,30 @@ export async function createInvitation(
   database: Database,
   who: Who,
   input: { groupId: string; personId: string; keyWrap?: string | null },
-  options: { now: number; mail?: { origin: string; inviterName: string } },
+  options: { now: number; mail?: InvitationMail },
 ): Promise<Made> {
-  const t = tables(database);
+  return transaction(database, (tx) => createInvitationIn(tx, who, input, options));
+}
+
+/** Where an invitation is mailed from, by whom, and for a reminder (DESIGN.md §12.4), what is owed. */
+export interface InvitationMail {
+  origin: string;
+  inviterName: string;
+  reminder?: string;
+}
+
+/** `createInvitation`, in the caller's transaction: a reminder to a placeholder makes its new link in the reminder's (§12.4). */
+export async function createInvitationIn(
+  tx: Database,
+  who: Who,
+  input: { groupId: string; personId: string; keyWrap?: string | null },
+  options: { now: number; mail?: InvitationMail },
+): Promise<Made> {
+  const t = tables(tx);
   const token = newToken();
   const invitationId = crypto.randomUUID();
   const expiresAt = options.now + VALID_FOR_MS;
-  return transaction(database, async (tx) => {
+  {
     // The placeholder is in the group, and the inviter an active member of it: both in the statement that finds it.
     const placeholder = await dbGet<{ email: string | null }>(
       tx,
@@ -93,12 +110,13 @@ export async function createInvitation(
           data: {
             inviterName: options.mail.inviterName,
             link: `${options.mail.origin}${invitationPath(token)}`,
+            ...(options.mail.reminder ? { reminder: options.mail.reminder } : {}),
           },
         },
         options.now,
       );
     return { invitationId, token, expiresAt, mailed };
-  });
+  }
 }
 
 /** Revokes a placeholder's live invitation, for a member of the group it is in. */

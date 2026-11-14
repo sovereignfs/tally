@@ -386,3 +386,25 @@ export const noticePref = app.table(
   },
   (table) => [primaryKey({ columns: [table.accountId, table.kind, table.channel] })],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const reminder = app.table(
+  'reminder',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    fromPersonId: ref('from_person_id').notNull(),
+    toMemberId: ref('to_member_id').notNull(),
+    day: isoDate('day').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('reminder_once_idx').on(
+      table.groupId,
+      table.fromPersonId,
+      table.toMemberId,
+      table.day,
+    ),
+    index('reminder_created_idx').on(table.createdAt),
+  ],
+);

@@ -20,6 +20,9 @@ const STATUS: Record<Exclude<OpError['code'], 'not_found'>, number> = {
   already_member: 409,
   too_many_members: 409,
   rate_limited: 429,
+  not_owed: 409,
+  already_reminded: 429,
+  cannot_remind: 409,
 };
 
 export function opsHandler(databaseOf: () => Promise<Database> = getDatabase) {

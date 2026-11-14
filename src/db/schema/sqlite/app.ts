@@ -442,3 +442,28 @@ export const noticePref = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.accountId, table.kind, table.channel] })],
 );
+
+/**
+ * **A reminder sent** (DESIGN.md §12.4): one per (who reminds, who is reminded, group) and day, the day in UTC, held by its unique index so that two at
+ * once are one. Kept two days, which is all the once-a-day check reads.
+ */
+export const reminder = sqliteTable(
+  'reminder',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    fromPersonId: ref('from_person_id').notNull(),
+    toMemberId: ref('to_member_id').notNull(),
+    day: isoDate('day').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('reminder_once_idx').on(
+      table.groupId,
+      table.fromPersonId,
+      table.toMemberId,
+      table.day,
+    ),
+    index('reminder_created_idx').on(table.createdAt),
+  ],
+);

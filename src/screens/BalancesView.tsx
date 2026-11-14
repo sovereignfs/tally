@@ -7,12 +7,13 @@ import { toMinor } from '../money/amount';
 import { formatMoney } from '../money/text';
 import { LocalLink, sheetHref } from './AddSheet';
 import type { GroupView } from './data';
+import { RemindButton } from './RemindButton';
 import styles from './Screens.module.css';
 
 /**
  * A group's **Balances** (DESIGN.md §15.5, §10): each member's balance per currency, then who owes whom by the group's setting (pairwise, or simplified),
  * each pair that involves the reader with **Settle up**, which opens the payment sheet filled in (§9), and a line saying whether debts are simplified,
- * with an owner's link to change it. Remind joins with reminders (9.3). Read from the device.
+ * with an owner's link to change it, and Remind beside someone who owes the reader (§12.4). Read from the device.
  */
 export function BalancesView({ view }: { view: GroupView }) {
   const pathname = usePathname();
@@ -105,6 +106,12 @@ export function BalancesView({ view }: { view: GroupView }) {
                   >
                     Settle up
                   </ButtonLink>
+                ) : null}
+                {debt.toId === view.me?.id && !closed ? (
+                  <RemindButton
+                    name={nameOf(debt.fromId)}
+                    targets={[{ groupId: view.group.id, memberId: debt.fromId }]}
+                  />
                 ) : null}
               </li>
             );

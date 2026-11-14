@@ -1,5 +1,6 @@
 'use client';
 
+import { RemindButton, owingGroups } from './RemindButton';
 import Link from 'next/link';
 import { useState } from 'react';
 import { AvatarStack, Button, EmptyState, PageContainer, PageHeader } from '@sovereignfs/ui';
@@ -20,7 +21,7 @@ import styles from './Screens.module.css';
 /**
  * **Home** (DESIGN.md §15.4): where the reader stands, then what to do about it. Their balance per currency (owed and owing, the primary currency first);
  * To settle, everyone with a balance against them, largest first, with the groups it comes from and Settle up (with a person, §9); the open groups with a
- * balance; and the last ten expenses and payments involving them. A person with no group sees one empty state. Remind joins with 9.3. From the device.
+ * balance; and the last ten expenses and payments involving them. A person with no group sees one empty state. Remind sits beside whoever owes the reader (§12.4). From the device.
  */
 export function Home() {
   const me = useMe();
@@ -141,6 +142,7 @@ export function Home() {
                     {[...new Set(between.map((b) => names[b.groupId] ?? '…'))].join(', ')}
                   </span>
                 </span>
+                <RemindButton name={person.name} targets={owingGroups(person)} />
                 <SettleWithPerson person={person} />
               </li>
             ))}

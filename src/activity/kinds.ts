@@ -29,6 +29,7 @@ export const ACTIVITY_KINDS = [
   'member_left',
   'member_removed',
   'member_merged',
+  'member_reminded',
   'role_changed',
 ] as const;
 
@@ -89,6 +90,18 @@ export interface MemberDetails {
   fromPersonId?: string;
 }
 
+/**
+ * For `member_reminded` (§12.4): who was reminded and of what, per currency; `amount` and `currency` when it was one. A reminder is between two people,
+ * so its line is not in the group's Activity: it is there only for the notice of the one reminded.
+ */
+export interface ReminderDetails {
+  memberId: string;
+  personId: string;
+  amounts: { amount: number; currency: string }[];
+  amount?: number;
+  currency?: string;
+}
+
 export interface RoleDetails {
   memberId: string;
   personId: string;
@@ -119,6 +132,7 @@ export interface ActivityDetailsOf {
   member_left: MemberDetails;
   member_removed: MemberDetails;
   member_merged: MemberDetails;
+  member_reminded: ReminderDetails;
   role_changed: RoleDetails;
 }
 
