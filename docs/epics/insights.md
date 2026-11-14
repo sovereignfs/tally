@@ -2,7 +2,7 @@
 
 ## Status
 
-📋 Planned.
+🚧 In progress: the figures are done; the screens wait for charts in `@sovereignfs/ui` (14.1).
 
 ## Overview
 
@@ -15,7 +15,7 @@ What was spent, as a person's share, per currency, never converted, computed on 
 
 ## Tasks
 
-#### 📋 10.1 — The figures
+#### ✅ 10.1 — The figures
 
 **Goal:** every spending figure, pure. **Design:** §13. **Depends on:** 4.2.
 
@@ -24,6 +24,15 @@ by category and by month, and each member's share; all per currency, ordered wit
 date (`YYYY-MM-DD`), so no time zone is involved.
 
 **Accepts when:** hand-worked fixtures across two groups and two currencies give the expected figures, and buying dinner for four counts a quarter.
+
+**Done as:** `src/insights/index.ts`, pure, over plain rows (each expense's date, currency, category, deletion and shares; each group's reader
+member), so that the screens read the device's rows through it and nothing else counts spending. The reader's spending by category for a month, by
+month for the twelve months ending with a given one (every month listed, oldest first), and by group (over everything or a month); a group's spending
+by category and by month, and each member's share (largest first, a tie in the group's member order). Each answer is a list of currencies, each with
+its total and rows, the primary currency first and then by code; no figure blends two. Spending is the reader's share; a deleted expense and a group the
+reader is not in count for nothing; payments are not spending; a month is the first seven characters of the expense's own date. Tests: a fixture
+worked by hand across two groups and two currencies (a cent left over, a deleted expense, an expense the reader paid for but has no share in, one
+thirteen months back, a group the reader is not in), every figure written out; the dinner for four seen failing when spending counted what was paid.
 
 #### 📋 10.2 — The screens
 
