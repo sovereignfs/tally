@@ -123,3 +123,58 @@ test('signing out takes the key off the device', async ({ page }) => {
   const names = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
   expect(names).not.toContain(`tally-vault-${accountId}`);
 });
+
+test('the recovery key, kept when offered, unlocks a device nothing else can, however it is typed', async ({
+  page,
+  browser,
+}) => {
+  await signedIn(page);
+  // The account starts with no recovery key: a run in the other browser may have kept one, and none is offered while one is kept.
+  const before = (
+    (await (await page.request.get('/api/keys')).json()) as {
+      wraps: { id: string; method: string }[];
+    }
+  ).wraps;
+  const origin = new URL(page.url()).origin;
+  for (const wrap of before.filter((w) => w.method === 'recovery')) {
+    await page.request.delete(`/api/keys/wraps/${wrap.id}`, { headers: { origin } });
+  }
+  // Offered as it is right after sign-up.
+  await page.evaluate(() => window.sessionStorage.setItem('tally.offer-recovery', '1'));
+  await page.reload();
+  const offer = page.getByRole('dialog', { name: 'Save your recovery key' });
+  await expect(offer).toBeVisible();
+  const code = (await offer.getByLabel('Your recovery key').textContent()) ?? '';
+  expect(code).toMatch(/^([0-9A-Z]{4}-){6}[0-9A-Z]{4}$/);
+  await offer.getByRole('button', { name: 'I have kept it' }).click();
+  await expect(offer).toHaveCount(0);
+  const wraps = (
+    (await (await page.request.get('/api/keys')).json()) as { wraps: { method: string }[] }
+  ).wraps;
+  expect(wraps.filter((w) => w.method === 'recovery')).toHaveLength(1);
+
+  await using phone = await secondBrowser(browser);
+  await phone.page.route('**/api/keys', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const reply = await route.fetch();
+    const body = (await reply.json()) as { wraps: { method: string }[] };
+    await route.fulfill({
+      response: reply,
+      json: { ...body, wraps: body.wraps.filter((w) => w.method !== 'password') },
+    });
+  });
+  await trySignIn(phone.page, EMAIL, PASSWORD);
+  await expect(locked(phone.page)).toBeVisible();
+  await hydrated(phone.page);
+  await phone.page.getByRole('button', { name: 'Use your recovery key' }).click();
+  const dialog = phone.page.getByRole('dialog', { name: 'Use your recovery key' });
+  // A code that is not one is told apart from the right one.
+  await dialog.getByLabel('Recovery key').fill('not a recovery key');
+  await dialog.getByRole('button', { name: 'Unlock' }).click();
+  await expect(dialog.getByText('That is not a recovery key. Check each character.')).toBeVisible();
+  await dialog.getByLabel('Recovery key').fill(code.toLowerCase().replace(/-/g, ' '));
+  await dialog.getByRole('button', { name: 'Unlock' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(() => holdsKey(phone.page)).toBe(true);
+  await expect(locked(phone.page)).toHaveCount(0);
+});

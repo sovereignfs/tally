@@ -64,6 +64,11 @@ export async function ensureAccount(page: Page) {
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
+  // A new account is offered its recovery key once (DESIGN.md §5.3): skipped here, as a person may.
+  const offer = page.getByRole('dialog', { name: 'Save your recovery key' });
+  await expect(offer).toBeVisible();
+  await offer.getByRole('button', { name: 'Not now' }).click();
+  await expect(offer).toHaveCount(0);
   await signOut(page);
 }
 

@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Button, ConfirmDialog } from '@sovereignfs/ui';
+import { Alert, Button, ConfirmDialog, Dialog, FormField, Input } from '@sovereignfs/ui';
+import { CipherError } from '../cipher/errors';
+import { parseRecoveryCode } from '../cipher/recovery';
+import { OFFER_FLAG, RecoveryKeyOffer } from './RecoveryKeyOffer';
 import { GroupKeys, httpGrantsApi } from './groups';
 import { AccountKeys, httpKeyApi, type ServerKeys } from './unlock';
 
@@ -52,6 +55,10 @@ export function KeyGate({ accountId }: { accountId: string }) {
   const [requests, setRequests] = useState<ServerKeys['requests']>([]);
   const [confirmAfresh, setConfirmAfresh] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [offer, setOffer] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const keysRef = useRef<AccountKeys | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -75,6 +82,8 @@ export function KeyGate({ accountId }: { accountId: string }) {
         setRequests(server.requests);
         // Each look is also an exchange of group keys: what this account was given is opened, and what other members lack is wrapped for them.
         await new GroupKeys(k, httpGrantsApi).sync().catch(() => undefined);
+        // Offered once, right after sign-up, while the account has no recovery key (DESIGN.md §5.3).
+        if (readFlag() && !server.wraps.some((w) => w.method === 'recovery')) setOffer(true);
       } else setState((now) => (now.kind === 'asking' ? now : { kind: 'locked' }));
     } catch {
       setState({ kind: 'failed' });
@@ -111,6 +120,47 @@ export function KeyGate({ accountId }: { accountId: string }) {
     } catch {
       setBusy(false);
       setState({ kind: 'failed' });
+    }
+  }
+
+  function readFlag(): boolean {
+    try {
+      return window.sessionStorage.getItem(OFFER_FLAG) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function closeOffer() {
+    try {
+      window.sessionStorage.removeItem(OFFER_FLAG);
+    } catch {
+      // Not kept: it is offered once more, which does no harm.
+    }
+    setOffer(false);
+  }
+
+  async function useRecoveryKey() {
+    setBusy(true);
+    setRecoveryError(null);
+    try {
+      const secret = await parseRecoveryCode(typed);
+      const k = await keys();
+      await k.unlockWithSecret('recovery', secret);
+      await new GroupKeys(k, httpGrantsApi).sync().catch(() => undefined);
+      setRecovering(false);
+      setTyped('');
+      setState({ kind: 'unlocked' });
+    } catch (error) {
+      if (error instanceof CipherError && error.kind === 'malformed')
+        setRecoveryError('That is not a recovery key. Check each character.');
+      else if (error instanceof CipherError)
+        setRecoveryError(
+          'That recovery key is not this account’s, or it was replaced by a newer one.',
+        );
+      else setRecoveryError('Could not reach the server. Try again in a moment.');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -158,6 +208,9 @@ export function KeyGate({ accountId }: { accountId: string }) {
               <Button onClick={() => void askAnotherDevice()} loading={busy}>
                 Ask another device
               </Button>
+              <Button variant="secondary" onClick={() => setRecovering(true)} disabled={busy}>
+                Use your recovery key
+              </Button>
               <Button variant="secondary" onClick={() => setConfirmAfresh(true)} disabled={busy}>
                 Start afresh
               </Button>
@@ -180,6 +233,57 @@ export function KeyGate({ accountId }: { accountId: string }) {
           </Alert>
         </div>
       ) : null}
+      <RecoveryKeyOffer accountId={accountId} open={offer} onClose={closeOffer} />
+      <Dialog
+        open={recovering}
+        onClose={() => setRecovering(false)}
+        title="Use your recovery key"
+        size="sm"
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void useRecoveryKey();
+          }}
+        >
+          <FormField
+            label="Recovery key"
+            hint="Spaces, dashes and lower case are fine."
+            error={recoveryError ?? undefined}
+          >
+            {(field) => (
+              <Input
+                {...field}
+                autoComplete="off"
+                spellCheck={false}
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                disabled={busy}
+              />
+            )}
+          </FormField>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 'var(--sv-space-2)',
+              marginTop: 'var(--sv-space-3)',
+            }}
+          >
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => setRecovering(false)}
+              disabled={busy}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={busy}>
+              Unlock
+            </Button>
+          </div>
+        </form>
+      </Dialog>
       <ConfirmDialog
         open={confirmAfresh}
         onClose={() => setConfirmAfresh(false)}

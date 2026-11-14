@@ -4,6 +4,7 @@ import { type FormEvent, useState } from 'react';
 import { authClient } from '../client';
 import { passwordValues } from '../derive';
 import { unlockAfterPassword } from '../../keys/after-sign-in';
+import { OFFER_FLAG } from '../../keys/RecoveryKeyOffer';
 import { messageFor } from '../messages';
 import { AuthButton, AuthError, AuthField, AuthForm, Input } from '@sovereignfs/ui';
 
@@ -45,6 +46,12 @@ export function SignUpForm({ minLength, mail = false }: { minLength: number; mai
     // Signed in at once: the account's key is made now, wrapped by the password (DESIGN.md §5.3). With mail, it is made at the first sign-in.
     const accountId = (data as { user?: { id?: string } } | null)?.user?.id;
     if (accountId) await unlockAfterPassword(accountId, values.unwrap);
+    // The shell offers the recovery key once, now (DESIGN.md §5.3).
+    try {
+      window.sessionStorage.setItem(OFFER_FLAG, '1');
+    } catch {
+      // Not offered now; Settings offers it any time.
+    }
     window.location.assign('/');
   }
 

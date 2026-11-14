@@ -110,7 +110,7 @@ taken out of the insert; a replaced key's wraps kept) each failed their test. **
 (7.1); sealing in the outbox once the key arrives, which is the outbox's (6.2); adding a person carrying the adder's wrap (8.2); the activity line of a
 replaced key (5.4).
 
-#### 📋 15.4 — The recovery key
+#### ✅ 15.4 — The recovery key
 
 **Goal:** a last way in, offered and never required. **Design:** §5.3, §16. **Depends on:** 15.2.
 
@@ -120,6 +120,16 @@ that is waiting, "Use your recovery key" unlocks the account key and so every gr
 
 **Accepts when:** after a password reset, with no other device and no passkey, the code alone unlocks every group; a replaced code unlocks nothing;
 skipping it leaves every feature working.
+
+**Done as:** `src/keys/RecoveryKeyOffer.tsx`: the code (15.1's, with its two check characters) to copy (`CopyButton`), download as a text file or
+print, with a QR code drawn by `qrcode.react`'s `QRCodeSVG` as Tusk's and Ledger's two-factor panels draw theirs (inline, nothing fetched), and a
+sentence on what it is for; **the wrap is made only on "I have kept it"**, so _Not now_ leaves nothing. It is offered once, right after sign-up (the
+sign-up form sets a session flag the key gate reads, while the account has no recovery wrap). A locked device's notice now offers _Use your recovery
+key_: the code, read forgivingly, unlocks the account key and so every group, and a code that is not one is told apart from one that is not this
+account's. The e2e helper `ensureAccount` skips the offer, as a person may. Run here: 46 browser tests in Chromium and WebKit, twice (the offer gives a
+code; a device the password cannot open is unlocked by it typed in lower case with spaces; a wrong code is said); the unlocking itself is 15.2's unit
+test. The browser test failed with the wrap not made. **Left out:** Settings > Recovery key, which shows whether one is kept and makes a new one
+(2.6, with this same offer).
 
 #### 📋 15.5 — An invitation link that carries the key
 
