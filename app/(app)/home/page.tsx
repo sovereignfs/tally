@@ -1,18 +1,9 @@
 import type { Metadata } from 'next';
-import { EmptyState, PageContainer, PageHeader } from '@sovereignfs/ui';
+import { Home } from '@/src/screens/Home';
 
 export const metadata: Metadata = { title: 'Home' };
 
-/** A place the shell has, with nothing in it yet: task 7.7 builds it. */
+/** Home (DESIGN.md §15.4), read from the device. */
 export default function Page() {
-  return (
-    <PageContainer>
-      <PageHeader title="Home" description="Where you stand, and what to do about it." />
-      <EmptyState
-        icon="house"
-        heading="Nothing to show yet"
-        description="This arrives with a later task of the roadmap."
-      />
-    </PageContainer>
-  );
+  return <Home />;
 }

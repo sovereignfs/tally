@@ -34,6 +34,7 @@ export const ROUTES: RouteRule[] = [
   { route: '/g/[id]/e/[expense]', page: account },
   { route: '/g/[id]/p/[payment]', page: account },
   { route: '/people', page: account },
+  { route: '/people/[id]', page: account },
   { route: '/activity', page: account },
   { route: '/insights', page: account },
   // Signing in (DESIGN.md §14.1). The last two only with mail: without it they are 404, like the routes under /api/auth that send and use the links.

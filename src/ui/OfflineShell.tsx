@@ -10,6 +10,8 @@ import { site } from '../site';
 import { SyncProvider } from '../sync/react';
 import { GroupPage } from '../screens/GroupPage';
 import { RecordScreen } from '../screens/RecordScreen';
+import { Home } from '../screens/Home';
+import { PeopleList, PersonScreen } from '../screens/People';
 import { GroupsList } from '../screens/GroupsList';
 import { AppShell } from './AppShell';
 import { AddSheet } from '../screens/AddSheet';
@@ -64,6 +66,10 @@ function OfflineScreen() {
     );
   const group = /^\/g\/([A-Za-z0-9_-]{1,64})/.exec(pathname)?.[1];
   if (group) return <GroupPage groupId={group} />;
+  const person = /^\/people\/([A-Za-z0-9_-]{1,64})$/.exec(pathname)?.[1];
+  if (person) return <PersonScreen personId={person} />;
+  if (pathname === '/people') return <PeopleList />;
+  if (pathname === '/' || pathname === '/home') return <Home />;
   return (
     <PageContainer>
       <PageHeader

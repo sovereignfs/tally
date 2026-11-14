@@ -1,4 +1,5 @@
 import { type Balances, type Debt, type GroupRows, balances, suggestedPayments } from '../balances';
+import type { SharedGroup } from '../balances/across';
 import type {
   LocalDatabase,
   LocalExpense,
@@ -26,6 +27,8 @@ export interface GroupView {
   balances: Balances;
   /** Who owes whom, by the group's setting (§10.2, §10.3): what Settle up offers. */
   suggestions: Debt[];
+  /** The rows as the balances read them, for the figures across groups (§10.4). */
+  rows: GroupRows;
 }
 
 export async function readGroupView(
@@ -63,6 +66,7 @@ export async function readGroupView(
     me,
     balances: balances(groupRows, order),
     suggestions: suggestedPayments(groupRows, order, rows.group.simplifyDebts),
+    rows: groupRows,
   };
 }
 
@@ -91,4 +95,48 @@ export async function readGroupViews(db: LocalDatabase, personId: string): Promi
       b.group.seq - a.group.seq ||
       (a.group.id < b.group.id ? -1 : 1),
   );
+}
+
+/** Someone the reader shares a group with, across every group they share (§15.7): matched by person, since a member is one group's. */
+export interface PersonView {
+  personId: string;
+  name: string;
+  placeholder: boolean;
+  leftTally: boolean;
+  /** Each group they share with the reader, with the two members there. */
+  groups: { view: GroupView; me: string; them: string }[];
+}
+
+export function peopleOf(views: readonly GroupView[], myPersonId: string): PersonView[] {
+  const people = new Map<string, PersonView>();
+  for (const view of views) {
+    if (!view.me) continue;
+    for (const member of view.members) {
+      if (member.personId === myPersonId) continue;
+      const person =
+        people.get(member.personId) ??
+        ({
+          personId: member.personId,
+          name: member.name,
+          placeholder: member.placeholder,
+          leftTally: member.leftTally,
+          groups: [],
+        } as PersonView);
+      person.groups.push({ view, me: view.me.id, them: member.id });
+      people.set(member.personId, person);
+    }
+  }
+  return [...people.values()];
+}
+
+/** The groups shared with one person, as the figures across groups read them. */
+export function sharedGroups(person: PersonView): SharedGroup[] {
+  return person.groups.map((g) => ({
+    groupId: g.view.group.id,
+    rows: g.view.rows,
+    order: g.view.order,
+    simplify: g.view.group.simplifyDebts,
+    me: g.me,
+    them: g.them,
+  }));
 }

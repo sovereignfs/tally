@@ -143,7 +143,7 @@ Milestone F. Tests: two devices edit an
 expense from one version, the later stands, Restore this version makes the earlier current and its history says so, and a comment written offline on
 one device is on the other after sync, in Chromium and WebKit.
 
-#### 📋 7.7 — Home
+#### ✅ 7.7 — Home
 
 **Goal:** where the reader stands, and what to do about it. **Design:** §15.4. **Depends on:** 7.5, 4.4, 14.2.
 
@@ -153,7 +153,14 @@ state for no group.
 
 **Accepts when:** figures match a hand-worked seed across two groups and two currencies; a new account sees only Create your first group.
 
-#### 📋 7.8 — People and a person
+**Done as:** `src/screens/Home.tsx` at `/` (and `/home`, and the offline shell): Your balance from `position` (owed and owing per currency apart,
+the primary currency first), To settle (each person with a balance, largest first, in words, with the groups it comes from and Settle up with the
+person), the open groups with a balance as tiles with `AvatarStack`, and the last ten expenses and payments involving the reader with the reader's part;
+a person with no group sees only Create your first group, with New group. Remind joins with 9.3. **Not tested:** the new account's empty state, since
+the browser tests have one account (sign-up is closed and other accounts join with Milestone F); the figures across two groups and two currencies are
+tested on the person's line, since Your balance sums every group the shared account has.
+
+#### ✅ 7.8 — People and a person
 
 **Goal:** everyone the reader shares a group with, and one of them. **Design:** §15.7. **Depends on:** 7.5, 4.4.
 
@@ -162,6 +169,14 @@ balance per currency, by group, Settle up with a person (one payment per group a
 both took part in, with their group; for a placeholder the reader added, Invite and editing the name and email (8.2, 8.3).
 
 **Accepts when:** settling up with a person shared across two groups records one payment in each and zeroes both.
+
+**Done as:** `src/screens/People.tsx`: `/people` (everyone the reader shares a group with, matched by person across groups by `peopleOf`, those with a
+balance first and then by name) and `/people/<id>` (`PersonScreen`: initials, "not on Tally yet", what lies between per currency in words and by
+group from `src/balances/across.ts`, Settle up with the person, and the expenses and payments both took part in with their group). `SettleWithPerson`
+records, behind one `ConfirmDialog` that lists them, one payment per group and currency (`settleWithPerson`). Remind (9.3), Invite and editing a
+placeholder (8.2, 8.3) join with their tasks. Tests in Playwright, Chromium and WebKit: the same placeholder seeded into two groups (`seedMembers`),
+an expense in euros in one and in yen in the other, the figures on Home and the person's page never blended, and settling up with the person
+recording two payments and zeroing both groups.
 
 #### 📋 7.9 — A group's settings
 
