@@ -43,11 +43,18 @@ export function MoneyInput({
     return () => window.clearTimeout(handle);
   }, [focusOnOpen]);
   const [text, setText] = useState(value === null ? '' : decimalText(value, currency));
+  const shownCurrency = useRef(currency);
   useEffect(() => {
-    // A new value from outside (a prefill, a reset) or a new currency: shown, unless the text already says it.
+    if (shownCurrency.current !== currency) {
+      // A new currency: what was typed stays as typed, and is read in it ("1000" in euros is ¥1,000, not ¥100,000).
+      shownCurrency.current = currency;
+      const reread = parseAmount(text, currency);
+      if (reread !== value) onChange(reread);
+      return;
+    }
+    // A new value from outside (a prefill, a reset): shown, unless the text already says it. Typing changes `text` and reports through `onChange`.
     if (parseAmount(text, currency) !== value)
       setText(value === null ? '' : decimalText(value, currency));
-    // Only an outside change re-syncs; typing changes `text` and reports through `onChange`.
   }, [value, currency]);
   const decimals = currencyDecimals(currency);
   return (
