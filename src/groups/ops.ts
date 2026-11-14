@@ -12,6 +12,7 @@ import { isGroupColor } from './colors';
 import { OpError } from './errors';
 import { closeGroup, deleteGroup, leaveGroup, removeMember, reopenGroup } from './lifecycle';
 import { addPerson, editPlaceholder } from './people';
+import { inviteCreate, inviteResend, inviteRevoke } from '../invites/ops';
 
 export { OpError } from './errors';
 
@@ -417,6 +418,9 @@ export const OPERATIONS = {
   'group.delete': deleteGroup,
   'member.add': addPerson,
   'person.edit': editPlaceholder,
+  'invite.create': inviteCreate,
+  'invite.revoke': inviteRevoke,
+  'invite.resend': inviteResend,
 } as const;
 
 export type OperationName = keyof typeof OPERATIONS;

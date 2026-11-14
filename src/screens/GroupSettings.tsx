@@ -8,6 +8,7 @@ import {
   Button,
   ColorPicker,
   ConfirmDialog,
+  CopyButton,
   EmptyState,
   FormField,
   Input,
@@ -49,6 +50,7 @@ export function GroupSettings({ groupId }: { groupId: string }) {
     null,
   );
   const [working, setWorking] = useState(false);
+  const [invited, setInvited] = useState<Invited | null>(null);
 
   // What the reader hears is theirs, kept by the server: read once, online.
   useEffect(() => {
@@ -246,7 +248,33 @@ export function GroupSettings({ groupId }: { groupId: string }) {
                     <span className={styles.small}>
                       {m.placeholder ? 'not on Tally yet' : m.role === 'owner' ? 'owner' : 'member'}
                     </span>
+                    {invited?.personId === m.personId ? (
+                      <InvitationLink invitation={invited} name={m.name} />
+                    ) : null}
                   </span>
+                  {m.placeholder && !closed ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        void op({ op: 'invite.create', groupId, personId: m.personId }).then(
+                          (answer) => {
+                            const made = answer as
+                              { token?: string; mailed?: boolean; mailOn?: boolean } | undefined;
+                            if (made?.token)
+                              setInvited({
+                                personId: m.personId,
+                                token: made.token,
+                                mailed: Boolean(made.mailed),
+                                mailOn: Boolean(made.mailOn),
+                              });
+                          },
+                        )
+                      }
+                    >
+                      {invited?.personId === m.personId ? 'New link' : `Invite ${m.name}`}
+                    </Button>
+                  ) : null}
                   {owner && !closed && m.role !== null && m.id !== view.me?.id ? (
                     <Button
                       variant="ghost"
@@ -506,5 +534,40 @@ function AddPeople({
         </div>
       ) : null}
     </div>
+  );
+}
+
+interface Invited {
+  personId: string;
+  token: string;
+  mailed: boolean;
+  mailOn: boolean;
+}
+
+/**
+ * An invitation just made (DESIGN.md §6.3): the link to copy and send any way at all, and whether an email went too. With no mail set up, it says the
+ * link is the only way, rather than pretending an email went. The token is shown once; a new link replaces it.
+ */
+function InvitationLink({ invitation, name }: { invitation: Invited; name: string }) {
+  const link = `${window.location.origin}/invite/${invitation.token}`;
+  return (
+    <span className={styles.stack} role="status" aria-label={`Invitation for ${name}`}>
+      <span className={styles.small}>
+        {invitation.mailed
+          ? `An email with this link is on its way to ${name}. You can also send it yourself:`
+          : invitation.mailOn
+            ? `${name} has no email address here: send this link yourself.`
+            : 'Mail is not set up here, so this link is the only way: send it to them yourself.'}
+      </span>
+      <span className={styles.row}>
+        <code className={styles.small} style={{ wordBreak: 'break-all' }}>
+          {link}
+        </code>
+        <CopyButton text={link} label="Copy link" copiedLabel="Copied" />
+      </span>
+      <span className={styles.small}>
+        It works once, for 14 days. Whoever has it can take {name}’s place.
+      </span>
+    </span>
   );
 }

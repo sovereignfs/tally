@@ -7,6 +7,7 @@ import { passkey } from '@better-auth/passkey';
 import type { Database } from '../db/client';
 import type { Mailer } from '../mail/mailer';
 import { resetMessage, verificationMessage } from '../mail/templates';
+import { INVITE_HEADER } from './invite-header';
 import * as postgresAuth from '../db/schema/postgres/auth';
 import * as sqliteAuth from '../db/schema/sqlite/auth';
 import { type AuthSettings, SIGNUP_CLOSED } from './config';
@@ -28,6 +29,8 @@ export interface AuthDependencies {
    * a single-use link that ends every other session; without one, neither exists** and the routes that would do them are not mounted (`app/api/auth`).
    */
   mailer?: Mailer | undefined;
+  /** Whether a token is a live invitation (`src/invites/store.ts`): what lets an account be made when sign-up is by invitation. */
+  invitationValid?: ((token: string) => Promise<boolean>) | undefined;
   /**
    * Called once better-auth has made an account, with what it was made with: the app makes the account's person here (`src/people/persons.ts`).
    * The account is not undone if this fails, since the person is made again at the account's next request; so a failure is not the visitor's.
@@ -53,6 +56,7 @@ export function createAuth({
   name,
   database,
   mailer,
+  invitationValid,
   onAccountCreated,
   onAccountUpdated,
 }: AuthDependencies) {
@@ -169,15 +173,25 @@ export function createAuth({
               () => undefined,
             );
           },
-          before: async () => {
+          before: async (_user, context) => {
             if (settings.signUp === 'open') return;
-            if ((await countUsers(database)) > 0) {
-              // With a code, so that a refusal can be told apart from any other 403.
-              throw new APIError('FORBIDDEN', {
-                message: 'Sign-up is closed on this instance.',
-                code: SIGNUP_CLOSED,
-              });
-            }
+            if ((await countUsers(database)) === 0) return;
+            // By invitation (§6.4): an account is made for someone who arrives with a live invitation, checked here, when it is made.
+            const invite =
+              context?.headers?.get(INVITE_HEADER) ??
+              context?.request?.headers.get(INVITE_HEADER) ??
+              null;
+            if (
+              settings.signUp === 'invite' &&
+              invite &&
+              (await invitationValid?.(invite).catch(() => false))
+            )
+              return;
+            // With a code, so that a refusal can be told apart from any other 403.
+            throw new APIError('FORBIDDEN', {
+              message: 'Sign-up is closed on this instance.',
+              code: SIGNUP_CLOSED,
+            });
           },
         },
       },

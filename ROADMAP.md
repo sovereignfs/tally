@@ -119,7 +119,7 @@ People outside can be in a group before they have an account, and take their pla
 | 51  | [8.1](docs/epics/invites.md)     | The mail outbox                           | P1       | 1.6            | ✅     |
 | 52  | [8.2](docs/epics/invites.md)     | Adding people and placeholders            | P1       | 7.9, 3.1       | ✅     |
 | 53  | [14.5](docs/epics/upstream.md)   | `AUTH_SIGNUP` by invitation (`sovereign`) | P1       | —              | ✅     |
-| 54  | [8.3](docs/epics/invites.md)     | Invitations and claiming                  | P1       | 8.1, 8.2, 14.5 | 📋     |
+| 54  | [8.3](docs/epics/invites.md)     | Invitations and claiming                  | P1       | 8.1, 8.2, 14.5 | ✅     |
 | 55  | [15.5](docs/epics/encryption.md) | An invitation link that carries the key   | P1       | 8.3, 15.3      | 📋     |
 | 56  | [3.4](docs/epics/groups.md)      | Merging a placeholder                     | P2       | 8.2, 5.2       | 📋     |
 

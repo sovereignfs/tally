@@ -41,6 +41,8 @@ export const ROUTES: RouteRule[] = [
   // Signing in (DESIGN.md §14.1). The last two only with mail: without it they are 404, like the routes under /api/auth that send and use the links.
   { route: '/sign-in', page: { kind: 'public' } },
   { route: '/sign-up', page: { kind: 'public' } },
+  // An invitation (DESIGN.md §6.3), for anyone: it shows who invited and nothing else, and every invalid link the same page.
+  { route: '/invite/[token]', page: { kind: 'public' } },
   { route: '/forgot-password', page: { kind: 'public' } },
   { route: '/reset-password', page: { kind: 'public' } },
   // The instance asks it before it sends anyone to the app, and a container's health check does: it says only whether the database answers.
@@ -82,5 +84,7 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/sync', methods: { POST: account } },
   // An expense's or a payment's history (DESIGN.md §8.5): only a group the account is an active member of, in the statement.
   { route: '/api/history', methods: { GET: account } },
+  // Accepting an invitation (DESIGN.md §6.3): the signed-in account claims the placeholder of a live invitation, in one transaction.
+  { route: '/api/invite', methods: { POST: account } },
   { route: '/api/keys/requests/[id]', methods: { GET: account, POST: account, DELETE: account } },
 ];

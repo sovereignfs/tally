@@ -372,3 +372,32 @@ export const mailOutbox = sqliteTable(
     index('mail_outbox_account_idx').on(table.accountId),
   ],
 );
+
+/**
+ * **An invitation** (DESIGN.md §6.3): a link that lets someone take a placeholder's place. Its token is 32 random bytes kept only as a hash
+ * (`token_hash`), compared in constant time, single use, 14 days, revocable; one live per placeholder. `key_wrap` is the group's key wrapped to a secret
+ * the link carries in its fragment, which the server never sees (§5.3), or null for one made to be emailed.
+ */
+export const invitation = sqliteTable(
+  'invitation',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    personId: ref('person_id').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    email: text('email'),
+    keyWrap: text('key_wrap'),
+    createdBy: ref('created_by').notNull(),
+    expiresAt: epochMs('expires_at').notNull(),
+    sentAt: epochMs('sent_at'),
+    acceptedBy: ref('accepted_by'),
+    acceptedAt: epochMs('accepted_at'),
+    revokedAt: epochMs('revoked_at'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('invitation_token_idx').on(table.tokenHash),
+    index('invitation_person_idx').on(table.personId),
+    index('invitation_group_idx').on(table.groupId),
+  ],
+);

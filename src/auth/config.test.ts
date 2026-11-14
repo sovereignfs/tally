@@ -27,11 +27,11 @@ describe('sign-in settings', () => {
     expect(authOf(loadConfig({ TALLY_AUTH_LOCAL: 'false' }))).toBeUndefined();
   });
 
-  it('are on with an address and a secret, and sign-up is closed unless it is said to be open', () => {
+  it('are on with an address and a secret, and sign-up is by invitation unless it is said to be open or closed', () => {
     expect(authOf(loadConfig(ON))).toEqual({
       url: 'https://tally.example.com',
       secret: SECRET,
-      signUp: 'closed',
+      signUp: 'invite',
       passwordMinLength: 10,
       local: true,
     });
@@ -39,6 +39,9 @@ describe('sign-in settings', () => {
       authOf(loadConfig({ ...ON, TALLY_AUTH_LOCAL: 'true', TALLY_AUTH_SIGNUP: 'OPEN' })),
     ).toMatchObject({
       signUp: 'open',
+    });
+    expect(authOf(loadConfig({ ...ON, TALLY_AUTH_SIGNUP: 'closed' }))).toMatchObject({
+      signUp: 'closed',
     });
     expect(authOf(loadConfig({ ...ON, TALLY_AUTH_PASSWORD_MIN_LENGTH: '14' }))).toMatchObject({
       passwordMinLength: 14,

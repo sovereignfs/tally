@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { EMAIL, PASSWORD, ensureAccount, signOut, trySignIn } from './helpers';
 
 /**
- * Signing up, in, and out, in a browser (task 2.1). The instance is closed to sign-up, so the first account is the only one there will be, and it
+ * Signing up, in, and out, in a browser (task 2.1). The instance takes sign-ups by invitation only, so the first account is the only one there will be, and it
  * is made by whichever browser gets here first: both browsers share the instance, so every test below starts by making sure there is one.
  */
 test('the first account can be made, and a visitor is sent to sign in', async ({ page }) => {

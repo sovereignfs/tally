@@ -6,10 +6,20 @@ import { passwordValues } from '../derive';
 import { unlockAfterPassword } from '../../keys/after-sign-in';
 import { OFFER_FLAG } from '../../keys/RecoveryKeyOffer';
 import { messageFor } from '../messages';
+import { INVITE_HEADER } from '../invite-header';
 import { AuthButton, AuthError, AuthField, AuthForm, Input } from '@sovereignfs/ui';
 
 /** Name, email and password. Without email there is nothing to confirm, so the account is made and the person is signed in. */
-export function SignUpForm({ minLength, mail = false }: { minLength: number; mail?: boolean }) {
+export function SignUpForm({
+  minLength,
+  mail = false,
+  invite,
+}: {
+  minLength: number;
+  mail?: boolean;
+  /** The invitation this account is made for, when sign-up is by invitation (§6.4): sent with the sign-up, and where the person goes after. */
+  invite?: string;
+}) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,11 +37,15 @@ export function SignUpForm({ minLength, mail = false }: { minLength: number; mai
     setBusy(true);
     setError(null);
     const values = await passwordValues(password, email);
-    const { data, error: failure } = await authClient.signUp.email({
-      name,
-      email,
-      password: values.signIn,
-    });
+    const { data, error: failure } = await authClient.signUp.email(
+      {
+        name,
+        email,
+        password: values.signIn,
+        ...(invite ? { callbackURL: `/invite/${invite}` } : {}),
+      },
+      invite ? { headers: { [INVITE_HEADER]: invite } } : undefined,
+    );
     if (failure) {
       setBusy(false);
       setError(messageFor(failure));
@@ -52,7 +66,7 @@ export function SignUpForm({ minLength, mail = false }: { minLength: number; mai
     } catch {
       // Not offered now; Settings offers it any time.
     }
-    window.location.assign('/');
+    window.location.assign(invite ? `/invite/${invite}` : '/');
   }
 
   if (sent)

@@ -6,8 +6,9 @@ import type { Problem } from '../config';
  *
  *   TALLY_AUTH_LOCAL                 1 or true: email and password. Off means off: `/sign-in`, `/sign-up` and `/api/auth` answer 404.
  *   TALLY_AUTH_SECRET[_FILE]         32 characters or more, to sign sessions and tokens. Required with local sign-in.
- *   TALLY_AUTH_SIGNUP                `closed` (the default with local sign-in): the first account is made and then sign-up is refused, by the
- *                                      server. `open`: anyone who can reach the page. A self-hoster who forgets is not an open registration.
+ *   TALLY_AUTH_SIGNUP                `invite` (the default): the first account, and anyone holding a valid invitation (DESIGN.md §6.4).
+ *                                      `closed`: the first account only; an invitation is accepted by signing in. `open`: anyone who can reach the
+ *                                      page. A self-hoster who forgets is not an open registration.
  *   TALLY_AUTH_PASSWORD_MIN_LENGTH   the shortest password, 10 by default.
  *   TALLY_URL                        the address people use; required (links, cookies and passkeys are made from it).
  *
@@ -18,7 +19,7 @@ export interface AuthSettings {
   /** The address people use, an origin with no path. */
   readonly url: string;
   readonly secret: string;
-  readonly signUp: 'open' | 'closed';
+  readonly signUp: 'open' | 'closed' | 'invite';
   readonly passwordMinLength: number;
   /** Email and password, passkeys and an authenticator app are on. Off means off: their pages and routes answer 404. */
   readonly local: boolean;
@@ -62,11 +63,10 @@ export function resolveAuth(
     );
   }
 
-  // Unset, it is closed. (With a core as the only way in it will be open, task 2.3: the core already decides who may sign in.)
-  const rawSignUp = (read('TALLY_AUTH_SIGNUP') ?? '').toLowerCase() || 'closed';
-  if (rawSignUp !== 'open' && rawSignUp !== 'closed') {
-    problems.push('TALLY_AUTH_SIGNUP is open or closed.');
-  }
+  // Unset, it is by invitation (§6.4). (With a core as the only way in it will be open, task 2.3: the core already decides who may sign in.)
+  const rawSignUp = (read('TALLY_AUTH_SIGNUP') ?? '').toLowerCase() || 'invite';
+  const signUpOk = rawSignUp === 'open' || rawSignUp === 'closed' || rawSignUp === 'invite';
+  if (!signUpOk) problems.push('TALLY_AUTH_SIGNUP is invite, open or closed.');
 
   const rawLength = read('TALLY_AUTH_PASSWORD_MIN_LENGTH');
   let passwordMinLength = DEFAULT_PASSWORD_MIN_LENGTH;
@@ -80,10 +80,8 @@ export function resolveAuth(
   }
 
   if (url === undefined || secret === undefined) return undefined;
-  if (secret.length < MIN_SECRET_LENGTH || (rawSignUp !== 'open' && rawSignUp !== 'closed')) {
-    return undefined;
-  }
-  return { url, secret, signUp: rawSignUp, passwordMinLength, local };
+  if (secret.length < MIN_SECRET_LENGTH || !signUpOk) return undefined;
+  return { url, secret, signUp: rawSignUp as AuthSettings['signUp'], passwordMinLength, local };
 }
 
 /** A switch is 1 or true to be on, 0 or false (or nothing) to be off; anything else is a mistake and is not guessed at. */

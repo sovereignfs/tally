@@ -78,6 +78,13 @@
       "when": 1794674690118,
       "tag": "0010_add_mail_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794675659649,
+      "tag": "0011_add_invitations",
+      "breakpoints": true
     }
   ]
 }

@@ -84,7 +84,7 @@ export default defineConfig({
         TALLY_URL: `http://localhost:${PORT}`,
         TALLY_AUTH_LOCAL: '1',
         TALLY_AUTH_SECRET: SECRET,
-        TALLY_AUTH_SIGNUP: 'closed',
+        TALLY_AUTH_SIGNUP: 'invite',
       } as Record<string, string>,
     },
   ],

@@ -327,3 +327,28 @@ export const mailOutbox = app.table(
     index('mail_outbox_account_idx').on(table.accountId),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const invitation = app.table(
+  'invitation',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    personId: ref('person_id').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    email: text('email'),
+    keyWrap: text('key_wrap'),
+    createdBy: ref('created_by').notNull(),
+    expiresAt: epochMs('expires_at').notNull(),
+    sentAt: epochMs('sent_at'),
+    acceptedBy: ref('accepted_by'),
+    acceptedAt: epochMs('accepted_at'),
+    revokedAt: epochMs('revoked_at'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('invitation_token_idx').on(table.tokenHash),
+    index('invitation_person_idx').on(table.personId),
+    index('invitation_group_idx').on(table.groupId),
+  ],
+);

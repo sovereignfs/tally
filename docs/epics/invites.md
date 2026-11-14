@@ -63,7 +63,7 @@ directory with 11.2, Invite with 8.3. Tests on the file database: a placeholder 
 a placeholder's email seen by its adder and not by another member, the edit rule, and the lookup's limit; in Playwright, Chromium, WebKit and the phone:
 a name added in settings in the next expense's split.
 
-#### 📋 8.3 — Invitations and claiming
+#### ✅ 8.3 — Invitations and claiming
 
 **Goal:** a placeholder's place taken by a real account. **Design:** §6.3, §6.4. **Depends on:** 8.1, 8.2, 14.5.
 
@@ -76,3 +76,22 @@ same page.
 
 **Accepts when:** journeys 3 and 4 of §3 pass in Playwright, once with mail and once with the link alone; an expired, used or revoked link shows the
 same page as a made-up one; the claimed person's balance is the placeholder's.
+
+**Done as:** migration `0011_add_invitations` (`invitation`, with the `key_wrap` column 15.5 fills) and `src/invites/`: `store.ts`
+(`createInvitation`, 32 random bytes kept as their SHA-256, the hash compared in constant time, 14 days, one live per placeholder, revoking the one
+before, mailed through the outbox when the placeholder has an address and mail is on, the link without a key; `revokeInvitation`;
+`resendInvitation`, at most once an hour; `validInvitation`; `acceptInvitation`, the claim in one transaction: each membership of the placeholder
+pointed at the account's person with each group's `seq` moved on and `member_joined` written, the placeholder's email dropped and the placeholder
+deleted once nothing points at it, refused with a sentence for a group the account is already in), `ops.ts` (`invite.create`, `invite.revoke`,
+`invite.resend` in `POST /api/ops`; the token answered once), `api.ts` (`POST /api/invite`, accepting) and `/invite/<token>`, which says who invited and
+nothing else and offers to join, make an account or sign in; every invalid link shows the same page. **Sign-up by invitation:** `TALLY_AUTH_SIGNUP`
+takes `invite`, now the default (and in `.env.example`, `deploy/.env.example` and `pnpm dev`'s file); the sign-up form sends its invitation in a header
+(`x-tally-invite`) that better-auth's user-creation hook checks against a live invitation, and goes back to the invitation after; sign-in takes a
+`next` of an invitation's page only. In a group's settings, **Invite <name>** makes the link and shows it with `CopyButton`, saying whether an email
+went, or that the link is the only way when mail is not set up. **Changed from the design:** Resend makes a new link and mails it, since the token is
+not kept to send the same one twice; the old link stops working. The `invite_accepted` notice joins with 9.1. **Not in the browser:** the mailed
+journey, since the browser tests have no SMTP; the outbox and the mailed invitation are tested in Vitest. Tests on the file database: making one
+(and nobody not in the group), the claim with the placeholder's balance becoming the account's and the placeholder gone, one use, revoked, expired and
+made-up links alike, an account already in the group refused, the mailed invitation in the outbox with no key, and sign-up by invitation allowing a
+live one only; in Playwright, Chromium and WebKit, journeys 3 and 4 with the link alone (Sam added by name, in the first expense, invited, signing up
+and finding their balance), and the used link reading as any other.

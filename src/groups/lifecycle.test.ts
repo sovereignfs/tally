@@ -307,6 +307,7 @@ describe(`a group's lifecycle (${leg})`, () => {
       expense: db().expense,
       expense_payer: db().expensePayer,
       expense_share: db().expenseShare,
+      invitation: db().invitation,
       key_wrap: db().keyWrap,
       member: db().member,
       payment: db().payment,

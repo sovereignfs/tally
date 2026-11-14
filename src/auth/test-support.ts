@@ -35,6 +35,7 @@ export async function makeAuth(
   mailer?: Mailer,
   onAccountCreated?: AuthDependencies['onAccountCreated'],
   onAccountUpdated?: AuthDependencies['onAccountUpdated'],
+  invitationValid?: AuthDependencies['invitationValid'],
 ): Promise<TestAuth> {
   const { database } = await freshDatabase('auth');
   await runMigrations(database);
@@ -44,6 +45,7 @@ export async function makeAuth(
     name: 'Tally',
     database,
     mailer,
+    invitationValid,
     onAccountCreated,
     onAccountUpdated,
   });

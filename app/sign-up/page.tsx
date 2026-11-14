@@ -8,12 +8,18 @@ import { AuthLink } from '@sovereignfs/ui';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Create an account' };
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string | string[] }>;
+}) {
+  const { invite: raw } = await searchParams;
+  const invite = typeof raw === 'string' && /^[A-Za-z0-9_-]{43}$/.test(raw) ? raw : undefined;
   const settings = authSettings();
   if (!settings?.local) notFound();
   if (await getSession()) redirect('/');
 
-  if (!(await signUpAvailable())) {
+  if (!(await signUpAvailable(invite))) {
     return (
       <AuthShell
         title="Sign-up is closed"
@@ -29,11 +35,18 @@ export default async function SignUpPage() {
       title="Create your account"
       footer={
         <>
-          Already have an account? <AuthLink href="/sign-in">Sign in</AuthLink>
+          Already have an account?{' '}
+          <AuthLink href={invite ? `/sign-in?next=/invite/${invite}` : '/sign-in'}>
+            Sign in
+          </AuthLink>
         </>
       }
     >
-      <SignUpForm minLength={settings.passwordMinLength} mail={mailAvailable()} />
+      <SignUpForm
+        minLength={settings.passwordMinLength}
+        mail={mailAvailable()}
+        {...(invite ? { invite } : {})}
+      />
     </AuthShell>
   );
 }

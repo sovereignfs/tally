@@ -2,6 +2,7 @@ import { getConfig } from '../config/current';
 import { getAuthDatabase, getDatabase } from '../db/boot';
 import { ensurePerson, updatePersonFromAccount } from '../people/persons';
 import { smtpMailer } from '../mail/smtp';
+import { validInvitation } from '../invites/store';
 import { site } from '../site';
 import { type Auth, createAuth } from './auth';
 import type { AuthSettings } from './config';
@@ -33,6 +34,8 @@ export function getAuth(): Promise<Auth | null> {
         name: site.name,
         database,
         mailer: mail ? smtpMailer(mail) : undefined,
+        invitationValid: async (token) =>
+          Boolean(await validInvitation(await getDatabase(), token, Date.now())),
         onAccountCreated: async (account) => {
           await ensurePerson(await getDatabase(), account);
         },
@@ -57,10 +60,16 @@ export function mailAvailable(): boolean {
  * Whether a new account can be made: yes if sign-up is open, yes for the very first account whatever the setting (someone has to be first), and
  * otherwise no. The server enforces the same rule where an account is created, so this only decides what the page offers.
  */
-export async function signUpAvailable(): Promise<boolean> {
+export async function signUpAvailable(invite?: string): Promise<boolean> {
   const settings = authSettings();
   // Sign-up is a page of local sign-in; a person who comes through Sovereign is made at their first sign-in (under the same policy, in the hook).
   if (!settings?.local) return false;
   if (settings.signUp === 'open') return true;
-  return (await countUsers(await getAuthDatabase())) === 0;
+  if ((await countUsers(await getAuthDatabase())) === 0) return true;
+  // By invitation: for someone who arrives with a live one (§6.4).
+  return (
+    settings.signUp === 'invite' &&
+    invite !== undefined &&
+    Boolean(await validInvitation(await getDatabase(), invite, Date.now()))
+  );
 }
