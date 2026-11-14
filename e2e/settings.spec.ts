@@ -4,6 +4,7 @@ import {
   PASSWORD,
   holdsKey,
   hydrated,
+  newGroup,
   secondBrowser,
   signOut,
   signedIn,
@@ -188,4 +189,26 @@ test.describe('a passkey', () => {
       )
       .toBe(0);
   });
+});
+
+test('Notifications says mail is not set up here, so the bell is the only way, and links to each group’s choice', async ({
+  page,
+}) => {
+  await signedIn(page);
+  await hydrated(page);
+  const groupName = `Told ${Date.now()}`;
+  await newGroup(page, groupName);
+  await openSettings(page, 'notifications');
+  const section = page.getByRole('region', { name: 'Notifications' });
+  await expect(section).toContainText(
+    'Mail is not set up on this server, so the bell is the only way you are told.',
+  );
+  // Nothing to turn on: every email switch is there, and none can be used.
+  const switches = section.getByRole('list', { name: 'Email me when' }).getByRole('switch');
+  await expect(switches).toHaveCount(10);
+  await expect(
+    section.getByRole('switch', { name: 'Email: Someone adds you to a group' }),
+  ).toBeDisabled();
+  await section.getByRole('link', { name: groupName }).click();
+  await expect(page).toHaveURL(/\/g\/[0-9a-f-]{36}\/settings$/);
 });

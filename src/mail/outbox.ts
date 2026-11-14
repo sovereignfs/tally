@@ -8,7 +8,9 @@ import { claim } from '../jobs/claim';
 import { kindOf } from '../jobs/runner';
 import type { JobDefinition } from '../jobs/runner';
 import type { Mailer, Message } from './mailer';
-import { invitationMessage } from './templates';
+import { formatMoney } from '../money/text';
+import { toMinor } from '../money/amount';
+import { type NoticeMailData, invitationMessage, noticeMessage, noticeSentence } from './templates';
 
 /**
  * **The mail outbox** (DESIGN.md §12.3): mail is written in the transaction of the change that causes it (`enqueueMail`), and sent in the background by
@@ -18,10 +20,11 @@ import { invitationMessage } from './templates';
  *
  * Templates take ids, names and links, never sealed text: no group's name, description or comment ever reaches a mail (§5.3).
  */
-export type MailTemplate = 'invitation';
+export type MailTemplate = 'invitation' | 'notice';
 
 export interface TemplateData {
   invitation: { inviterName: string; link: string };
+  notice: NoticeMailData;
 }
 
 /** Attempts before a message is marked failed, and the backoff between them: a minute, then four, sixteen, about an hour, about four. */
@@ -67,6 +70,21 @@ function render(app: string, to: string, template: string, data: unknown): Messa
     const d = data as TemplateData['invitation'];
     if (typeof d?.inviterName !== 'string' || typeof d.link !== 'string') return undefined;
     return invitationMessage(app, to, d.inviterName, d.link);
+  }
+  if (template === 'notice') {
+    const d = data as NoticeMailData;
+    if (
+      typeof d?.kind !== 'string' ||
+      typeof d.link !== 'string' ||
+      typeof d.settingsLink !== 'string'
+    )
+      return undefined;
+    const money =
+      typeof d.amount === 'number' && typeof d.currency === 'string'
+        ? formatMoney(toMinor(d.amount), d.currency, 'en')
+        : null;
+    const sentence = noticeSentence(app, d, money);
+    return sentence ? noticeMessage(app, to, sentence, d) : undefined;
   }
   return undefined;
 }

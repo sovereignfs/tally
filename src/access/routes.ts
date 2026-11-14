@@ -65,6 +65,8 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/account/delete', methods: { GET: account, POST: account } },
   // An account's own settings (DESIGN.md §16).
   { route: '/api/account/settings', methods: { PATCH: account } },
+  // What the account is told by each channel (DESIGN.md §12.3).
+  { route: '/api/account/notifications', methods: { PATCH: account } },
   // Settings (DESIGN.md §16), for someone signed in.
   { route: '/settings', page: account },
   // What the account is told, and its reading of it (DESIGN.md §12.2): every statement names the account, and only its active groups' are shown.

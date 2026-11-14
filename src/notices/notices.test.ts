@@ -20,6 +20,10 @@ import { toMinor } from '../money/amount';
 import { personOfAccount } from '../people/persons';
 import { type Actor, applyMutation } from '../sync/apply';
 import { noticesHandler } from './api';
+import { setNoticeMailForTests } from './mail';
+import { setPref } from './prefs';
+import { MemoryMailer } from '../mail/memory';
+import { sendDue } from '../mail/outbox';
 import type { NoticeRow } from './kinds';
 
 /**
@@ -154,7 +158,10 @@ describe(`notices (${leg})`, () => {
       personId: (await personOfAccount(t.database, t.grace.id))?.id ?? '',
     };
   });
-  afterAll(async () => t.close());
+  afterAll(async () => {
+    setNoticeMailForTests(null);
+    await t.close();
+  });
 
   it('Everything, the default: a member is told of every expense, payment, comment and closing, and the one who acted never is', async () => {
     const g = await group();
@@ -360,5 +367,91 @@ describe(`notices (${leg})`, () => {
     // A request it does not understand is refused.
     expect((await post(t.grace, { action: 'shred' })).status).toBe(400);
     expect((await post(t.grace, { action: 'read', ids: ['x y'] })).status).toBe(400);
+  });
+
+  describe('by email', () => {
+    const mailFor = async (who: Person) =>
+      dbAll<{ template: string; data: string }>(
+        t.database,
+        sql`SELECT template, data FROM ${db().mailOutbox} WHERE account_id = ${who.id} AND template = 'notice' ORDER BY created_at, id`,
+      );
+    const clearMail = () => dbRun(t.database, sql`DELETE FROM ${db().mailOutbox}`);
+
+    it('turning a kind’s email on mails it, with no sealed text; off stops the mail and keeps the bell', async () => {
+      setNoticeMailForTests({ origin: 'https://tally.example' });
+      await clearMail();
+      const g = await group();
+      // Off by default for an expense: the bell, and no mail.
+      await expense(ada, g.groupId, [g.ada, g.grace], g.ada);
+      expect(await mailFor(t.grace)).toEqual([]);
+      await setPref(t.database, t.grace.id, 'expense_added', 'email', true);
+      await expense(ada, g.groupId, [g.ada, g.grace], g.ada);
+      const mailed = await mailFor(t.grace);
+      expect(mailed).toHaveLength(1);
+      expect(mailed[0]?.data).not.toContain('s1.');
+      expect(JSON.parse(mailed[0]?.data ?? '{}')).toMatchObject({
+        kind: 'expense_added',
+        actorName: 'Ada',
+        amount: 900,
+        currency: 'EUR',
+        settingsLink: 'https://tally.example/settings?section=notifications',
+      });
+      // Sent, it says who and how much, and nothing written in the group.
+      const mailer = new MemoryMailer();
+      await sendDue(
+        {
+          database: t.database,
+          authDatabase: t.auth.database,
+          mailer,
+          app: 'Tally',
+          log: () => {},
+        },
+        Date.now() + 1_000,
+      );
+      const sent = mailer.sent.find((m) => m.to === t.grace.email);
+      expect(sent?.subject).toBe('Ada added an expense of €9.00 in a group on Tally');
+      expect(sent?.text).toContain(`https://tally.example/g/${g.groupId}/e/`);
+      expect(sent?.text).not.toContain('Lisbon');
+
+      await setPref(t.database, t.grace.id, 'expense_added', 'email', false);
+      await clearMail();
+      await expense(ada, g.groupId, [g.ada, g.grace], g.ada);
+      expect(await mailFor(t.grace)).toEqual([]);
+      expect((await told(t.grace, g.groupId)).filter((k) => k === 'expense_added')).toHaveLength(3);
+      // The one who acted gets no mail either.
+      expect(await mailFor(t.ada)).toEqual([]);
+    });
+
+    it('mails the kinds on by default, and nothing at all with no mail set up', async () => {
+      setNoticeMailForTests({ origin: 'https://tally.example' });
+      await clearMail();
+      const g = await group();
+      await call(t.grace, { op: 'member.leave', groupId: g.groupId });
+      await call(t.ada, { op: 'member.add', groupId: g.groupId, personId: grace.personId });
+      expect((await mailFor(t.grace)).map((m) => JSON.parse(m.data).kind)).toEqual([
+        'added_to_group',
+      ]);
+
+      setNoticeMailForTests(undefined);
+      await clearMail();
+      await setPref(t.database, t.grace.id, 'expense_added', 'email', true);
+      await expense(ada, g.groupId, [g.ada, g.grace], g.ada);
+      expect(await mailFor(t.grace)).toEqual([]);
+      expect((await told(t.grace, g.groupId)).slice(-1)).toEqual(['expense_added']);
+      await setPref(t.database, t.grace.id, 'expense_added', 'email', false);
+    });
+
+    it('keeps only a choice that differs from the default, and refuses one it does not offer', async () => {
+      await setPref(t.database, t.ada.id, 'reminder', 'email', false);
+      await setPref(t.database, t.ada.id, 'reminder', 'email', true);
+      expect(
+        await dbAll(
+          t.database,
+          sql`SELECT kind FROM ${db().noticePref} WHERE account_id = ${t.ada.id}`,
+        ),
+      ).toEqual([]);
+      await expect(setPref(t.database, t.ada.id, 'reminder', 'push', true)).rejects.toThrow();
+      await expect(setPref(t.database, t.ada.id, 'shouting', 'email', true)).rejects.toThrow();
+    });
   });
 });

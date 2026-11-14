@@ -47,7 +47,7 @@ devices, read all, dismiss, a group left, another account's notices untouchable;
 Playwright, Chromium and WebKit: an expense another member recorded in the bell in words, opened and read, on `/notifications` by day, and the
 recorder told only of the invitation taken. **Left out:** export of notices joins export (12.1); delivery by email and to core's bell is 9.2.
 
-#### 📋 9.2 — Preferences and email
+#### ✅ 9.2 — Preferences and email
 
 **Goal:** each kind by each channel, as the person chooses. **Design:** §12.3, §16. **Depends on:** 9.1, 8.1.
 
@@ -56,6 +56,20 @@ Settings > Notifications, saying plainly what is not available (no mail, no core
 for kinds with email on, with no sealed text in it ("Kasun added an expense of €84.00 in a group on Tally").
 
 **Accepts when:** turning a kind's email off stops its mail and keeps its bell; with no mail set up, Settings says so and nothing fails.
+
+**Done as:** `notice_pref` (migration `0013_add_notice_prefs`) keeps a choice only where it differs from the default (`src/notices/prefs.ts`: email on
+for `added_to_group`, `reminder` and `invite_accepted`, core's bell on for every kind, push off), so a default changed later reaches everyone who never
+chose; only email is offered for now, and `PATCH /api/account/notifications` refuses any other channel. `raiseNotices` now writes, beside each notice,
+a `notice` row in the mail outbox where mail is set up and that kind's email is on, read in the statement that finds who is told
+(`src/notices/mail.ts` decides whether mail is on, from `TALLY_SMTP_*` and `TALLY_URL`; tests set it). The mail carries the actor's name in Tally, the
+figure and two links, never sealed text: "Ada added an expense of €9.00 in a group on Tally" (`noticeSentence` and `noticeMessage` in
+`src/mail/templates.ts`, which replace an unused template copied from Tusk). Settings has a Notifications section: a switch per kind for email, which
+says so and is disabled where mail is not set up, a sentence that no Sovereign instance is connected, and a link to each group's own choice. Deleting
+an account deletes its choices. Tests: in Vitest, on each database, a kind's email on mails it with no sealed text, rendered through the outbox with
+who and how much and a link to the expense, and off stops the mail while the bell keeps it; the actor gets no mail; the default kinds mailed; nothing
+written with no mail; a choice equal to the default kept as no row, and a channel not offered refused. In Playwright, Chromium and WebKit: with no
+mail set up, Settings says the bell is the only way, the switches are there and disabled, and the group's link opens its settings. **Left out:**
+core's bell, its column and its sending are 11.1; the choices are exported with export (12.1).
 
 #### 📋 9.3 — Reminders
 

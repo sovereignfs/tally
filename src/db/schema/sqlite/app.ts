@@ -426,3 +426,19 @@ export const notice = sqliteTable(
     index('notice_group_idx').on(table.groupId),
   ],
 );
+
+/**
+ * **What a person hears, by kind and channel** (DESIGN.md §12.3): a row only where they chose other than the default (`src/notices/prefs.ts`), so
+ * that a default changed later reaches everyone who never chose. Channels: `email`, `core_bell` (core's bell, 11.1) and `push` (phase 2, not shown).
+ */
+export const noticePref = sqliteTable(
+  'notice_pref',
+  {
+    accountId: ref('account_id').notNull(),
+    kind: text('kind').notNull(),
+    channel: text('channel').notNull(),
+    enabled: bool('enabled').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.kind, table.channel] })],
+);

@@ -7,6 +7,7 @@ export const SECTIONS = [
   'security',
   'unlocking',
   'preferences',
+  'notifications',
   'device',
   'data',
 ] as const;

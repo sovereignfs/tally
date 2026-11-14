@@ -20,22 +20,67 @@ export function resetMessage(app: string, to: string, link: string): Message {
   };
 }
 
-/**
- * A notice, by email (DESIGN.md §12.3): its title and what it says, one link to where it goes, and one to Settings, where the person turns email off. The title is
- * a card's or a board's, as the person wrote it, and so is in the message; Settings says so before it is turned on.
- */
-export function notificationMessage(
+/** What a notice's email is made from (DESIGN.md §12.3): who, a figure and links, never sealed text, so never a group's name or a description. */
+export interface NoticeMailData {
+  kind: string;
+  /** The activity line's kind, which says changed, deleted or restored. */
+  lineKind: string;
+  actorName: string;
+  amount: number | null;
+  currency: string | null;
+  link: string;
+  settingsLink: string;
+}
+
+/** The sentence of a notice's email, or nothing for a kind this version does not know. */
+export function noticeSentence(
+  app: string,
+  d: NoticeMailData,
+  money: string | null,
+): string | undefined {
+  const of = money ? ` of ${money}` : '';
+  const verb = d.lineKind.endsWith('_deleted')
+    ? 'deleted'
+    : d.lineKind.endsWith('_restored')
+      ? 'restored'
+      : 'changed';
+  switch (d.kind) {
+    case 'expense_added':
+      return `${d.actorName} added an expense${of} in a group on ${app}`;
+    case 'expense_changed':
+      return `${d.actorName} ${verb} an expense${of} in a group on ${app}`;
+    case 'payment_recorded':
+      return d.lineKind === 'payment_added'
+        ? `${d.actorName} recorded a payment${of} in a group on ${app}`
+        : `${d.actorName} ${verb} a payment${of} in a group on ${app}`;
+    case 'comment':
+      return `${d.actorName} commented in a group on ${app}`;
+    case 'group_closed':
+      return `${d.actorName} ${d.lineKind === 'group_reopened' ? 'reopened' : 'closed'} a group on ${app}`;
+    case 'added_to_group':
+      return `${d.actorName} added you to a group on ${app}`;
+    case 'invite_accepted':
+      return `${d.actorName} took your invitation and joined a group on ${app}`;
+    case 'edit_replaced':
+      return `${d.actorName} changed ${d.lineKind.startsWith('payment_') ? 'a payment' : 'an expense'} in a group on ${app}, in place of your change`;
+    case 'owner_passed':
+      return `You are now an owner of a group on ${app}: its last owner left`;
+    default:
+      return undefined;
+  }
+}
+
+/** A notice by email: one sentence, a link to it, and a link to Settings to turn the kind's email off. */
+export function noticeMessage(
   app: string,
   to: string,
-  title: string,
-  body: string | undefined,
-  link: string,
-  settingsLink: string,
+  sentence: string,
+  d: NoticeMailData,
 ): Message {
   return {
     to,
-    subject: title,
-    text: `${title}\n\n${body ? `${body}\n\n` : ''}${link}\n\nYou get this because you turned on email from ${app}. To stop it: ${settingsLink}\n`,
+    subject: sentence,
+    text: `${sentence}.\n\nSee it on ${app}:\n\n${d.link}\n\nWhat it is about stays private to the group, so it is not in this email. To choose what you are emailed about: ${d.settingsLink}\n`,
   };
 }
 

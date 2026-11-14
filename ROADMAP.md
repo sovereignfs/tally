@@ -130,7 +130,7 @@ People hear about what concerns them. **Done when** each kind of notice reaches 
 | #   | ID                           | Task                  | Priority | Depends on | Status |
 | --- | ---------------------------- | --------------------- | -------- | ---------- | ------ |
 | 57  | [9.1](docs/epics/notices.md) | Notices and the bell  | P1       | 5.2, 7.1   | ✅     |
-| 58  | [9.2](docs/epics/notices.md) | Preferences and email | P1       | 9.1, 8.1   | 📋     |
+| 58  | [9.2](docs/epics/notices.md) | Preferences and email | P1       | 9.1, 8.1   | ✅     |
 | 59  | [9.3](docs/epics/notices.md) | Reminders             | P1       | 9.2, 4.3   | 📋     |
 
 ### Milestone H — Insights

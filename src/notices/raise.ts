@@ -3,7 +3,12 @@ import type { ActivityDetailsOf, ActivityKind } from '../activity/kinds';
 import type { Database } from '../db/client';
 import { dbAll } from '../db/exec';
 import { tables } from '../db/tables';
-import { GROUP_KIND_OF, type NoticeKind } from './kinds';
+import { enqueueMail } from '../mail/outbox';
+import type { NoticeMailData } from '../mail/templates';
+import { GROUP_KIND_OF, type NoticeKind, type NoticeRow } from './kinds';
+import { noticeMail } from './mail';
+import { defaultOn } from './prefs';
+import { noticeHref } from './words';
 
 /**
  * **Raising notices** (DESIGN.md §12.2): the one function that writes them, called by `recordActivity` for every line, in the transaction of the change,
@@ -13,6 +18,8 @@ import { GROUP_KIND_OF, type NoticeKind } from './kinds';
  *  - A line of a group's kind (`GROUP_KIND_OF`) is told to every active member by their choice for the group: `all`; `involved` when the line is about
  *    them (they paid or are in the split of the expense, made or received the payment, are on what a comment is on or commented on it before; closing
  *    and reopening involve everyone); `none` never.
+ *  - **Email,** where the server sends mail (`mail.ts`) and the person has that kind's email on (`prefs.ts`): a row in the mail outbox in the same
+ *    transaction, made of who, a figure and links, never sealed text (§5.3).
  *  - The personal kinds: `added_to_group` to the person added, `edit_replaced` to the author of the version an edit replaced, `owner_passed` to a member
  *    made owner by deletion (a `role_changed` line with no actor), and whatever the caller adds in `tell` (`invite_accepted`, to whoever invited).
  */
@@ -48,11 +55,12 @@ export async function raiseNotices<K extends ActivityKind>(
   )
     personal.push({ personId: d.personId, kind: 'owner_passed' });
 
+  const mail = await mailContext(tx, line);
   const told = new Set<string>();
   for (const one of personal) {
     if (one.personId === line.actorPersonId || told.has(one.personId)) continue;
     told.add(one.personId);
-    await write(tx, line, one.kind, sql`m.person_id = ${one.personId}`);
+    await write(tx, line, one.kind, sql`m.person_id = ${one.personId}`, mail);
   }
 
   const kind = GROUP_KIND_OF[line.kind];
@@ -74,7 +82,7 @@ export async function raiseNotices<K extends ActivityKind>(
           [...told].map((id) => sql`${id}`),
           sql`, `,
         )})`;
-  await write(tx, line, kind, sql`${chosen} AND ${already}`);
+  await write(tx, line, kind, sql`${chosen} AND ${already}`, mail);
 }
 
 /** One notice for each active member with an account matching `who`, never the actor, from the group's members in the statement. */
@@ -83,21 +91,74 @@ async function write(
   line: { id: string; groupId: string; actorPersonId: string | null; now: number },
   kind: NoticeKind,
   who: SQL,
+  mail: MailContext | undefined,
 ) {
   const t = tables(tx);
-  const accounts = await dbAll<{ accountId: string }>(
+  const accounts = await dbAll<{ accountId: string; email: number | boolean | null }>(
     tx,
-    sql`SELECT p.account_id AS "accountId" FROM ${t.member} m JOIN ${t.person} p ON p.id = m.person_id
+    sql`SELECT p.account_id AS "accountId",
+               (SELECT np.enabled FROM ${t.noticePref} np WHERE np.account_id = p.account_id AND np.kind = ${kind} AND np.channel = 'email') AS email
+        FROM ${t.member} m JOIN ${t.person} p ON p.id = m.person_id
         WHERE m.group_id = ${line.groupId} AND m.left_at IS NULL AND p.account_id IS NOT NULL
           AND (${line.actorPersonId === null ? sql`1 = 1` : sql`m.person_id <> ${line.actorPersonId}`}) AND ${who}`,
   );
-  for (const { accountId } of accounts)
+  for (const { accountId, email } of accounts) {
     await dbAll(
       tx,
       sql`INSERT INTO ${t.notice} (id, account_id, group_id, activity_id, kind, read_at, dismissed_at, created_at)
           VALUES (${crypto.randomUUID()}, ${accountId}, ${line.groupId}, ${line.id}, ${kind}, NULL, NULL, ${line.now})
           RETURNING id`,
     );
+    const emailOn =
+      email === null || email === undefined
+        ? defaultOn(kind, 'email')
+        : email === true || Number(email) === 1;
+    if (mail && emailOn)
+      await enqueueMail(
+        tx,
+        { to: { accountId }, template: 'notice', data: { ...mail.data, kind } },
+        line.now,
+      );
+  }
+}
+
+interface MailContext {
+  data: Omit<NoticeMailData, 'kind'>;
+}
+
+/** What every email of a line carries, when mail is on: who did it (by their name in Tally), its figure, and links. */
+async function mailContext(
+  tx: Database,
+  line: {
+    groupId: string;
+    actorPersonId: string | null;
+    kind: ActivityKind;
+    subjectId: string | null;
+    details: unknown;
+  },
+): Promise<MailContext | undefined> {
+  const mail = noticeMail();
+  if (!mail) return undefined;
+  const actor = line.actorPersonId
+    ? (
+        await dbAll<{ name: string }>(
+          tx,
+          sql`SELECT name FROM ${tables(tx).person} WHERE id = ${line.actorPersonId}`,
+        )
+      )[0]?.name
+    : undefined;
+  const d = line.details as Record<string, unknown>;
+  const path = noticeHref({ groupId: line.groupId, line: line as NoticeRow['line'] });
+  return {
+    data: {
+      lineKind: line.kind,
+      actorName: actor ?? 'Someone',
+      amount: typeof d.amount === 'number' ? d.amount : null,
+      currency: typeof d.currency === 'string' ? d.currency : null,
+      link: `${mail.origin}${path}`,
+      settingsLink: `${mail.origin}/settings?section=notifications`,
+    },
+  };
 }
 
 /** The members a line is about, for those who chose "Only what involves me". */

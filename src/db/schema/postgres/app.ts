@@ -373,3 +373,16 @@ export const notice = app.table(
     index('notice_group_idx').on(table.groupId),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const noticePref = app.table(
+  'notice_pref',
+  {
+    accountId: ref('account_id').notNull(),
+    kind: text('kind').notNull(),
+    channel: text('channel').notNull(),
+    enabled: bool('enabled').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.kind, table.channel] })],
+);
