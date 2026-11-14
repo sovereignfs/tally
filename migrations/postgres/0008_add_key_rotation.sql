@@ -1,0 +1,1 @@
+ALTER TABLE "tally"."grp" ADD COLUMN "key_rotation_due" boolean DEFAULT false NOT NULL;

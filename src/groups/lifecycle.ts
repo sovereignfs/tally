@@ -21,8 +21,8 @@ import { OpError } from './errors';
  *  - **Close** is refused while anyone's balance is not zero. A closed group refuses every mutation (`src/sync/apply.ts`) and every operation but reopen.
  *  - **Delete** only a group that has never had an expense or a payment (deleted ones count), every row of it in one transaction.
  *
- * Leaving and removing also make the group due a new key epoch, so that what is written after is sealed under a key the one who left never held;
- * rotating it is its own task (15.6).
+ * Leaving and removing also make the group due a new key epoch, so that what is written after is sealed under a key the one who left never held
+ * (`src/keys/rotation.ts`).
  */
 
 interface Who {
@@ -122,6 +122,14 @@ function amountsSentence(
     : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
+/** Someone left: what is written next is sealed under a new key, made by the next remaining member's device (`src/keys/rotation.ts`). */
+async function markRotationDue(tx: Database, groupId: string) {
+  await dbAll(
+    tx,
+    sql`UPDATE ${tables(tx).grp} SET key_rotation_due = ${true} WHERE id = ${groupId} RETURNING id`,
+  );
+}
+
 /** Moves the group's `seq` on, open and with the account an active member (or owner), in the statement; refuses otherwise as not found. */
 async function moveSeq(
   tx: Database,
@@ -185,6 +193,7 @@ export async function leaveGroup(
       sql`UPDATE ${t.member} SET left_at = ${now}, role = CASE WHEN role IS NULL THEN NULL ELSE 'member' END, seq = ${seq}
           WHERE id = ${me.id} AND group_id = ${groupId} RETURNING id`,
     );
+    await markRotationDue(tx, groupId);
     await recordActivity(tx, {
       groupId,
       actorPersonId: who.personId,
@@ -227,6 +236,7 @@ export async function removeMember(
       sql`UPDATE ${t.member} SET left_at = ${now}, role = CASE WHEN role IS NULL THEN NULL ELSE 'member' END, seq = ${seq}
           WHERE id = ${memberId} AND group_id = ${groupId} AND left_at IS NULL RETURNING id`,
     );
+    await markRotationDue(tx, groupId);
     await recordActivity(tx, {
       groupId,
       actorPersonId: who.personId,

@@ -143,7 +143,7 @@ expiring or using the invitation deletes its wrap.
 **Accepts when:** a copied link opens the group's words on first load; an emailed link's group is unlocked by a member's device at its next sync; no
 request to the server carries the fragment (checked in Playwright's request log); a used invitation's wrap is gone.
 
-#### 📋 15.6 — Rotating a group's key
+#### ✅ 15.6 — Rotating a group's key
 
 **Goal:** someone who left cannot read what is written after. **Design:** §5.3. **Depends on:** 3.3, 15.3.
 
@@ -153,3 +153,14 @@ the rotation loses nothing; earlier epochs kept for the remaining members.
 
 **Accepts when:** after a removal, a new expense is sealed under a new epoch that the removed person has no wrap of; a device offline across the
 rotation still opens both epochs once synced.
+
+**Done as:** migration `0008_add_key_rotation` (`grp.key_rotation_due`), set by `member.leave` and `member.remove` in their transaction
+(`src/groups/lifecycle.ts`). `src/keys/rotation.ts`: `dueRotations` (in `GET /api/keys/groups` as `rotations`, for an active member holding the current
+epoch, with every remaining member's account key) and `rotateGroupKey`, `POST /api/keys/groups/rotate`, which moves `key_epoch` on only from the
+current epoch, while due, for an active member holding it, in one `UPDATE`, then stores the new wraps for active members with a key; the rotating
+account's own wrap is required. Two devices rotating at once make one epoch: the second is told `not_current` (409). On the device,
+`GroupKeys.sync` rotates after granting and keeps the new key only once the server took it (a lost answer is recovered through the account's own
+wrap); `newestKey` gives the newest epoch held, which is what a device seals under. The server already accepted any epoch of the group (5.1), so an
+offline device loses nothing. Tests: after a removal the next exchange rotates once, new text is sealed under epoch 2, the removed person has a wrap of
+epoch 1 only, and a device offline across it opens both; a race takes one epoch, and someone not in the group none; seen failing with the mark taken
+out. The removed person's old wraps stay, as earlier text was theirs to read.

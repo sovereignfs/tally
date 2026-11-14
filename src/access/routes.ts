@@ -65,6 +65,8 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/keys/wraps/[id]', methods: { DELETE: account } },
   // A group's key wrapped to each member (DESIGN.md §5.3): taken only between active members of the same group, in the statement.
   { route: '/api/keys/groups', methods: { GET: account, POST: account } },
+  // A new epoch after someone left: taken only from an active member holding the current one, while it is due, in the statement.
+  { route: '/api/keys/groups/rotate', methods: { POST: account } },
   { route: '/api/keys/requests', methods: { POST: account } },
   // The activity of the account's groups (DESIGN.md §12.1): only groups the account is an active member of, in the statement.
   { route: '/api/activity', methods: { GET: account } },

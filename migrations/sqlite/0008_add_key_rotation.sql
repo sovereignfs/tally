@@ -1,0 +1,1 @@
+ALTER TABLE `grp` ADD `key_rotation_due` integer DEFAULT false NOT NULL;

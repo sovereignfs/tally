@@ -87,6 +87,7 @@ export const grp = app.table('grp', {
   simplifyDebts: bool('simplify_debts').notNull(),
   closedAt: epochMs('closed_at'),
   keyEpoch: counter('key_epoch').notNull(),
+  keyRotationDue: bool('key_rotation_due').notNull().default(false),
   seq: counter('seq').notNull(),
   createdBy: ref('created_by').notNull(),
   createdAt: epochMs('created_at').notNull(),

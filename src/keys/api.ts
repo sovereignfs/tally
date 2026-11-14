@@ -17,6 +17,7 @@ import {
   requestOf,
   wrapsOf,
 } from './store';
+import { RotationError, dueRotations, rotateGroupKey } from './rotation';
 import { MAX_GRANTS, myGroupWraps, neededGrants, storeGrants, type Grant } from './grants';
 
 /**
@@ -167,6 +168,7 @@ export function keyHandlers(databaseOf: DatabaseOf = getDatabase) {
         Response.json({
           wraps: await myGroupWraps(db, context.accountId),
           needed: await neededGrants(db, context.accountId),
+          rotations: await dueRotations(db, context.accountId),
         }),
       ),
     putGroupGrants: (context: AccountContext) =>
@@ -191,6 +193,34 @@ export function keyHandlers(databaseOf: DatabaseOf = getDatabase) {
           };
         });
         return Response.json(await storeGrants(db, context.accountId, grants));
+      }),
+    /** A new epoch of a group's key, made by this account's device because someone left (DESIGN.md §5.3). */
+    rotateGroup: (context: AccountContext) =>
+      run(async (db) => {
+        const input = await body(context.request);
+        const raw = Array.isArray(input.wraps) ? input.wraps : [];
+        const wraps = raw.map((value) => {
+          const wrap = (value ?? {}) as Record<string, unknown>;
+          if (typeof wrap.accountId !== 'string' || typeof wrap.wrapped !== 'string')
+            throw new KeyError('invalid');
+          return { accountId: wrap.accountId, wrapped: wrap.wrapped };
+        });
+        if (typeof input.groupId !== 'string' || typeof input.fromEpoch !== 'number')
+          throw new KeyError('invalid');
+        try {
+          return Response.json(
+            await rotateGroupKey(db, context.accountId, {
+              groupId: input.groupId,
+              fromEpoch: input.fromEpoch,
+              wraps,
+            }),
+          );
+        } catch (error) {
+          if (!(error instanceof RotationError)) throw error;
+          return error.code === 'not_current'
+            ? Response.json({ code: 'not_current' }, { status: 409 })
+            : Response.json({ code: 'invalid' }, { status: 400 });
+        }
       }),
     deleteRequest: (context: AccountContext) =>
       run(async (db) => {

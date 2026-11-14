@@ -4,7 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { accountRoute } from '../access/route';
 import { type Person, type TwoAccounts, twoAccounts } from '../access/two-accounts';
 import { openVault } from '../cipher/vault';
-import { dbRun } from '../db/exec';
+import { epochOf, openRow, sealRow } from '../cipher/seal';
+import { dbAll, dbRun } from '../db/exec';
 import { tables } from '../db/tables';
 import { testTarget } from '../db/test-support';
 import { opsHandler } from '../groups/api';
@@ -27,7 +28,14 @@ describe(`a group's key (${leg})`, () => {
     context?: { params?: Promise<Record<string, string>> },
   ) => Promise<Response>;
   let route: Record<
-    'get' | 'create' | 'replace' | 'putWrap' | 'groupGrants' | 'putGroupGrants' | 'ops',
+    | 'get'
+    | 'create'
+    | 'replace'
+    | 'putWrap'
+    | 'groupGrants'
+    | 'putGroupGrants'
+    | 'rotateGroup'
+    | 'ops',
     Handler
   >;
 
@@ -61,6 +69,10 @@ describe(`a group's key (${leg})`, () => {
     const grants: GrantsApi = {
       get: async () => (await send(route.groupGrants, who, 'GET')).json(),
       put: async (list) => (await send(route.putGroupGrants, who, 'POST', { grants: list })).json(),
+      rotate: async (input) => {
+        const reply = await send(route.rotateGroup, who, 'POST', input);
+        return reply.status === 409 ? 'not_current' : ((await reply.json()) as { epoch: number });
+      },
     };
     const account = new AccountKeys(
       who.id,
@@ -91,6 +103,7 @@ describe(`a group's key (${leg})`, () => {
       putWrap: accountRoute(keys.putWrap, t.deps),
       groupGrants: accountRoute(keys.groupGrants, t.deps),
       putGroupGrants: accountRoute(keys.putGroupGrants, t.deps),
+      rotateGroup: accountRoute(keys.rotateGroup, t.deps),
       ops: accountRoute(
         opsHandler(async () => t.database),
         t.deps,
@@ -117,7 +130,7 @@ describe(`a group's key (${leg})`, () => {
     const grace = await deviceOf(t.grace);
     expect(await grace.account.afterPassword(new Uint8Array(32).fill(2))).toBe('unlocked');
     // Before she is a member, a wrap for her is refused, whoever makes it.
-    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 0 });
+    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 0, rotated: 0 });
 
     await addMember(group.id, t.grace);
     const asGrace = (await (
@@ -125,14 +138,14 @@ describe(`a group's key (${leg})`, () => {
     ).json()) as { group: { id: string; sealed: string } };
     // The group is there for her, its words not yet: "…".
     expect(await grace.groups.openName(asGrace.group)).toBeUndefined();
-    expect(await grace.groups.sync()).toEqual({ opened: 0, granted: 0 });
+    expect(await grace.groups.sync()).toEqual({ opened: 0, granted: 0, rotated: 0 });
 
     // Ada's device, at its next exchange, wraps the key for her; Grace's, at hers, opens it.
-    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 1 });
-    expect(await grace.groups.sync()).toEqual({ opened: 1, granted: 0 });
+    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 1, rotated: 0 });
+    expect(await grace.groups.sync()).toEqual({ opened: 1, granted: 0, rotated: 0 });
     expect(await grace.groups.openName(asGrace.group)).toBe('Lisbon');
     // And nothing more to do on either side.
-    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 0 });
+    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 0, rotated: 0 });
   });
 
   it('reaches an account whose key was replaced, again by itself', async () => {
@@ -206,5 +219,101 @@ describe(`a group's key (${leg})`, () => {
       wraps: { groupId: string }[];
     };
     expect(asGrace.wraps.filter((w) => w.groupId === group.id)).toEqual([]);
+  });
+  it('after a removal, gives the group a new epoch the removed person never holds, and a device offline across it opens both', async () => {
+    const ada = await deviceOf(t.ada);
+    await ada.account.afterPassword(new Uint8Array(32).fill(1));
+    // Ada's second device, which will be offline across the rotation.
+    const laptop = await deviceOf(t.ada);
+    await laptop.account.afterPassword(new Uint8Array(32).fill(1));
+    const prepared = await ada.groups.prepareGroup('Trip');
+    const { group } = (await (
+      await ops(t.ada, {
+        op: 'group.create',
+        ...prepared,
+        color: '#2563eb',
+        defaultCurrency: 'EUR',
+      })
+    ).json()) as { group: { id: string; sealed: string } };
+    await addMember(group.id, t.grace);
+    // Ada's device wraps epoch 1 for Grace (whose account key an earlier test replaced; her wrap is what counts here).
+    expect((await ada.groups.sync()).granted).toBeGreaterThanOrEqual(1);
+    await laptop.groups.sync();
+
+    // Ada removes Grace. Nothing rotates until a remaining member's device exchanges keys; then it does, once.
+    const person = await personOfAccount(t.database, t.grace.id);
+    const state = (await (await ops(t.ada, { op: 'group.read', groupId: group.id })).json()) as {
+      members: { memberId: string; id: string }[];
+    };
+    const memberId = state.members.find((m) => m.id === person?.id)?.memberId;
+    expect((await ops(t.ada, { op: 'member.remove', groupId: group.id, memberId })).status).toBe(
+      200,
+    );
+    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 0, rotated: 1 });
+    expect(await ada.groups.sync()).toEqual({ opened: 0, granted: 0, rotated: 0 });
+
+    const read = (await (await ops(t.ada, { op: 'group.read', groupId: group.id })).json()) as {
+      group: { keyEpoch: number };
+    };
+    expect(read.group.keyEpoch).toBe(2);
+    // A new expense is sealed under epoch 2, which Grace has no wrap of.
+    const newest = await ada.groups.newestKey(group.id, 2);
+    if (!newest) throw new Error('no key');
+    expect(newest.epoch).toBe(2);
+    const sealed = await sealRow({ description: 'After', note: null }, newest.key, 2, {
+      group: group.id,
+      table: 'expense',
+      row: 'expense-after',
+    });
+    expect(epochOf(sealed)).toBe(2);
+    const graceWraps = await dbAll<{ epoch: number }>(
+      t.database,
+      sql`SELECT epoch FROM ${tables(t.database).keyWrap} WHERE group_id = ${group.id} AND account_id = ${t.grace.id}`,
+    );
+    expect(graceWraps.map((w) => Number(w.epoch))).toEqual([1]);
+
+    // The laptop, back online, opens the new epoch and still has the old.
+    expect(await laptop.groups.keyFor(group.id, 2)).toBeUndefined();
+    expect((await laptop.groups.sync()).opened).toBe(1);
+    expect(await laptop.groups.keyFor(group.id, 1)).toBeDefined();
+    const laptopKey = await laptop.groups.keyFor(group.id, 2);
+    if (!laptopKey) throw new Error('no key');
+    const opened = await openRow(sealed, laptopKey, {
+      group: group.id,
+      table: 'expense',
+      row: 'expense-after',
+    });
+    expect(opened.description).toBe('After');
+    expect(await laptop.groups.openName(group)).toBe('Trip');
+  });
+
+  it('takes one new epoch when two devices rotate at once, and none from someone not in the group', async () => {
+    const ada = await deviceOf(t.ada);
+    await ada.account.afterPassword(new Uint8Array(32).fill(1));
+    const prepared = await ada.groups.prepareGroup('Race');
+    const { group } = (await (
+      await ops(t.ada, {
+        op: 'group.create',
+        ...prepared,
+        color: '#2563eb',
+        defaultCurrency: 'EUR',
+      })
+    ).json()) as { group: { id: string } };
+    await dbRun(
+      t.database,
+      sql`UPDATE ${tables(t.database).grp} SET key_rotation_due = ${true} WHERE id = ${group.id}`,
+    );
+    const wrapped = `h1.${'Z'.repeat(60)}`;
+    const send2 = (who: Person, fromEpoch: number) =>
+      send(route.rotateGroup, who, 'POST', {
+        groupId: group.id,
+        fromEpoch,
+        wraps: [{ accountId: who.id, wrapped }],
+      });
+    expect((await send2(t.grace, 1)).status).toBe(409);
+    expect((await send2(t.ada, 1)).status).toBe(200);
+    // The second device, a moment later, from the same epoch: refused, and its key dropped.
+    expect((await send2(t.ada, 1)).status).toBe(409);
+    expect((await send2(t.ada, 2)).status).toBe(409);
   });
 });

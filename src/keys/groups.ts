@@ -13,10 +13,22 @@ export interface GrantsApi {
   get(): Promise<{
     wraps: { groupId: string; epoch: number; wrapped: string }[];
     needed: { groupId: string; epoch: number; accountId: string; publicKey: string }[];
+    /** Groups someone left, which this device should give a new epoch (DESIGN.md §5.3). */
+    rotations?: {
+      groupId: string;
+      epoch: number;
+      members: { accountId: string; publicKey: string }[];
+    }[];
   }>;
   put(
     grants: { groupId: string; epoch: number; accountId: string; wrapped: string }[],
   ): Promise<{ accepted: number; refused: number }>;
+  /** Sends a new epoch's wraps; `not_current` when another device rotated first, or it is no longer due. */
+  rotate(input: {
+    groupId: string;
+    fromEpoch: number;
+    wraps: { accountId: string; wrapped: string }[];
+  }): Promise<{ epoch: number } | 'not_current'>;
 }
 
 const vaultName = (groupId: string, epoch: number) => `group:${groupId}:${epoch}`;
@@ -43,10 +55,10 @@ export class GroupKeys {
    * One exchange: unwraps the group keys the server has for this account that the device lacks, then wraps the keys it holds for each member who
    * lacks one. Nothing happens on a device that is not unlocked.
    */
-  async sync(): Promise<{ opened: number; granted: number }> {
+  async sync(): Promise<{ opened: number; granted: number; rotated: number }> {
     const held = await this.account.current();
-    if (!held) return { opened: 0, granted: 0 };
-    const { wraps, needed } = await this.api.get();
+    if (!held) return { opened: 0, granted: 0, rotated: 0 };
+    const { wraps, needed, rotations = [] } = await this.api.get();
     let opened = 0;
     for (const wrap of wraps) {
       if (await this.account.vault.get(vaultName(wrap.groupId, wrap.epoch))) continue;
@@ -79,7 +91,60 @@ export class GroupKeys {
       });
     }
     const granted = grants.length > 0 ? (await this.api.put(grants)).accepted : 0;
-    return { opened, granted };
+    let rotated = 0;
+    for (const rotation of rotations) if (await this.rotate(rotation)) rotated++;
+    return { opened, granted, rotated };
+  }
+
+  /**
+   * Gives a group a new epoch because someone left: a new key, wrapped to every remaining member's account key (this one's too), sent; kept in the vault
+   * only once the server took it. If the answer is lost, this account's own wrap brings the key back at the next exchange; if another device rotated
+   * first, this key is dropped and theirs arrives the same way.
+   */
+  private async rotate(rotation: {
+    groupId: string;
+    epoch: number;
+    members: { accountId: string; publicKey: string }[];
+  }): Promise<boolean> {
+    if (!(await this.account.vault.get(vaultName(rotation.groupId, rotation.epoch)))) return false;
+    const key = newGroupKey();
+    const next = rotation.epoch + 1;
+    const wraps: { accountId: string; wrapped: string }[] = [];
+    for (const member of rotation.members) {
+      const publicKey = fromBase64Url(member.publicKey);
+      if (!publicKey || publicKey.length !== 32) continue;
+      wraps.push({
+        accountId: member.accountId,
+        wrapped: await wrapToPublicKey(
+          key,
+          publicKey,
+          bindingOf(rotation.groupId, next, member.accountId),
+        ),
+      });
+    }
+    const taken = await this.api.rotate({
+      groupId: rotation.groupId,
+      fromEpoch: rotation.epoch,
+      wraps,
+    });
+    if (taken === 'not_current') return false;
+    await this.account.vault.put(vaultName(rotation.groupId, taken.epoch), key);
+    return true;
+  }
+
+  /**
+   * The key a device seals under: the newest epoch it holds, at most the group's current one (DESIGN.md §5.3). A device that has not yet opened the
+   * newest still writes, under an older epoch the server accepts.
+   */
+  async newestKey(
+    groupId: string,
+    epoch: number,
+  ): Promise<{ key: CryptoKey; epoch: number } | undefined> {
+    for (let e = epoch; e >= 1; e--) {
+      const key = await this.keyFor(groupId, e);
+      if (key) return { key, epoch: e };
+    }
+    return undefined;
   }
 
   /**
@@ -140,5 +205,15 @@ export const httpGrantsApi: GrantsApi = {
     });
     if (!reply.ok) throw new Error(`grants: ${reply.status}`);
     return (await reply.json()) as { accepted: number; refused: number };
+  },
+  async rotate(input) {
+    const reply = await fetch('/api/keys/groups/rotate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (reply.status === 409) return 'not_current';
+    if (!reply.ok) throw new Error(`rotate: ${reply.status}`);
+    return (await reply.json()) as { epoch: number };
   },
 };
