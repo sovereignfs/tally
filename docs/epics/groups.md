@@ -81,7 +81,7 @@ other row by `group_id` through `deleteGroupRows`, now shared with `People.delet
 `member_left`, `member_removed`, `group_closed`, `group_reopened`. **Left for 15.6:** leaving and removing should make the group due a new key epoch;
 nothing marks it yet.
 
-#### 📋 3.4 — Merging a placeholder
+#### ✅ 3.4 — Merging a placeholder
 
 **Goal:** one person in a group twice becomes once. **Design:** §7.2. **Depends on:** 8.2, 5.2.
 
@@ -91,3 +91,18 @@ membership ended, and the placeholder deleted if it is in no other group.
 
 **Accepts when:** after a merge every balance in the group is what it was with the two people added together, and a device that was offline during the
 merge ends with the merged rows.
+
+**Done as:** `member.merge` (`src/groups/merge.ts`), an owner's operation over `/api/ops`, of a placeholder into someone else still in the group: the
+owner and the group open are held in the statement that moves the group's `seq` on, and anything else reads as not found. The rows are rewritten in the
+write path, `mergeMemberRows` in `src/sync/apply.ts`, since it changes expenses and payments: every one of the group's naming the placeholder, deleted
+ones too since they can be restored, is moved to the member, its `version` moved on, stamped with the `seq` and given its revision. Someone on an
+expense twice becomes once with the two amounts added; the stored shares stay exactly what the method and units give, and where adding the two would
+not (both on it, or a remainder that now falls elsewhere in the member order) the expense becomes split by amounts, each unit its share. A payment
+between the two would be from the member to themself and moves no balance, so it is deleted, with its revision. The placeholder's membership ends (its
+row stays, as a left member's does, so the history keeps its name), its invitation to the group is revoked, and the activity says `member_merged`.
+**Changed from the wording above:** the placeholder is not deleted, since its ended membership points at it, by the same rule a claimed one is deleted
+by (8.3); a placeholder in no other group keeps no email and no live invitation. Group settings shows Merge on a placeholder's line to an owner, with a
+choice of whom and a confirmation. Tests: on each database, balances afterwards are the two added together in two currencies, nothing names the
+placeholder, every split still checks, each touched row has one revision of the right kind, the `seq` moved once; a member, an account, oneself,
+another group's member and a left member are refused and write nothing; and two devices over the real endpoint, one offline during the merge, end with
+the same merged rows. In Playwright, Chromium and WebKit, an owner merges two people of one expense and the balance shows the two added.

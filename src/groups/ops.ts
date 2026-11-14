@@ -12,6 +12,7 @@ import { isGroupColor } from './colors';
 import { OpError } from './errors';
 import { closeGroup, deleteGroup, leaveGroup, removeMember, reopenGroup } from './lifecycle';
 import { addPerson, editPlaceholder } from './people';
+import { mergePlaceholder } from './merge';
 import { inviteCreate, inviteResend, inviteRevoke } from '../invites/ops';
 
 export { OpError } from './errors';
@@ -417,6 +418,8 @@ export const OPERATIONS = {
     reopenGroup(db, who, input).then(() => readGroup(db, who, string(input.groupId))),
   'group.delete': deleteGroup,
   'member.add': addPerson,
+  'member.merge': (db: Database, who: Who, input: Record<string, unknown>) =>
+    mergePlaceholder(db, who, input).then(() => readGroup(db, who, string(input.groupId))),
   'person.edit': editPlaceholder,
   'invite.create': inviteCreate,
   'invite.revoke': inviteRevoke,

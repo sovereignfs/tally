@@ -14,7 +14,7 @@ import type { Database } from '../db/client';
 import { dbAll, dbGet, transaction } from '../db/exec';
 import { tables } from '../db/tables';
 import { toMinor } from '../money/amount';
-import { memberOrder } from '../money/split';
+import { SplitError, checkShares, isSplitMethod, memberOrder } from '../money/split';
 
 /**
  * **The server's one path for a recorded change** (DESIGN.md §11.3–§11.5, §8.5). Expenses, payments and comments are written here and nowhere else.
@@ -547,4 +547,145 @@ async function applyComment(
     },
     now,
   });
+}
+
+/**
+ * **A placeholder merged into a member** (DESIGN.md §7.2), written here because it rewrites expenses and payments: every one of the group's that names
+ * `fromId`, deleted ones too (they may be restored), is moved to `intoId` inside the caller's transaction, which has moved the group's `seq` on with the
+ * owner in the statement. Each row is written whole, its `version` moved on and its revision kept, as an edit's is.
+ *
+ *  - An expense's payers and shares: someone on it twice becomes once, with the two amounts added. The stored shares stay exactly what its method and
+ *    units give (`checkShares`, in the group's member order): where adding two people's parts would not, or where both were on it, the expense becomes
+ *    split by amounts, each share's units its amount, which every figure keeps.
+ *  - A payment between the two becomes one from the member to themself, which moves no balance: it is deleted, its revision kept. Any other is moved.
+ *
+ * Every balance is then what it was with the two people added together. Returns how many expenses and payments it touched.
+ */
+export async function mergeMemberRows(
+  tx: Database,
+  actorPersonId: string,
+  groupId: string,
+  fromId: string,
+  intoId: string,
+  order: readonly string[],
+  seq: number,
+  now: number,
+): Promise<{ expenses: number; payments: number }> {
+  const t = tables(tx);
+  const expenses = await dbAll<{ id: string; amount: number; method: string; version: number }>(
+    tx,
+    sql`SELECT e.id, e.amount, e.method, e.version FROM ${t.expense} e WHERE e.group_id = ${groupId} AND (
+          EXISTS (SELECT 1 FROM ${t.expensePayer} p WHERE p.expense_id = e.id AND p.group_id = ${groupId} AND p.member_id = ${fromId})
+          OR EXISTS (SELECT 1 FROM ${t.expenseShare} s WHERE s.expense_id = e.id AND s.group_id = ${groupId} AND s.member_id = ${fromId}))
+        ORDER BY e.id`,
+  );
+  for (const expense of expenses) {
+    const payers = await dbAll<{ memberId: string; amount: number }>(
+      tx,
+      sql`SELECT member_id AS "memberId", amount FROM ${t.expensePayer} WHERE expense_id = ${expense.id} AND group_id = ${groupId}`,
+    );
+    const shares = await dbAll<{ memberId: string; amount: number; units: number | null }>(
+      tx,
+      sql`SELECT member_id AS "memberId", amount, units FROM ${t.expenseShare} WHERE expense_id = ${expense.id} AND group_id = ${groupId}`,
+    );
+    const mergedPayers = new Map<string, number>();
+    for (const p of payers) {
+      const id = p.memberId === fromId ? intoId : p.memberId;
+      mergedPayers.set(id, (mergedPayers.get(id) ?? 0) + Number(p.amount));
+    }
+    const both =
+      shares.some((s) => s.memberId === intoId) && shares.some((s) => s.memberId === fromId);
+    const mergedShares = new Map<string, { amount: number; units: number | null }>();
+    for (const s of shares) {
+      const id = s.memberId === fromId ? intoId : s.memberId;
+      const was = mergedShares.get(id);
+      mergedShares.set(id, {
+        amount: (was?.amount ?? 0) + Number(s.amount),
+        units: s.units === null ? null : Number(s.units),
+      });
+    }
+    const amount = toMinor(Number(expense.amount));
+    let method = expense.method;
+    let list = [...mergedShares].map(([memberId, s]) => ({
+      memberId,
+      amount: toMinor(s.amount),
+      units: s.units,
+    }));
+    let keeps = !both && isSplitMethod(method);
+    if (keeps && isSplitMethod(method)) {
+      try {
+        checkShares(amount, method, list, order);
+      } catch (error) {
+        if (!(error instanceof SplitError)) throw error;
+        keeps = false;
+      }
+    }
+    if (!keeps) {
+      method = 'amounts';
+      list = list.map((s) => ({ ...s, units: s.amount }));
+    }
+    const version = Number(expense.version) + 1;
+    await dbAll(
+      tx,
+      sql`UPDATE ${t.expense} SET method = ${method}, version = ${version}, updated_by = ${actorPersonId}, seq = ${seq}, updated_at = ${now}
+          WHERE id = ${expense.id} AND group_id = ${groupId} RETURNING id`,
+    );
+    await dbAll(
+      tx,
+      sql`DELETE FROM ${t.expensePayer} WHERE expense_id = ${expense.id} AND group_id = ${groupId} RETURNING expense_id`,
+    );
+    await dbAll(
+      tx,
+      sql`DELETE FROM ${t.expenseShare} WHERE expense_id = ${expense.id} AND group_id = ${groupId} RETURNING expense_id`,
+    );
+    for (const [memberId, paid] of mergedPayers)
+      await dbAll(
+        tx,
+        sql`INSERT INTO ${t.expensePayer} (expense_id, member_id, group_id, amount) VALUES (${expense.id}, ${memberId}, ${groupId}, ${paid})
+            RETURNING expense_id`,
+      );
+    for (const share of list)
+      await dbAll(
+        tx,
+        sql`INSERT INTO ${t.expenseShare} (expense_id, member_id, group_id, amount, units)
+            VALUES (${expense.id}, ${share.memberId}, ${groupId}, ${share.amount}, ${share.units}) RETURNING expense_id`,
+      );
+    await writeRevision(tx, actorPersonId, groupId, 'expense', expense.id, version, 'edited', now);
+  }
+
+  const payments = await dbAll<{
+    id: string;
+    fromMemberId: string;
+    toMemberId: string;
+    version: number;
+    deletedAt: number | null;
+  }>(
+    tx,
+    sql`SELECT id, from_member_id AS "fromMemberId", to_member_id AS "toMemberId", version, deleted_at AS "deletedAt" FROM ${t.payment}
+        WHERE group_id = ${groupId} AND (from_member_id = ${fromId} OR to_member_id = ${fromId}) ORDER BY id`,
+  );
+  for (const payment of payments) {
+    const from = payment.fromMemberId === fromId ? intoId : payment.fromMemberId;
+    const to = payment.toMemberId === fromId ? intoId : payment.toMemberId;
+    const toThemself = from === to;
+    const deletedAt = toThemself ? (payment.deletedAt ?? now) : payment.deletedAt;
+    const version = Number(payment.version) + 1;
+    await dbAll(
+      tx,
+      sql`UPDATE ${t.payment} SET from_member_id = ${from}, to_member_id = ${to}, deleted_at = ${deletedAt}, version = ${version},
+            updated_by = ${actorPersonId}, seq = ${seq}, updated_at = ${now}
+          WHERE id = ${payment.id} AND group_id = ${groupId} RETURNING id`,
+    );
+    await writeRevision(
+      tx,
+      actorPersonId,
+      groupId,
+      'payment',
+      payment.id,
+      version,
+      toThemself && payment.deletedAt === null ? 'deleted' : 'edited',
+      now,
+    );
+  }
+  return { expenses: expenses.length, payments: payments.length };
 }

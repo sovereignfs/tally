@@ -131,7 +131,7 @@ async function markRotationDue(tx: Database, groupId: string) {
 }
 
 /** Moves the group's `seq` on, open and with the account an active member (or owner), in the statement; refuses otherwise as not found. */
-async function moveSeq(
+export async function moveSeq(
   tx: Database,
   who: Who,
   groupId: string,

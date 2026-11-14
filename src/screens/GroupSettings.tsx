@@ -46,9 +46,11 @@ export function GroupSettings({ groupId }: { groupId: string }) {
   const [done, setDone] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
   const [notify, setNotify] = useState<Notify | null>(null);
-  const [confirm, setConfirm] = useState<null | 'leave' | 'close' | 'delete' | { remove: string }>(
-    null,
-  );
+  const [confirm, setConfirm] = useState<
+    null | 'leave' | 'close' | 'delete' | { remove: string } | { merge: string; into: string }
+  >(null);
+  // The placeholder whose "Merge into" picker is open, and whom it would merge into.
+  const [merging, setMerging] = useState<{ from: string; into: string } | null>(null);
   const [working, setWorking] = useState(false);
   const [invited, setInvited] = useState<Invited | null>(null);
 
@@ -135,6 +137,11 @@ export function GroupSettings({ groupId }: { groupId: string }) {
     memberId === view.me?.id
       ? 'You'
       : (view.members.find((m) => m.id === memberId)?.name ?? 'Someone');
+  const whose = (memberId: string) =>
+    memberId === view.me?.id ? 'yours' : `${nameOf(memberId)}’s`;
+  /** Who a placeholder can be merged into: anyone else still in the group. */
+  const others = (memberId: string) =>
+    view.members.filter((o) => o.leftAt === null && o.id !== memberId);
 
   async function rename() {
     const next = (name ?? current ?? '').trim();
@@ -322,10 +329,50 @@ export function GroupSettings({ groupId }: { groupId: string }) {
                       Step down
                     </Button>
                   ) : null}
+                  {owner && !closed && m.placeholder && others(m.id).length > 0 ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-expanded={merging?.from === m.id}
+                      onClick={() =>
+                        setMerging(
+                          merging?.from === m.id
+                            ? null
+                            : { from: m.id, into: others(m.id)[0]?.id ?? '' },
+                        )
+                      }
+                    >
+                      Merge
+                    </Button>
+                  ) : null}
                   {owner && !closed && m.id !== view.me?.id ? (
                     <Button variant="ghost" size="sm" onClick={() => setConfirm({ remove: m.id })}>
                       Remove
                     </Button>
+                  ) : null}
+                  {merging?.from === m.id ? (
+                    // One person in the group twice (§7.2): everything of the placeholder becomes the chosen member's.
+                    <span className={styles.row}>
+                      <Select
+                        aria-label={`Merge ${m.name} into`}
+                        value={merging.into}
+                        onChange={(event) => setMerging({ from: m.id, into: event.target.value })}
+                      >
+                        {others(m.id).map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {nameOf(o.id)}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={!merging.into}
+                        onClick={() => setConfirm({ merge: m.id, into: merging.into })}
+                      >
+                        Merge into them
+                      </Button>
+                    </span>
                   ) : null}
                 </li>
               ))}
@@ -417,7 +464,9 @@ export function GroupSettings({ groupId }: { groupId: string }) {
               ? 'Close this group?'
               : confirm === 'delete'
                 ? 'Delete this group?'
-                : `Remove ${typeof confirm === 'object' && confirm ? nameOf(confirm.remove) : ''}?`
+                : typeof confirm === 'object' && confirm && 'merge' in confirm
+                  ? `Merge ${nameOf(confirm.merge)} into ${confirm.into === view.me?.id ? 'you' : nameOf(confirm.into)}?`
+                  : `Remove ${typeof confirm === 'object' && confirm ? nameOf(confirm.remove) : ''}?`
         }
         message={
           confirm === 'leave'
@@ -426,7 +475,9 @@ export function GroupSettings({ groupId }: { groupId: string }) {
               ? 'Nothing more can be added. An owner can reopen it.'
               : confirm === 'delete'
                 ? 'It goes for good, with everyone in it.'
-                : 'They stay on what they shared, shown as left.'
+                : typeof confirm === 'object' && confirm && 'merge' in confirm
+                  ? `Everything ${nameOf(confirm.merge)} paid, shared and settled becomes ${whose(confirm.into)}, and ${nameOf(confirm.merge)} leaves the group. This cannot be undone.`
+                  : 'They stay on what they shared, shown as left.'
         }
         confirmLabel={
           confirm === 'leave'
@@ -435,7 +486,9 @@ export function GroupSettings({ groupId }: { groupId: string }) {
               ? 'Close'
               : confirm === 'delete'
                 ? 'Delete'
-                : 'Remove'
+                : typeof confirm === 'object' && confirm && 'merge' in confirm
+                  ? 'Merge'
+                  : 'Remove'
         }
         onConfirm={() => {
           const which = confirm;
@@ -448,6 +501,19 @@ export function GroupSettings({ groupId }: { groupId: string }) {
                 await op({ op: 'group.close', groupId }, { said: 'The group is closed.' });
               else if (which === 'delete') {
                 if (await op({ op: 'group.delete', groupId })) router.push('/groups');
+              } else if (which && typeof which === 'object' && 'merge' in which) {
+                const answer = await op(
+                  {
+                    op: 'member.merge',
+                    groupId,
+                    memberId: which.merge,
+                    intoMemberId: which.into,
+                  },
+                  {
+                    said: `${nameOf(which.merge)} is merged into ${which.into === view.me?.id ? 'you' : nameOf(which.into)}.`,
+                  },
+                );
+                if (answer) setMerging(null);
               } else if (which && typeof which === 'object')
                 await op(
                   { op: 'member.remove', groupId, memberId: which.remove },
