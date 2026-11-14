@@ -1,6 +1,13 @@
 import { fromBase64Url, type Bytes } from '../cipher/bytes';
 import { CipherError } from '../cipher/errors';
-import { importGroupKey, newGroupKey, openRow, sealRow, epochOf } from '../cipher/seal';
+import {
+  type RowBinding,
+  importGroupKey,
+  newGroupKey,
+  openRow,
+  sealRow,
+  epochOf,
+} from '../cipher/seal';
 import { unwrapWithPrivateKey, wrapToPublicKey } from '../cipher/wrap';
 import type { AccountKeys } from './unlock';
 
@@ -189,6 +196,22 @@ export class GroupKeys {
       bindingOf(groupId, 1, this.account.accountId),
     );
     return { groupId, sealed, keyWrap };
+  }
+
+  /**
+   * A row's sealed text, opened with the key it was sealed under and sealed again for another row, under the target group's newest epoch held here (at
+   * most `targetEpoch`): moving a refused expense to another group (§11.5). The text is in memory only for this.
+   */
+  async reseal(
+    sealed: string,
+    from: RowBinding,
+    to: RowBinding,
+    targetEpoch: number,
+  ): Promise<string> {
+    const key = await this.keyFor(from.group, epochOf(sealed));
+    const target = await this.newestKey(to.group, targetEpoch);
+    if (!key || !target) throw new CipherError('wrong_key');
+    return sealRow(await openRow(sealed, key, from), target.key, target.epoch, to);
   }
 
   /** Seals a group's new name under its current epoch's key, for a rename. */

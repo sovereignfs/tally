@@ -39,7 +39,7 @@ test('is in the avatar menu, and the name changed there is the one shown everywh
   await page.getByRole('button', { name: 'User menu' }).click();
   await page.getByRole('menuitem', { name: 'Settings' }).click();
   await expect(page).toHaveURL(/\/settings$/);
-  for (const name of ['Profile', 'Security', 'Unlocking', 'Preferences', 'Data']) {
+  for (const name of ['Profile', 'Security', 'Unlocking', 'Preferences', 'This device', 'Data']) {
     await expect(
       page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name }),
     ).toBeVisible();
@@ -92,6 +92,17 @@ test('Unlocking says what opens a new device, and keeps a recovery key from ther
   await expect(offer.getByLabel('Your recovery key')).toHaveText(/^([0-9A-Z]{4}-){6}[0-9A-Z]{4}$/);
   await offer.getByRole('button', { name: 'I have kept it' }).click();
   await expect(page.getByText('You have kept a recovery key.')).toBeVisible();
+});
+
+test('This device says when it last synced, and that nothing is waiting', async ({ page }) => {
+  await signedIn(page);
+  await openSettings(page, 'device');
+  const section = page.getByRole('region', { name: 'This device' });
+  await expect(
+    section.getByText(/Last synced .*Everything recorded here has been sent\./),
+  ).toBeVisible();
+  await expect(section.getByText('Nothing here')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Some changes couldn’t sync' })).toHaveCount(0);
 });
 
 test('deleting the account asks for the password, and a wrong one deletes nothing', async ({

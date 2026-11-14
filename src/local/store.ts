@@ -8,7 +8,7 @@ import {
   checkPayment,
   parseMutation,
 } from '../actions/validate';
-import { memberOrder } from '../money/split';
+import { computeShares, memberOrder } from '../money/split';
 import type { MutationResult, SyncResponse } from '../sync/format';
 import type {
   FailedEntry,
@@ -272,7 +272,10 @@ export async function settle(
   });
   for (const [i, entry] of sent.entries())
     if (answer.results[i] && entry.n !== undefined) await tx.objectStore('outbox').delete(entry.n);
-  for (const failed of refused) await tx.objectStore('failed').put(failed);
+  // A refused comment is undone with a toast (§11.5), not kept: what was typed is short, and the screen says why. An expense or a payment is kept.
+  for (const failed of refused)
+    if (!failed.mutation.changes.every((c) => c.table === 'comment'))
+      await tx.objectStore('failed').put(failed);
 
   for (const changes of answer.groups) {
     const groupId = changes.group.id;
@@ -330,3 +333,138 @@ export async function pendingRows(db: LocalDatabase): Promise<Set<string>> {
 }
 
 export type { LocalTable };
+
+// ——— Couldn't sync (§11.5) ———
+
+/** Discards a refused change: the person chose to. */
+export async function discardFailed(db: LocalDatabase, mutationId: string): Promise<void> {
+  await db.delete('failed', mutationId);
+}
+
+/** Sends a refused change again, as it was (the group reopened, the person is back): out of `failed`, into the outbox and the rows. */
+export async function resendFailed(
+  db: LocalDatabase,
+  mutationId: string,
+  actorPersonId: string,
+  now: number,
+): Promise<void> {
+  const failed = await db.get('failed', mutationId);
+  if (!failed) return;
+  const mutation = await checkLocally(db, failed.mutation);
+  const tx = db.transaction(ALL, 'readwrite');
+  await tx.objectStore('failed').delete(mutationId);
+  await layOver(tx, mutation, actorPersonId, now);
+  await tx.objectStore('outbox').add({ mutation, queuedAt: now });
+  await tx.done;
+}
+
+/** Re-seals a row's text for another row: opened with the source group's key, sealed under the target's newest (`GroupKeys`). */
+export type Reseal = (
+  sealed: string,
+  from: { group: string; table: 'expense' | 'payment'; row: string },
+  to: { group: string; table: 'expense' | 'payment'; row: string },
+) => Promise<string>;
+
+export class MoveRefused extends Error {
+  constructor(
+    readonly reason: 'not_movable' | 'missing_person' | 'no_group',
+    readonly personId?: string,
+  ) {
+    super(reason);
+    this.name = 'MoveRefused';
+  }
+}
+
+/**
+ * **Moves a refused expense or payment to another group** (§11.5): recorded there as new, with its people found in the target group by person (a
+ * member of one group is the same person in another), its split worked out again by the target group's order, and its text sealed again for its new
+ * row. Someone who is not in the target group refuses the move, naming them (`MoveRefused`). On success it is queued like any write and leaves `failed`.
+ */
+export async function moveFailed(
+  db: LocalDatabase,
+  mutationId: string,
+  targetGroupId: string,
+  reseal: Reseal,
+  ids: { mutationId: string; rowId: string },
+  actorPersonId: string,
+  now: number,
+): Promise<Mutation> {
+  const failed = await db.get('failed', mutationId);
+  const change = failed?.mutation.changes[0];
+  if (
+    !failed ||
+    failed.mutation.changes.length !== 1 ||
+    !change ||
+    change.op !== 'put' ||
+    change.table === 'comment'
+  )
+    throw new MoveRefused('not_movable');
+  const source = await db.getAllFromIndex('member', 'byGroup', failed.mutation.groupId);
+  const target = await db.getAllFromIndex('member', 'byGroup', targetGroupId);
+  if (!(await db.get('grp', targetGroupId))) throw new MoveRefused('no_group');
+  const personOf = new Map(source.map((m) => [m.id, m.personId]));
+  const inTarget = new Map(target.filter((m) => m.leftAt === null).map((m) => [m.personId, m.id]));
+  const map = (memberId: string): string => {
+    const personId = personOf.get(memberId);
+    const mapped = personId ? inTarget.get(personId) : undefined;
+    if (!mapped) throw new MoveRefused('missing_person', personId);
+    return mapped;
+  };
+  const from = { group: failed.mutation.groupId, table: change.table, row: change.id };
+  const to = { group: targetGroupId, table: change.table, row: ids.rowId };
+  const sealed = change.row.sealed === null ? null : await reseal(change.row.sealed, from, to);
+  let moved: Mutation;
+  if (change.table === 'expense') {
+    const order = memberOrder(target.map((m) => ({ id: m.id, joinedAt: m.joinedAt })));
+    const shares = computeShares(
+      change.row.amount,
+      change.row.method,
+      change.row.shares.map((s) => ({ memberId: map(s.memberId), units: s.units })),
+      order,
+    );
+    moved = {
+      mutationId: ids.mutationId,
+      groupId: targetGroupId,
+      changes: [
+        {
+          table: 'expense',
+          op: 'put',
+          id: ids.rowId,
+          baseVersion: null,
+          row: {
+            ...change.row,
+            sealed: sealed ?? '',
+            payers: change.row.payers.map((p) => ({ memberId: map(p.memberId), amount: p.amount })),
+            shares,
+          },
+        },
+      ],
+    };
+  } else {
+    moved = {
+      mutationId: ids.mutationId,
+      groupId: targetGroupId,
+      changes: [
+        {
+          table: 'payment',
+          op: 'put',
+          id: ids.rowId,
+          baseVersion: null,
+          row: {
+            ...change.row,
+            sealed,
+            fromMemberId: map(change.row.fromMemberId),
+            toMemberId: map(change.row.toMemberId),
+          },
+        },
+      ],
+    };
+  }
+  const checked = await checkLocally(db, moved);
+  const tx = db.transaction(ALL, 'readwrite');
+  await tx.objectStore('failed').delete(mutationId);
+  await layOver(tx, checked, actorPersonId, now);
+  await tx.objectStore('outbox').add({ mutation: checked, queuedAt: now });
+  await tx.done;
+  return checked;
+}

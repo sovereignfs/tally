@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UserMenu } from '@sovereignfs/ui';
 import { authClient } from '../client';
 import { deleteVault } from '../../cipher/vault';
-import { signOutDevice } from '../../sync/device';
+import { signOutDevice, watchFailed } from '../../sync/device';
+import styles from './AccountMenu.module.css';
 
 /**
  * The avatar menu at the right of the header: who the person is (name and address) and *Sign out*. Signing
@@ -20,6 +21,20 @@ export function AccountMenu({
   email: string;
 }) {
   const [leaving, setLeaving] = useState(false);
+  // Couldn't sync (DESIGN.md §11.5): a quiet mark on the avatar while any change the server refused is waiting for the person.
+  const [failed, setFailed] = useState(0);
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let live = true;
+    void watchFailed(accountId, (count) => live && setFailed(count)).then((unsubscribe) => {
+      if (live) stop = unsubscribe;
+      else unsubscribe();
+    });
+    return () => {
+      live = false;
+      stop?.();
+    };
+  }, [accountId]);
 
   async function signOut() {
     setLeaving(true);
@@ -37,24 +52,38 @@ export function AccountMenu({
   }
 
   return (
-    <UserMenu
-      name={name}
-      email={email}
-      size="sm"
-      aria-label="User menu"
-      items={[
-        {
-          label: 'Settings',
-          icon: 'settings',
-          onSelect: () => window.location.assign('/settings'),
-        },
-        {
-          label: leaving ? 'Signing out…' : 'Sign out',
-          icon: 'log-out',
-          destructive: true,
-          onSelect: () => void signOut(),
-        },
-      ]}
-    />
+    <span className={styles.wrap}>
+      <UserMenu
+        name={name}
+        email={email}
+        size="sm"
+        aria-label="User menu"
+        items={[
+          ...(failed > 0
+            ? [
+                {
+                  label: `Couldn’t sync (${failed})`,
+                  icon: 'alert-triangle' as const,
+                  onSelect: () => window.location.assign('/settings?section=device'),
+                },
+              ]
+            : []),
+          {
+            label: 'Settings',
+            icon: 'settings',
+            onSelect: () => window.location.assign('/settings'),
+          },
+          {
+            label: leaving ? 'Signing out…' : 'Sign out',
+            icon: 'log-out',
+            destructive: true,
+            onSelect: () => void signOut(),
+          },
+        ]}
+      />
+      {failed > 0 ? (
+        <span className={styles.mark} role="status" aria-label="Some changes couldn’t sync" />
+      ) : null}
+    </span>
   );
 }

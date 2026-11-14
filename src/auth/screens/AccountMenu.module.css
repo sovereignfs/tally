@@ -1,0 +1,17 @@
+/* The avatar with Couldn't sync's quiet mark (DESIGN.md §11.5): a dot at its corner, composed beside the design system's menu. */
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.mark {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sv-color-warning-text);
+  box-shadow: 0 0 0 2px var(--sv-color-surface);
+  pointer-events: none;
+}

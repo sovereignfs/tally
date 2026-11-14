@@ -68,7 +68,7 @@ with the text queued until the key arrives (a write today needs the key; it join
 needs a screen that records an expense (7.x) and is covered here by the two-device test over the real endpoint; `KeyGate` still runs its own
 30-second key exchange beside the sync's, which is harmless and goes when Settings' This device lands (6.3).
 
-#### 📋 6.3 — Couldn't sync
+#### ✅ 6.3 — Couldn't sync
 
 **Goal:** a refused change is kept, explained, and recoverable. **Design:** §11.5. **Depends on:** 6.2.
 
@@ -78,6 +78,17 @@ mark on the avatar while any are there; last synced time; Reset this device.
 
 **Accepts when:** an expense recorded offline in a group closed meanwhile lands in Couldn't sync with "Lisbon was closed", and can be moved to another
 group and synced.
+
+**Done as:** in `src/local/store.ts`, `settle` keeps a refused expense or payment in `failed` and lets a refused comment go (the client's `onRefused`
+tells the screen, for the toast); `resendFailed`, `discardFailed` and `moveFailed`, which records the change in another group as new, finding its
+people there by person, working the split out again by that group's order and sealing the text again for its new row (`GroupKeys.reseal`), and
+refuses a move naming whom the other group lacks. `SyncClient` has `resend`, `move` and `discard`. Settings has a **This device** section
+(`src/account/DeviceSection.tsx`): last synced, what waits to be sent, Couldn't sync with the reason in `refusalSentence`'s words and Send again,
+Move there and Discard, and Reset this device (`resetDevice`), which says how many changes would be lost first. The avatar has a dot and a
+"Couldn't sync (n)" item while any are waiting (`watchFailed`), composed beside the design system's `UserMenu`, which has no badge of its own.
+**Changed from the epic:** "Fix and send again" is Send again until the add sheet exists (7.x), which will open it filled in. Tests: an expense
+recorded offline in a group closed meanwhile lands in `failed` with "Lisbon was closed." and moves to another group and syncs, on a file, sqld and
+PostgreSQL; the section in Playwright.
 
 #### 📋 6.4 — Opening offline
 

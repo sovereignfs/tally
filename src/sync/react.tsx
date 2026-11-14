@@ -18,7 +18,7 @@ import { type Device, startDevice } from './device';
  * (`GroupKeys.exchange`); `useSync` gives the client to write through and `useStoreChanges` re-renders a reader when the store changes, here or in
  * another tab. A screen reads the store and never waits for the network.
  */
-const SyncContext = createContext<Device | null>(null);
+const SyncContext = createContext<{ device: Device; groups: GroupKeys } | null>(null);
 
 export function SyncProvider({
   accountId,
@@ -29,7 +29,7 @@ export function SyncProvider({
   personId: string;
   children: ReactNode;
 }) {
-  const [device, setDevice] = useState<Device | null>(null);
+  const [device, setDevice] = useState<{ device: Device; groups: GroupKeys } | null>(null);
   useEffect(() => {
     let live = true;
     void (async () => {
@@ -43,7 +43,7 @@ export function SyncProvider({
         onSignedOut: () => window.location.assign('/sign-in'),
         onUpdateRequired: () => window.location.reload(),
       });
-      if (live) setDevice(started);
+      if (live) setDevice({ device: started, groups });
     })().catch(() => undefined);
     return () => {
       live = false;
@@ -54,7 +54,12 @@ export function SyncProvider({
 
 /** The client to write through, once the device's store is open. */
 export function useSync(): SyncClient | null {
-  return useContext(SyncContext)?.client ?? null;
+  return useContext(SyncContext)?.device.client ?? null;
+}
+
+/** The device's group keys: to open and seal what people write. */
+export function useGroupKeys(): GroupKeys | null {
+  return useContext(SyncContext)?.groups ?? null;
 }
 
 /** A number that changes whenever the store does: a reader keys its effect on it to read again. */

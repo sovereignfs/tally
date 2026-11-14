@@ -10,6 +10,7 @@ const SECTIONS: { id: AccountSection; label: string; icon: IconName }[] = [
   { id: 'security', label: 'Security', icon: 'shield' },
   { id: 'unlocking', label: 'Unlocking', icon: 'lock' },
   { id: 'preferences', label: 'Preferences', icon: 'sliders-horizontal' },
+  { id: 'device', label: 'This device', icon: 'smartphone' },
   { id: 'data', label: 'Data', icon: 'database' },
 ];
 

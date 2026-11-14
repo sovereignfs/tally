@@ -99,3 +99,33 @@ export async function unsentChanges(accountId: string): Promise<number> {
   const device = await running.catch(() => undefined);
   return device ? outboxSize(device.db) : 0;
 }
+
+/**
+ * **Reset this device** (§11.5): its copy of the account's groups deleted, unsent changes and Couldn't sync with it, and the page starts again, pulling
+ * every group afresh. The screen says first what would be lost.
+ */
+export async function resetDevice(accountId: string, name = localName(accountId)): Promise<void> {
+  const running = devices.get(accountId);
+  devices.delete(accountId);
+  const device = await running?.catch(() => undefined);
+  if (device) {
+    device.loop.stop();
+    device.client.close();
+    device.db.close();
+  }
+  await deleteLocal(accountId, name).catch(() => undefined);
+}
+
+/** Told when this account's device on the page changes: what the avatar's mark listens to, outside the provider. */
+export async function watchFailed(
+  accountId: string,
+  listener: (count: number) => void,
+): Promise<() => void> {
+  for (let i = 0; i < 50 && !devices.get(accountId); i++)
+    await new Promise((r) => setTimeout(r, 200));
+  const device = await devices.get(accountId)?.catch(() => undefined);
+  if (!device) return () => undefined;
+  const tell = () => void device.db.count('failed').then(listener, () => undefined);
+  tell();
+  return device.client.subscribe(tell);
+}

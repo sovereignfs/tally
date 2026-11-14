@@ -11,6 +11,7 @@ import { testTarget } from '../db/test-support';
 import { opsHandler } from '../groups/api';
 import { openLocal } from '../local/db';
 import { LocalRefusal, outboxSize, readFailed, readGroupRows } from '../local/store';
+import { refusalSentence } from '../actions/validate';
 import type { Limiter } from '../limits/rate';
 import { toMinor } from '../money/amount';
 import { personOfAccount } from '../people/persons';
@@ -265,5 +266,112 @@ describe(`two devices (${leg})`, () => {
     ]);
     expect((await view(grace.db)).find((e) => e.id === withSam)).toBeUndefined();
     expect(await outboxSize(grace.db)).toBe(0);
+  });
+  it('lands a change recorded offline in a group closed meanwhile in Couldn’t sync, from where it moves to another group', async () => {
+    // Two groups of Ada's and Grace's, Lisbon and Porto, with nothing in them.
+    const db = tables(t.database);
+    const gracePerson = (await personOfAccount(t.database, t.grace.id))?.id ?? '';
+    const make = async () => {
+      const id = crypto.randomUUID();
+      await ops(
+        t.request(t.ada, '/api/ops', {
+          method: 'POST',
+          body: {
+            op: 'group.create',
+            groupId: id,
+            sealed,
+            color: '#2563eb',
+            defaultCurrency: 'EUR',
+            keyWrap: WRAP,
+          },
+        }),
+      );
+      const adaMember =
+        (
+          await dbGet<{ id: string }>(
+            t.database,
+            sql`SELECT id FROM ${db.member} WHERE group_id = ${id}`,
+          )
+        )?.id ?? '';
+      const graceMember = crypto.randomUUID();
+      await dbRun(
+        t.database,
+        sql`INSERT INTO ${db.member} (id, group_id, person_id, role, notify, added_by, joined_at, left_at, seq)
+            VALUES (${graceMember}, ${id}, ${gracePerson}, 'member', 'all', NULL, ${Date.now() + 9}, NULL, 1)`,
+      );
+      return { id, ada: adaMember, grace: graceMember };
+    };
+    const lisbon = await make();
+    const porto = await make();
+    const ada = await device(t.ada, 'ada3');
+    await ada.client.sync();
+
+    ada.state.offline = true;
+    const recorded = expenseRow(
+      {
+        sealed,
+        amount: m(4_000),
+        currency: 'EUR',
+        date: '2026-11-04',
+        category: 'eating_out',
+        method: 'equal',
+        payers: [{ memberId: lisbon.ada, amount: m(4_000) }],
+        split: [lisbon.ada, lisbon.grace].map((memberId) => ({ memberId, units: null })),
+      },
+      [lisbon.ada, lisbon.grace],
+    );
+    if (!recorded.ok) throw new Error('fixture');
+    await ada.client.commit(
+      addExpense({
+        mutationId: mid(),
+        groupId: lisbon.id,
+        expenseId: crypto.randomUUID(),
+        row: recorded.value,
+      }),
+    );
+    // Lisbon is closed from elsewhere while this device is offline.
+    expect(
+      (
+        await ops(
+          t.request(t.ada, '/api/ops', {
+            method: 'POST',
+            body: { op: 'group.close', groupId: lisbon.id },
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    ada.state.offline = false;
+    await ada.client.sync();
+
+    const [failed] = await readFailed(ada.db);
+    if (!failed) throw new Error('not kept');
+    expect(failed.refusal).toEqual({ code: 'closed' });
+    expect(refusalSentence(failed.refusal, { group: 'Lisbon' })).toBe('Lisbon was closed.');
+    expect((await readGroupRows(ada.db, lisbon.id)).expenses).toEqual([]);
+
+    // Moved to Porto: the same people, found there by person, its text sealed again for its new row.
+    const resealed: string[] = [];
+    await ada.client.move(failed.mutationId, porto.id, async (_text, _from, to) => {
+      const again = await sealRow(
+        { description: 'Dinner', note: null },
+        await importGroupKey(newGroupKey()),
+        1,
+        to,
+      );
+      resealed.push(to.group);
+      return again;
+    });
+    expect(resealed).toEqual([porto.id]);
+    expect(await readFailed(ada.db)).toEqual([]);
+    expect(await ada.client.sync()).toEqual({ status: 'synced' });
+    const stored = await dbGet<{ amount: number }>(
+      t.database,
+      sql`SELECT amount FROM ${db.expense} WHERE group_id = ${porto.id}`,
+    );
+    expect(Number(stored?.amount)).toBe(4_000);
+    const shares = (await readGroupRows(ada.db, porto.id)).expenses[0]?.shares
+      .map((x) => x.memberId)
+      .sort();
+    expect(shares).toEqual([porto.ada, porto.grace].sort());
   });
 });

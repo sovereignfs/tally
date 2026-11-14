@@ -2,7 +2,14 @@
  * Which part of Settings an address asks for (DESIGN.md §16): `/settings?section=security`. Pure, so that what a stray or hostile address does is tested
  * with no browser. Only sections that exist can be asked for; an address that names another, or nothing, opens Profile.
  */
-export const SECTIONS = ['profile', 'security', 'unlocking', 'preferences', 'data'] as const;
+export const SECTIONS = [
+  'profile',
+  'security',
+  'unlocking',
+  'preferences',
+  'device',
+  'data',
+] as const;
 export type AccountSection = (typeof SECTIONS)[number];
 
 export interface AccountQuery {

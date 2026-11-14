@@ -1,7 +1,11 @@
 import type { LocalDatabase } from '../local/db';
 import {
+  type Reseal,
   type Settled,
   checkLocally,
+  discardFailed,
+  moveFailed,
+  resendFailed,
   commitMutation,
   readCursors,
   readOutbox,
@@ -79,6 +83,32 @@ export class SyncClient {
     const mutation = await checkLocally(this.options.db, raw);
     await commitMutation(this.options.db, mutation, this.options.personId, this.now());
     this.announce('write');
+  }
+
+  /** Couldn't sync (§11.5): sends a refused change again, as it was. */
+  async resend(mutationId: string): Promise<void> {
+    await resendFailed(this.options.db, mutationId, this.options.personId, this.now());
+    this.announce('write');
+  }
+
+  /** Couldn't sync: records a refused expense or payment in another group instead. */
+  async move(mutationId: string, targetGroupId: string, reseal: Reseal): Promise<void> {
+    await moveFailed(
+      this.options.db,
+      mutationId,
+      targetGroupId,
+      reseal,
+      { mutationId: crypto.randomUUID(), rowId: crypto.randomUUID() },
+      this.options.personId,
+      this.now(),
+    );
+    this.announce('write');
+  }
+
+  /** Couldn't sync: lets a refused change go, as the person chose. */
+  async discard(mutationId: string): Promise<void> {
+    await discardFailed(this.options.db, mutationId);
+    this.announce('pull');
   }
 
   /** One sync: rounds of outbox and pull until nothing is waiting on either side, or `maxRounds`. */
