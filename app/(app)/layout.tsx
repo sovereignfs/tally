@@ -4,6 +4,7 @@ import { requirePerson } from '@/src/people/session';
 import { site } from '@/src/site';
 import { AppShell } from '@/src/ui/AppShell';
 import { KeyGate } from '@/src/keys/KeyGate';
+import { SyncProvider } from '@/src/sync/react';
 
 // Every page here is for someone signed in, so it is decided per request, from the cookie.
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       }
     >
       <KeyGate accountId={session.user.id} />
-      {children}
+      <SyncProvider accountId={session.user.id} personId={person.id}>
+        {children}
+      </SyncProvider>
     </AppShell>
   );
 }

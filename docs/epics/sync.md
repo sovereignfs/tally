@@ -38,7 +38,7 @@ account is no longer in are `gone`; the key exchange is folded in (`grants` in t
 device needs no second request. Every statement of the pull carries the account's active membership. Tombstones are in the shape and empty until
 pruning (6.5) removes rows. Tested on a file, sqld and PostgreSQL; the paging test failed when a page ended past its boundary.
 
-#### 📋 6.2 — The device's store, outbox and loop
+#### ✅ 6.2 — The device's store, outbox and loop
 
 **Goal:** screens read and write the device, and the loop syncs. **Design:** §11.1, §11.3, §11.7. **Depends on:** 6.1.
 
@@ -51,6 +51,22 @@ after trying to send; an ended session keeps the outbox; `navigator.storage.pers
 
 **Accepts when:** with `fake-indexeddb`, a write is visible at once and sent once; two tabs do not both sync; in Playwright, two browsers in one group
 converge, one of them having recorded offline.
+
+**Done as:** `src/local/db.ts` (`tally-<account>`: the group tables, `shadow`, `outbox`, `failed`, `meta`), `src/local/store.ts` (`checkLocally`
+runs the server's validators against the device's copy of the group; `commitMutation` writes rows and outbox in one transaction; `settle` takes back
+every unanswered change through `shadow`, moves answered entries out, refused ones to `failed`, lays the pull down, removes gone groups and applies
+what still waits on top), `src/sync/client.ts` (`SyncClient`: commit, rounds of sync, the key exchange folded in through `GroupKeys.exchange`, which
+`GroupKeys.sync` now uses too; `fetchTransport`), `src/sync/loop.ts` (copied from Tusk's; changed: every 30 seconds and only while visible, no
+deleted-account outcome), `src/sync/device.ts` (one device per account per page, `navigator.storage.persist()`, a `BroadcastChannel` to the other
+tabs, and `signOutDevice`, which tries once more to send and then deletes the store, from the account menu and from deleting the account) and
+`src/sync/react.tsx` (`SyncProvider` in the signed-in layout, `useSync`, `useStoreChanges`); `idb` added, as Tusk's. **Changed from Tusk:** a whole row
+is laid over, never a field, since an expense travels whole. Tests: the loop with every timer and lock given (debounce, focus, online, 30 seconds only
+while visible, one tab, back-off, an ended session); two devices over the real endpoint on a file, sqld and PostgreSQL (a write at once and sent once,
+a refusal at once on the device, one device offline while the other records and both ending with the same rows, a refused change in `failed`); sign-out
+sending once more and deleting the store, an ended session keeping the outbox. **Left out:** writing to a group the device has not unlocked yet,
+with the text queued until the key arrives (a write today needs the key; it joins the add sheet, 7.x); the two-browser Playwright convergence, which
+needs a screen that records an expense (7.x) and is covered here by the two-device test over the real endpoint; `KeyGate` still runs its own
+30-second key exchange beside the sync's, which is harmless and goes when Settings' This device lands (6.3).
 
 #### 📋 6.3 — Couldn't sync
 

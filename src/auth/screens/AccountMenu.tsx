@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UserMenu } from '@sovereignfs/ui';
 import { authClient } from '../client';
 import { deleteVault } from '../../cipher/vault';
+import { signOutDevice } from '../../sync/device';
 
 /**
  * The avatar menu at the right of the header: who the person is (name and address) and *Sign out*. Signing
@@ -30,6 +31,8 @@ export function AccountMenu({
     }
     // Signing out takes the account's key off this device (DESIGN.md §5.3, §11.7): the next sign-in here unlocks it again as a new device does.
     await deleteVault(accountId).catch(() => undefined);
+    // And its groups: one last try to send what it recorded, then the store deleted.
+    await signOutDevice(accountId).catch(() => undefined);
     window.location.assign('/');
   }
 

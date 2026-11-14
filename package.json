@@ -42,6 +42,7 @@
     "better-auth": "~1.7.22",
     "drizzle-orm": "^0.45.4",
     "hash-wasm": "4.13.0",
+    "idb": "^8.0.4",
     "next": "^16.4.3",
     "nodemailer": "10.3.1",
     "pg": "^8.23.1",

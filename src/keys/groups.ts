@@ -56,11 +56,33 @@ export class GroupKeys {
    * lacks one. Nothing happens on a device that is not unlocked.
    */
   async sync(): Promise<{ opened: number; granted: number; rotated: number }> {
+    if (!(await this.account.current())) return { opened: 0, granted: 0, rotated: 0 };
+    const { opened, grants, rotated } = await this.exchange(await this.api.get());
+    const granted = grants.length > 0 ? (await this.api.put(grants)).accepted : 0;
+    return { opened, granted, rotated };
+  }
+
+  /**
+   * The device's half of an exchange, from what the server said (its own route, or a sync's answer, DESIGN.md §11.3): unwraps the keys it lacks, gives
+   * a group someone left a new epoch, and returns the wraps it made for the members who lack a key, which the caller sends.
+   */
+  async exchange(keys: {
+    wraps: { groupId: string; epoch: number; wrapped: string }[];
+    needed: { groupId: string; epoch: number; accountId: string; publicKey: string }[];
+    rotations?: {
+      groupId: string;
+      epoch: number;
+      members: { accountId: string; publicKey: string }[];
+    }[];
+  }): Promise<{
+    opened: number;
+    grants: { groupId: string; epoch: number; accountId: string; wrapped: string }[];
+    rotated: number;
+  }> {
     const held = await this.account.current();
-    if (!held) return { opened: 0, granted: 0, rotated: 0 };
-    const { wraps, needed, rotations = [] } = await this.api.get();
+    if (!held) return { opened: 0, grants: [], rotated: 0 };
     let opened = 0;
-    for (const wrap of wraps) {
+    for (const wrap of keys.wraps) {
       if (await this.account.vault.get(vaultName(wrap.groupId, wrap.epoch))) continue;
       try {
         const key = await unwrapWithPrivateKey(
@@ -77,7 +99,7 @@ export class GroupKeys {
       }
     }
     const grants: { groupId: string; epoch: number; accountId: string; wrapped: string }[] = [];
-    for (const need of needed) {
+    for (const need of keys.needed) {
       const key = await this.account.vault.get(vaultName(need.groupId, need.epoch));
       const publicKey = fromBase64Url(need.publicKey);
       if (!key || !publicKey || publicKey.length !== 32) continue;
@@ -90,10 +112,9 @@ export class GroupKeys {
         ),
       });
     }
-    const granted = grants.length > 0 ? (await this.api.put(grants)).accepted : 0;
     let rotated = 0;
-    for (const rotation of rotations) if (await this.rotate(rotation)) rotated++;
-    return { opened, granted, rotated };
+    for (const rotation of keys.rotations ?? []) if (await this.rotate(rotation)) rotated++;
+    return { opened, grants, rotated };
   }
 
   /**
