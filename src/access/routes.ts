@@ -31,6 +31,8 @@ export const ROUTES: RouteRule[] = [
   { route: '/home', page: account },
   { route: '/groups', page: account },
   { route: '/g/[id]', page: account },
+  { route: '/g/[id]/e/[expense]', page: account },
+  { route: '/g/[id]/p/[payment]', page: account },
   { route: '/people', page: account },
   { route: '/activity', page: account },
   { route: '/insights', page: account },
@@ -76,5 +78,7 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/activity', methods: { GET: account } },
   // Sync (DESIGN.md §11.3): every mutation applied through the one path, every pull carrying the account's membership in its statements.
   { route: '/api/sync', methods: { POST: account } },
+  // An expense's or a payment's history (DESIGN.md §8.5): only a group the account is an active member of, in the statement.
+  { route: '/api/history', methods: { GET: account } },
   { route: '/api/keys/requests/[id]', methods: { GET: account, POST: account, DELETE: account } },
 ];

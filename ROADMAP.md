@@ -102,7 +102,7 @@ The interface of `DESIGN.md` §15 on the device's data. **Done when** people wit
 | 41  | [7.3](docs/epics/screens.md)   | A group: expenses                                | P1       | 7.2            | ✅     |
 | 42  | [7.4](docs/epics/screens.md)   | A group: balances                                | P1       | 7.3, 4.3       | ✅     |
 | 43  | [7.5](docs/epics/screens.md)   | Payments and settling up                         | P1       | 7.4            | ✅     |
-| 44  | [7.6](docs/epics/screens.md)   | An expense: comments and history                 | P1       | 7.3, 5.3       | 📋     |
+| 44  | [7.6](docs/epics/screens.md)   | An expense: comments and history                 | P1       | 7.3, 5.3       | ✅     |
 | 45  | [4.4](docs/epics/money.md)     | Across groups                                    | P1       | 4.3            | 📋     |
 | 46  | [7.7](docs/epics/screens.md)   | Home                                             | P1       | 7.5, 4.4, 14.2 | 📋     |
 | 47  | [7.8](docs/epics/screens.md)   | People and a person                              | P1       | 7.5, 4.4       | 📋     |

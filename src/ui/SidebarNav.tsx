@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { sheetHref } from '../screens/AddSheet';
+import { LocalLink, sheetHref } from '../screens/AddSheet';
 import { useState } from 'react';
 import { Icon } from '@sovereignfs/ui';
 import { GroupDot } from '../screens/Balance';
@@ -36,16 +36,15 @@ export function SidebarNav() {
   });
   return (
     <nav className={styles.sidebar} aria-label="Main">
-      <Link
+      <LocalLink
         href={addHref}
-        scroll={false}
         className={`${styles.row} ${styles.add}`}
         aria-label="Add expense"
         title="Add expense (N)"
       >
         <Icon name="plus" aria-hidden />
         <span className={styles.label}>Add expense</span>
-      </Link>
+      </LocalLink>
       <ul className={styles.list}>
         {SIDEBAR_PLACES.map((id) => {
           const place = placeById(id);

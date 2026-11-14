@@ -9,6 +9,7 @@ import { type Identity, readIdentity } from '../identity';
 import { site } from '../site';
 import { SyncProvider } from '../sync/react';
 import { GroupPage } from '../screens/GroupPage';
+import { RecordScreen } from '../screens/RecordScreen';
 import { GroupsList } from '../screens/GroupsList';
 import { AppShell } from './AppShell';
 import { AddSheet } from '../screens/AddSheet';
@@ -52,6 +53,15 @@ export function OfflineShell() {
 /** The screen for the address (DESIGN.md §15.11): the page the worker answered with is not the page of the address, so it is chosen here. */
 function OfflineScreen() {
   const pathname = usePathname();
+  const record = /^\/g\/([A-Za-z0-9_-]{1,64})\/(e|p)\/([A-Za-z0-9_-]{1,64})$/.exec(pathname);
+  if (record?.[1] && record[3])
+    return (
+      <RecordScreen
+        groupId={record[1]}
+        kind={record[2] === 'e' ? 'expense' : 'payment'}
+        id={record[3]}
+      />
+    );
   const group = /^\/g\/([A-Za-z0-9_-]{1,64})/.exec(pathname)?.[1];
   if (group) return <GroupPage groupId={group} />;
   return (

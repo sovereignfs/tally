@@ -1,7 +1,7 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { type AnchorHTMLAttributes, Suspense, useCallback, useEffect, useState } from 'react';
 import { Drawer, ResponsiveSurface, Sheet } from '@sovereignfs/ui';
 import { useGroupKeys } from '../sync/react';
 import { AddExpenseForm, type Editing } from './AddExpense';
@@ -20,6 +20,45 @@ export function AddSheet() {
     <Suspense fallback={null}>
       <AddSheetHost />
     </Suspense>
+  );
+}
+
+/**
+ * Changes the address in the browser alone (`history.pushState`/`replaceState`, which Next keeps `useSearchParams` in step with): opening and closing a
+ * sheet, a group's view and its filters are the page's own state, so they need no request to the server, and two in a row cannot arrive out of order.
+ */
+export function goLocally(href: string, how: 'push' | 'replace' = 'push') {
+  if (how === 'push') window.history.pushState(null, '', href);
+  else window.history.replaceState(null, '', href);
+}
+
+/** A link that opens a sheet or a view over this page, locally (`goLocally`), and is still a link for a middle click or a copied address. */
+export function LocalLink({
+  href,
+  onClick,
+  children,
+  ...rest
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
+  return (
+    <a
+      {...rest}
+      href={href}
+      onClick={(event) => {
+        onClick?.(event);
+        if (
+          event.defaultPrevented ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.button !== 0
+        )
+          return;
+        event.preventDefault();
+        goLocally(href);
+      }}
+    >
+      {children}
+    </a>
   );
 }
 
@@ -45,7 +84,6 @@ const typing = (target: EventTarget | null) =>
 function AddSheetHost() {
   const params = useSearchParams();
   const pathname = usePathname();
-  const router = useRouter();
   const views = useGroupViews();
   const names = useGroupNames(views?.map((v) => v.group) ?? []);
   const keys = useGroupKeys();
@@ -58,10 +96,20 @@ function AddSheetHost() {
 
   const close = useCallback(
     () =>
-      router.replace(sheetHref(pathname, params, { add: null, g: null, e: null }), {
-        scroll: false,
-      }),
-    [router, pathname, params],
+      goLocally(
+        sheetHref(pathname, params, {
+          add: null,
+          g: null,
+          e: null,
+          p: null,
+          from: null,
+          to: null,
+          amount: null,
+          currency: null,
+        }),
+        'replace',
+      ),
+    [pathname, params],
   );
 
   useEffect(() => {
@@ -75,12 +123,12 @@ function AddSheetHost() {
             : null;
       if (sheet) {
         event.preventDefault();
-        router.push(sheetHref(pathname, params, { add: sheet }), { scroll: false });
+        goLocally(sheetHref(pathname, params, { add: sheet }));
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [router, pathname, params, adding]);
+  }, [pathname, params, adding]);
 
   // An edit opens its row's text on the device first.
   useEffect(() => {

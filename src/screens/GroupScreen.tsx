@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AvatarStack,
@@ -20,7 +20,7 @@ import { pendingRows } from '../local/store';
 import { toMinor } from '../money/amount';
 import { formatMoney } from '../money/text';
 import { useLocal, useMe } from '../sync/react';
-import { sheetHref } from './AddSheet';
+import { LocalLink, goLocally, sheetHref } from './AddSheet';
 import { Balance, GroupDot } from './Balance';
 import { CATEGORY_VIEW } from './categories';
 import { type GroupView, myBalances, readGroupView } from './data';
@@ -52,7 +52,6 @@ export function GroupScreen({
 }) {
   const me = useMe();
   const params = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const view = useLocal(
     (db) => readGroupView(db, groupId, me?.personId ?? ''),
@@ -119,7 +118,7 @@ export function GroupScreen({
         {closed ? null : (
           <div className={styles.row}>
             <ButtonLink
-              renderLink={(props) => <Link {...props} scroll={false} />}
+              renderLink={(props) => <LocalLink {...props} href={props.href} />}
               href={sheetHref(pathname, new URLSearchParams(params.toString()), {
                 add: 'expense',
                 g: groupId,
@@ -130,7 +129,7 @@ export function GroupScreen({
             {settleUp ? (
               <ButtonLink
                 variant="secondary"
-                renderLink={(props) => <Link {...props} href={props.href} scroll={false} />}
+                renderLink={(props) => <LocalLink {...props} href={props.href} />}
                 href={sheetHref(pathname, new URLSearchParams(params.toString()), {
                   add: 'payment',
                   g: groupId,
@@ -147,11 +146,11 @@ export function GroupScreen({
             items={tabs}
             value={current}
             onChange={(value) =>
-              router.replace(
+              goLocally(
                 sheetHref(pathname, new URLSearchParams(params.toString()), {
                   view: value === 'expenses' ? null : value,
                 }),
-                { scroll: false },
+                'replace',
               )
             }
           />
@@ -174,12 +173,11 @@ type Row =
 
 function ExpensesView({ view }: { view: GroupView }) {
   const params = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const search = useRef<HTMLInputElement>(null);
   const pending = useLocal((db) => pendingRows(db), []);
   // The filters are the screen's own state, written whole to the address on every change, so that no keystroke waits for the address and two
-  // changes in a row both stand (the router updates the address after a moment).
+  // changes in a row both stand.
   const [filters, setFilters] = useState(() => ({
     q: params.get('q') ?? '',
     person: params.get('person') ?? '',
@@ -191,14 +189,14 @@ function ExpensesView({ view }: { view: GroupView }) {
   const set = (changes: Partial<typeof filters>) => {
     const next = { ...filters, ...changes };
     setFilters(next);
-    router.replace(
+    goLocally(
       sheetHref(pathname, new URLSearchParams(params.toString()), {
         q: next.q || null,
         person: next.person || null,
         category: next.category || null,
         deleted: next.deleted ? '1' : null,
       }),
-      { scroll: false },
+      'replace',
     );
   };
 

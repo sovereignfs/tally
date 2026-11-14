@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { ButtonLink, EmptyState } from '@sovereignfs/ui';
 import { toMinor } from '../money/amount';
 import { formatMoney } from '../money/text';
-import { sheetHref } from './AddSheet';
+import { LocalLink, sheetHref } from './AddSheet';
 import type { GroupView } from './data';
 import styles from './Screens.module.css';
 
@@ -93,7 +93,7 @@ export function BalancesView({ view }: { view: GroupView }) {
                     variant="secondary"
                     size="sm"
                     aria-label={`Settle up: ${words}`}
-                    renderLink={(props) => <Link {...props} href={props.href} scroll={false} />}
+                    renderLink={(props) => <LocalLink {...props} href={props.href} />}
                     href={sheetHref(pathname, new URLSearchParams(params.toString()), {
                       add: 'payment',
                       g: view.group.id,

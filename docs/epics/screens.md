@@ -120,7 +120,7 @@ header. Editing, deleting and restoring a payment from its page is 7.6, through 
 settled zeroes the pair here and on a second device at its next sync; a part recorded by hand with `P` reduces it by its amount and shows as a row.
 The browser tests' helpers now wait for hydration and for the address before each sheet, which removed the flakes seen while building this.
 
-#### 📋 7.6 — An expense: comments and history
+#### ✅ 7.6 — An expense: comments and history
 
 **Goal:** an expense's and a payment's page. **Design:** §15.6. **Depends on:** 7.3, 5.3.
 
@@ -129,6 +129,19 @@ History read from the server (online, §11.6) in words, a replaced version's Res
 Delete and Restore in the menu.
 
 **Accepts when:** restoring a replaced version makes it current and writes a revision; a comment added offline appears for another member after sync.
+
+**Done as:** `src/screens/RecordScreen.tsx` at `/g/<id>/e/<id>` and `/g/<id>/p/<id>` (also chosen by the offline shell): the amount large, the date
+and category, who paid and each share with the method in words, the note; Edit (the sheet filled in, through `e` or `p`), Delete and Restore;
+Comments from the device, each body opened there, with a field to add one (sealed, offline too) and Delete for the author's own; History from
+`GET /api/history` (`src/history/api.ts`, online, the membership in the statement, with a second-person test), each version in words by what changed
+from the one before ("You changed the amount from €80.00 to €84.00"), and a replaced version's **Restore this version**, an edit with that version's
+row. **Changed on the way:** opening and closing a sheet, a group's tabs and its filters now change the address with `history.pushState` and
+`replaceState` (`goLocally`, `LocalLink`), which Next keeps `useSearchParams` in step with, instead of router navigations that each asked the server
+and could arrive out of order (a sheet reopened after a save in WebKit). A payment's page has comments
+and history as an expense's has. **Not yet:** "another member" in the test is the same account on a second device, since a second account joins with
+Milestone F. Tests: two devices edit an
+expense from one version, the later stands, Restore this version makes the earlier current and its history says so, and a comment written offline on
+one device is on the other after sync, in Chromium and WebKit.
 
 #### 📋 7.7 — Home
 
