@@ -53,7 +53,7 @@ amounts not adding up; `checkShares` is the server's inverse check (shares round
 (`src/testing/random.ts`, no new dependency): over 2,000 random splits in every method, shares add up, are never negative, do not depend on the input's
 order and pass the server's check; no part is more than one unit from its exact value. The tests failed when the leftover was given in reverse order.
 
-#### 📋 4.3 — Balances, pairwise and simplified
+#### ✅ 4.3 — Balances, pairwise and simplified
 
 **Goal:** every figure of who owes whom. **Design:** §10.1, §10.2, §10.3. **Depends on:** 4.2.
 
@@ -64,6 +64,16 @@ the suggestions settles everyone, results do not depend on row order.
 
 **Accepts when:** hand-worked fixtures with several payers, every method, payments and two currencies give the expected figures; the property tests
 pass.
+
+**Done as:** `src/balances/index.ts`: `balances` (per currency and member, everyone who took part, ordered by code and member order), `pairwiseDebts`,
+`simplifiedPayments` (greedy, the largest debtor to the largest creditor, ties by member order), `suggestedPayments` by the group's setting, and
+`asPayments` to record suggestions. Deleted rows count for nothing. **Two corrections to `DESIGN.md`**, made there: §10.1 had the signs of payments the
+wrong way round (a payment made raises the giver's balance), and §10.2's "each share divided by what each paid" rounds a payer's pieces apart from what
+they paid (the property test caught it, two units out on its first seed); the shares are now taken in member order, each divided by what the payers
+have left, so the pieces add up to every share and to every payment of the expense. Property tests, over random rows of every method, three currencies
+(JPY, EUR, BHD), several payers, payments and deletions: balances add up to zero; a member's pairwise debts add up to their balance; recording the
+suggestions settles everyone (and pairwise, every pair); simplified needs fewer payments than there are people with a balance; nothing depends on the
+order of rows, payers or shares.
 
 #### 📋 4.4 — Across groups
 

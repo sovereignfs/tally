@@ -468,8 +468,8 @@ Per member and currency, over expenses and payments not deleted:
 ```
 balance(member, currency) =   what they paid of expenses in that currency
                             − their shares of expenses in that currency
-                            + payments they received in that currency
-                            − payments they made in that currency
+                            + payments they made in that currency
+                            − payments they received in that currency
 ```
 
 Positive is owed to them; negative is what they owe; zero is settled up, the sign `BalanceChip` expects. In every group and currency the balances add
@@ -479,8 +479,9 @@ up to zero, which a property test holds (§20).
 
 With simplify debts off (the default), who owes whom is derived from who actually shared what:
 
-- For each expense, each member's share is owed to the payers in proportion to what each paid, divided with the same rounding rule (§8.3) so that the
-  pieces add up to the share exactly. What a member owes themselves cancels.
+- For each expense, each member's share is owed to the payers in proportion to what each paid, divided with the same rounding rule (§8.3). The shares
+  are taken in member order, each divided by what the payers have left after the shares before it, so that the pieces add up to the share and to what
+  each payer paid, exactly. What a member owes themselves cancels.
 - A payment reduces the debt between its two members directly.
 - The pairs net out (what A owes B less what B owes A), per currency. A member's pairwise debts always add up to their balance.
 
