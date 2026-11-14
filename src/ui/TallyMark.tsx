@@ -1,22 +1,25 @@
 /**
- * The app's mark, a tally of five: four strokes and a fifth across them, in `currentColor`. The same shape as `public/icons/icon.svg`, for the
- * places that have room for it (sign-in).
+ * The app's mark, two arrows exchanging (the plugin's icon, carried over as the app's), in `currentColor`. The same shape as `public/icons/icon.svg`,
+ * for the places that have room for it (sign-in).
  */
 export function TallyMark({ size = 40 }: { size?: number }) {
   return (
     <svg
-      viewBox="0 0 512 512"
+      viewBox="0 0 24 24"
       width={size}
       height={size}
       role="img"
       aria-label="Tally"
       fill="none"
       stroke="currentColor"
-      strokeWidth={32}
+      strokeWidth={2}
       strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M168 136v240M224 136v240M280 136v240M336 136v240" />
-      <path d="M120 344l272-176" />
+      <path d="M7 3 3 7l4 4" />
+      <path d="M3 7h11a4 4 0 0 1 4 4v1" />
+      <path d="M17 21l4-4-4-4" />
+      <path d="M21 17H10a4 4 0 0 1-4-4v-1" />
     </svg>
   );
 }
