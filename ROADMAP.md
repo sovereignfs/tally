@@ -66,7 +66,7 @@ Expenses, payments and comments can be written through the one path, and every f
 
 | #   | ID                               | Task                                 | Priority | Depends on    | Status |
 | --- | -------------------------------- | ------------------------------------ | -------- | ------------- | ------ |
-| 22  | [4.2](docs/epics/money.md)       | Splitting and rounding               | P0       | 4.1           | 📋     |
+| 22  | [4.2](docs/epics/money.md)       | Splitting and rounding               | P0       | 4.1           | ✅     |
 | 23  | [4.3](docs/epics/money.md)       | Balances, pairwise and simplified    | P0       | 4.2           | 📋     |
 | 24  | [5.1](docs/epics/expenses.md)    | Actions and validators               | P0       | 4.2, 3.2      | 📋     |
 | 25  | [5.2](docs/epics/expenses.md)    | Applying a mutation                  | P0       | 5.1           | 📋     |

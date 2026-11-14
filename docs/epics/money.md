@@ -33,7 +33,7 @@ rule). **A float never reaches an amount by type:** `Minor` is a branded number,
 `amount.types.test.ts` has four `@ts-expect-error` lines a float or an unchecked number would need, and `pnpm typecheck` failed when `Minor` was made
 a plain number. A test round-trips JPY 1,500, EUR 1,234.56 and BHD 1.005 from typing to minor units to text and back, in English and in German.
 
-#### 📋 4.2 — Splitting and rounding
+#### ✅ 4.2 — Splitting and rounding
 
 **Goal:** the four methods, one rounding rule. **Design:** §8.3. **Depends on:** 4.1.
 
@@ -43,6 +43,15 @@ sums; a test per method and currency decimals, and a property test that shares a
 
 **Accepts when:** 100.00 split three ways equally gives 33.34, 33.33, 33.33 by member order on every run; percentages not totalling 100.00% and amounts
 not adding up are refused; the property test passes.
+
+**Done as:** `src/money/split.ts`, Tally's own (Ledger's half-to-even split is not carried over). Every method comes down to weights through one
+`distribute`: each part rounded down in integer `bigint` arithmetic, then the units left over one each to members with a weight, in the group's member
+order (`memberOrder`: joined, then id), so the form's order never matters. `computeShares` makes the shares and refuses an amount not above zero,
+nobody, someone twice or not in the group, units that are not the method's (a weight up to 1,000 shares), percentages not totalling 100.00% and
+amounts not adding up; `checkShares` is the server's inverse check (shares rounded any other way are `MISMATCH`, even when they add up);
+`checkPayers` checks payers (§8.2). Errors are a `SplitError` with a code and no amount or name. The property tests run on a seeded generator
+(`src/testing/random.ts`, no new dependency): over 2,000 random splits in every method, shares add up, are never negative, do not depend on the input's
+order and pass the server's check; no part is more than one unit from its exact value. The tests failed when the leftover was given in reverse order.
 
 #### 📋 4.3 — Balances, pairwise and simplified
 
