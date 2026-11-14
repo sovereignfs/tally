@@ -47,7 +47,7 @@ X25519 with AES-128-GCM and AES-256-GCM on every intermediate value and the ciph
 that WebAssembly compiles under the policy, which failed without it. Argon2id takes about 150 ms in Node here; a mid-range phone, at three to five
 times slower, is estimated at 0.5–0.8 s and is measured in a browser with 2.1. **Left out:** the QR of the recovery code, which is 15.4's screen.
 
-#### 📋 15.2 — Account keys and unlocking
+#### ✅ 15.2 — Account keys and unlocking
 
 **Goal:** every account has a key, and every device it signs in on unlocks at once, unasked. **Design:** §5.3, §14.1, §16. **Depends on:** 15.1, 2.1.
 
@@ -63,6 +63,23 @@ second-person test.
 **Accepts when:** in Playwright, an account signs in with its password on a second browser while the first is closed, and reads every group's words on
 first load; the same with a passkey that has PRF (a virtual authenticator); a password reset leaves the old wrap unopened and the fallback offered; a
 second person can read no wrap of the first's; deleting a person leaves no key or wrap of theirs.
+
+**Done as:** `account_key`, `account_key_wrap` and `key_request` (migration `0002_add_account_keys`); `src/keys/store.ts` (every statement names
+the session's account; a key made once, `ON CONFLICT DO NOTHING`; one password and one recovery wrap, one per passkey; a replacement only from the
+version a device saw; requests good ten minutes, five at most, allowed once), `src/keys/api.ts` and `/api/keys`, `/api/keys/wraps[/id]`,
+`/api/keys/requests[/id]`. **The access layer is copied from Ledger** (`src/access/route.ts` as `accountRoute`, `body.ts`, `routes.ts` and its test,
+`two-accounts.ts`, `route.test.ts`), its "book" made the account and its person; the routes test accepts a page guarded by a layout's
+`requirePerson()`. In the browser, `src/keys/unlock.ts` (`AccountKeys`: `afterPassword`, `afterPasskey`, `askAnotherDevice`/`approve`/`decline`,
+`putSecretWrap`/`unlockWithSecret` for 15.4, `startAfresh`, and `current`, which drops a key the server has replaced): **the sign-in and sign-up forms
+unlock with the same Argon2id run that made the sign-in value**, and the passkey sign-in asks for PRF in the same tap (`after-sign-in.ts`).
+`KeyGate` in the shell says nothing when unlocked, offers _Ask another device_ and _Start afresh_ when locked, and on an unlocked device asks _Allow
+your new device…?_ (every thirty seconds while visible). Signing out deletes the vault, and an open vault now steps aside for that
+(`onversionchange`), which a test showed hanging without it. Run here: 384 tests on sqld and a file, 383 on PostgreSQL; boot-check on each; 44
+browser tests twice (a second browser signs in with the first closed and holds the key; a locked device is let in by another; sign-out leaves no
+vault); the isolation test failed with an account condition taken out. The shared `signOut` helper waits for the sign-in page, and `gotoSignIn`
+knows Chromium's word for an interrupted navigation. **Left out:** the passkey's PRF in a browser test, with the Settings that add a passkey (2.6);
+the Sovereign-only passkey offer (2.3); Settings > Devices and Unlocking (2.6); the activity line of a replaced key (15.3, which has groups);
+`People.deletePerson` removing these rows (2.5).
 
 #### 📋 15.3 — Group keys and granting
 

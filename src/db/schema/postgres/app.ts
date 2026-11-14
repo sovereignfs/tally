@@ -37,3 +37,43 @@ export const person = app.table(
     index('person_added_by_idx').on(table.addedBy),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const accountKey = app.table('account_key', {
+  accountId: id('account_id'),
+  publicKey: text('public_key').notNull(),
+  version: counter('version').notNull(),
+  createdAt: epochMs('created_at').notNull(),
+  updatedAt: epochMs('updated_at').notNull(),
+});
+
+/** See `schema/sqlite/app.ts`. */
+export const accountKeyWrap = app.table(
+  'account_key_wrap',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    version: counter('version').notNull(),
+    method: text('method').notNull(),
+    credentialId: text('credential_id'),
+    params: text('params'),
+    wrapped: text('wrapped').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [index('account_key_wrap_account_idx').on(table.accountId)],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const keyRequest = app.table(
+  'key_request',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    publicKey: text('public_key').notNull(),
+    label: text('label').notNull(),
+    wrapped: text('wrapped'),
+    createdAt: epochMs('created_at').notNull(),
+    expiresAt: epochMs('expires_at').notNull(),
+  },
+  (table) => [index('key_request_account_idx').on(table.accountId)],
+);

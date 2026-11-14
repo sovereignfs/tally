@@ -1,8 +1,13 @@
 'use client';
 
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { authClient } from '../client';
-import { signInValue } from '../derive';
+import { passwordValues } from '../derive';
+import {
+  passkeyExtensions,
+  unlockAfterPasskey,
+  unlockAfterPassword,
+} from '../../keys/after-sign-in';
 import { messageFor } from '../messages';
 import {
   AuthButton,
@@ -39,6 +44,7 @@ export function SignInForm({
   const [passkeys, setPasskeys] = useState(false);
   useEffect(() => setPasskeys('PublicKeyCredential' in window), []);
   const [backup, setBackup] = useState(false);
+  const unwrapRef = useRef<Uint8Array | null>(null);
   const [code, setCode] = useState('');
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -46,9 +52,10 @@ export function SignInForm({
     setBusy(true);
     setError(null);
     // The password itself never leaves the browser: what is sent is the value Argon2id makes of it (DESIGN.md §14.1).
+    const values = await passwordValues(password, email);
     const { data, error: failure } = await authClient.signIn.email({
       email,
-      password: await signInValue(password, email),
+      password: values.signIn,
     });
     if (failure) {
       setBusy(false);
@@ -57,10 +64,15 @@ export function SignInForm({
     }
     // The password was right and the account has an authenticator app: a code is the second step, and there is no session until it is given.
     if ((data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+      // Kept for after the code: the same password then unlocks the account's key.
+      unwrapRef.current = values.unwrap;
       setBusy(false);
       setSecondStep(true);
       return;
     }
+    // The password that signed in also unlocks the account's key on this device (DESIGN.md §5.3).
+    const accountId = (data as { user?: { id?: string } } | null)?.user?.id;
+    if (accountId) await unlockAfterPassword(accountId, values.unwrap);
     // A full navigation, not a client-side one: `/` is a different page now that there is a session, and the server decides which.
     window.location.assign('/');
   }
@@ -81,18 +93,38 @@ export function SignInForm({
       );
       return;
     }
+    const unwrap = unwrapRef.current;
+    unwrapRef.current = null;
+    const accountId = (await authClient.getSession()).data?.user.id;
+    if (unwrap && accountId) await unlockAfterPassword(accountId, unwrap);
     window.location.assign('/');
   }
 
   async function withPasskey() {
     setBusy(true);
     setError(null);
-    const { error: failure } = await authClient.signIn.passkey();
-    if (failure) {
+    // The PRF extension in the same tap: the passkey that signs in also unlocks, where it has been set up to (DESIGN.md §5.3).
+    const {
+      data,
+      error: failure,
+      webauthn,
+    } = (await authClient.signIn.passkey({
+      // TypeScript's DOM types do not know the PRF extension yet, which every current browser takes (WebAuthn Level 3).
+      extensions: (await passkeyExtensions()) as AuthenticationExtensionsClientInputs,
+      returnWebAuthnResponse: true,
+    })) as {
+      data: unknown;
+      error: unknown;
+      webauthn?: { response: { id: string }; clientExtensionResults: unknown };
+    };
+    if (failure || !data) {
       setBusy(false);
       setError('That passkey did not sign you in. Use your password instead.');
       return;
     }
+    const accountId = (await authClient.getSession()).data?.user.id;
+    if (accountId && webauthn)
+      await unlockAfterPasskey(accountId, webauthn.response.id, webauthn.clientExtensionResults);
     window.location.assign('/');
   }
 

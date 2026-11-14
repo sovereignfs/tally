@@ -2,7 +2,8 @@
 
 import { type FormEvent, useState } from 'react';
 import { authClient } from '../client';
-import { signInValue } from '../derive';
+import { passwordValues } from '../derive';
+import { unlockAfterPassword } from '../../keys/after-sign-in';
 import { messageFor } from '../messages';
 import { AuthButton, AuthError, AuthField, AuthForm, Input } from '@sovereignfs/ui';
 
@@ -24,10 +25,11 @@ export function SignUpForm({ minLength, mail = false }: { minLength: number; mai
     }
     setBusy(true);
     setError(null);
-    const { error: failure } = await authClient.signUp.email({
+    const values = await passwordValues(password, email);
+    const { data, error: failure } = await authClient.signUp.email({
       name,
       email,
-      password: await signInValue(password, email),
+      password: values.signIn,
     });
     if (failure) {
       setBusy(false);
@@ -40,6 +42,9 @@ export function SignUpForm({ minLength, mail = false }: { minLength: number; mai
       setSent(true);
       return;
     }
+    // Signed in at once: the account's key is made now, wrapped by the password (DESIGN.md §5.3). With mail, it is made at the first sign-in.
+    const accountId = (data as { user?: { id?: string } } | null)?.user?.id;
+    if (accountId) await unlockAfterPassword(accountId, values.unwrap);
     window.location.assign('/');
   }
 

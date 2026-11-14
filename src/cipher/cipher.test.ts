@@ -274,3 +274,15 @@ describe('the cipher', () => {
     }
   });
 });
+
+describe('the vault, deleted while it is open', () => {
+  it('is deleted, not left waiting for the page that has it open', async () => {
+    const open = await openVault('account-open');
+    await open.put('k', new Uint8Array([1]));
+    // Not closed: as the shell holds it while the person signs out.
+    await deleteVault('account-open');
+    const fresh = await openVault('account-open');
+    expect(await fresh.get('k')).toBeUndefined();
+    fresh.close();
+  });
+});

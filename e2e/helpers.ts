@@ -76,7 +76,8 @@ async function gotoSignIn(page: Page) {
   try {
     await page.goto('/sign-in');
   } catch (error) {
-    if (!/interrupted by another navigation/.test(String(error))) throw error;
+    // WebKit says "interrupted by another navigation", Chromium `net::ERR_ABORTED`: the same thing, a page already on its way somewhere.
+    if (!/interrupted by another navigation|ERR_ABORTED/.test(String(error))) throw error;
     await page.waitForLoadState('load');
     if (new URL(page.url()).pathname !== '/sign-in') await page.goto('/sign-in');
   }
@@ -115,4 +116,8 @@ export async function signOut(page: Page) {
   await page.getByRole('button', { name: 'User menu' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'User menu' })).toHaveCount(0);
+  // Signing out goes to the front address, which sends a visitor on to sign in: the next step waits until it has arrived, or its own navigation
+  // would be interrupted by this one.
+  await page.waitForURL('**/sign-in');
+  await page.waitForLoadState('load');
 }

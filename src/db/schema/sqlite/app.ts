@@ -46,3 +46,53 @@ export const person = sqliteTable(
     index('person_added_by_idx').on(table.addedBy),
   ],
 );
+
+/**
+ * **An account's key** (DESIGN.md §5.3): the public half of its X25519 key pair, which a group's key is wrapped to. The private half is on the account's
+ * devices and here only wrapped (`account_key_wrap`). `version` goes up when the key is replaced, the last resort when no way in is left; every wrap
+ * says which version it is of.
+ */
+export const accountKey = sqliteTable('account_key', {
+  accountId: id('account_id'),
+  publicKey: text('public_key').notNull(),
+  version: counter('version').notNull(),
+  createdAt: epochMs('created_at').notNull(),
+  updatedAt: epochMs('updated_at').notNull(),
+});
+
+/**
+ * **The account key's private half, wrapped by a way in** (DESIGN.md §5.3): the password's unwrapping value, a passkey's PRF output (with its
+ * credential), the recovery code, or a new device's one-time key. The server holds these and can open none of them.
+ */
+export const accountKeyWrap = sqliteTable(
+  'account_key_wrap',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    version: counter('version').notNull(),
+    method: text('method').notNull(),
+    credentialId: text('credential_id'),
+    params: text('params'),
+    wrapped: text('wrapped').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [index('account_key_wrap_account_idx').on(table.accountId)],
+);
+
+/**
+ * **A new device asking another of the account's devices for the key** (DESIGN.md §5.3), the fallback when the way it signed in cannot unlock: its
+ * one-time public key, and once a device has allowed it, the account key wrapped to that. Good for ten minutes, and deleted once taken.
+ */
+export const keyRequest = sqliteTable(
+  'key_request',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    publicKey: text('public_key').notNull(),
+    label: text('label').notNull(),
+    wrapped: text('wrapped'),
+    createdAt: epochMs('created_at').notNull(),
+    expiresAt: epochMs('expires_at').notNull(),
+  },
+  (table) => [index('key_request_account_idx').on(table.accountId)],
+);

@@ -21,10 +21,13 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-function openDatabase(accountId: string): Promise<IDBDatabase> {
+async function openDatabase(accountId: string): Promise<IDBDatabase> {
   const req = indexedDB.open(nameOf(accountId), 1);
   req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-  return request(req);
+  const db = await request(req);
+  // A sign-out deletes the vault while a page still has it open: this connection steps aside, or the deletion would wait for it forever.
+  db.onversionchange = () => db.close();
+  return db;
 }
 
 async function read<T>(db: IDBDatabase, key: string): Promise<T | undefined> {
