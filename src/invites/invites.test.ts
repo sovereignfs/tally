@@ -15,6 +15,7 @@ import { personOfAccount } from '../people/persons';
 import { applyMutation } from '../sync/apply';
 import { acceptHandler } from './api';
 import { createInvitation, validInvitation } from './store';
+import { prune } from '../sync/prune';
 
 /**
  * Invitations and claiming (DESIGN.md §6.3, §6.4) on each database: a placeholder's place, with its expenses and balance, taken by the account that
@@ -255,6 +256,104 @@ describe(`invitations (${leg})`, () => {
       link: `https://tally.test/invite/${made.token}`,
     });
     expect(mail?.data).not.toContain('#');
+  });
+});
+
+describe(`an invitation that carries the key (${leg})`, () => {
+  let t: TwoAccounts;
+  let ops: (request: Request) => Promise<Response>;
+  let accept: (request: Request) => Promise<Response>;
+  const groupId = crypto.randomUUID();
+  const call = async (who: Person, body: Record<string, unknown>) => {
+    const reply = await ops(t.request(who, '/api/ops', { method: 'POST', body }));
+    return (await reply.json().catch(() => null)) as Record<string, unknown> | null;
+  };
+  const wrapOf = async (personId: string) =>
+    (
+      await dbGet<{ keyWrap: string | null }>(
+        t.database,
+        sql`SELECT key_wrap AS "keyWrap" FROM ${tables(t.database).invitation} WHERE person_id = ${personId} ORDER BY created_at DESC LIMIT 1`,
+      )
+    )?.keyWrap;
+  const KEY_WRAP = `w1.${'Q'.repeat(60)}`;
+
+  beforeAll(async () => {
+    t = await twoAccounts();
+    ops = accountRoute(
+      opsHandler(async () => t.database),
+      t.deps,
+    );
+    accept = accountRoute(
+      acceptHandler(async () => t.database),
+      t.deps,
+    );
+    for (const who of [t.ada, t.grace]) await call(who, { op: 'group.read', groupId });
+    const sealed = await sealRow({ name: 'Porto' }, await importGroupKey(newGroupKey()), 1, {
+      group: groupId,
+      table: 'grp',
+      row: groupId,
+    });
+    await call(t.ada, {
+      op: 'group.create',
+      groupId,
+      sealed,
+      color: '#2563eb',
+      defaultCurrency: 'EUR',
+      keyWrap: WRAP,
+    });
+  });
+  afterAll(async () => t.close());
+
+  it('keeps the claimer’s own wrap with the claim, and no wrap once used, revoked or ended', async () => {
+    const sam = String((await call(t.ada, { op: 'member.add', groupId, name: 'Sam' }))?.personId);
+    const token = String(
+      (await call(t.ada, { op: 'invite.create', groupId, personId: sam, keyWrap: KEY_WRAP }))
+        ?.token,
+    );
+    expect(await wrapOf(sam)).toBe(KEY_WRAP);
+    expect((await validInvitation(t.database, token, Date.now()))?.keyWrap).toBe(KEY_WRAP);
+    const selfWrap = { epoch: 1, wrapped: `h1.${'S'.repeat(60)}` };
+    const reply = await accept(
+      t.request(t.grace, '/api/invite', { method: 'POST', body: { token, selfWrap } }),
+    );
+    expect(reply.status).toBe(200);
+    expect(await wrapOf(sam)).toBeNull();
+    const kept = await dbGet<{ wrapped: string }>(
+      t.database,
+      sql`SELECT wrapped FROM ${tables(t.database).keyWrap} WHERE group_id = ${groupId} AND account_id = ${t.grace.id}`,
+    );
+    expect(kept?.wrapped).toBe(selfWrap.wrapped);
+
+    const lee = String((await call(t.ada, { op: 'member.add', groupId, name: 'Lee' }))?.personId);
+    await call(t.ada, { op: 'invite.create', groupId, personId: lee, keyWrap: KEY_WRAP });
+    await call(t.ada, { op: 'invite.revoke', groupId, personId: lee });
+    expect(await wrapOf(lee)).toBeNull();
+    await call(t.ada, { op: 'invite.create', groupId, personId: lee, keyWrap: KEY_WRAP });
+    await dbRun(
+      t.database,
+      sql`UPDATE ${tables(t.database).invitation} SET expires_at = 1 WHERE person_id = ${lee} AND revoked_at IS NULL`,
+    );
+    await prune(t.database, Date.now());
+    expect(await wrapOf(lee)).toBeNull();
+  });
+
+  it('keeps no wrap a claimer sends with an invitation that carried none', async () => {
+    const kim = String((await call(t.ada, { op: 'member.add', groupId, name: 'Kim' }))?.personId);
+    const token = String(
+      (await call(t.ada, { op: 'invite.create', groupId, personId: kim }))?.token,
+    );
+    // Grace is in the group already through Sam: the claim is refused, and nothing is kept.
+    await accept(
+      t.request(t.grace, '/api/invite', {
+        method: 'POST',
+        body: { token, selfWrap: { epoch: 1, wrapped: `h1.${'T'.repeat(60)}` } },
+      }),
+    );
+    const wraps = await dbAll<{ wrapped: string }>(
+      t.database,
+      sql`SELECT wrapped FROM ${tables(t.database).keyWrap} WHERE group_id = ${groupId} AND account_id = ${t.grace.id}`,
+    );
+    expect(wraps.map((w) => w.wrapped)).not.toContain(`h1.${'T'.repeat(60)}`);
   });
 });
 

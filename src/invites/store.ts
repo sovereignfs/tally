@@ -73,7 +73,7 @@ export async function createInvitation(
     if (!placeholder) throw new OpError('not_found');
     await dbAll(
       tx,
-      sql`UPDATE ${t.invitation} SET revoked_at = ${options.now}
+      sql`UPDATE ${t.invitation} SET revoked_at = ${options.now}, key_wrap = NULL
           WHERE person_id = ${input.personId} AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id`,
     );
     const mailed = Boolean(options.mail && placeholder.email);
@@ -111,7 +111,7 @@ export async function revokeInvitation(
   const t = tables(database);
   const done = await dbAll<{ id: string }>(
     database,
-    sql`UPDATE ${t.invitation} SET revoked_at = ${now}
+    sql`UPDATE ${t.invitation} SET revoked_at = ${now}, key_wrap = NULL
         WHERE group_id = ${input.groupId} AND person_id = ${input.personId} AND accepted_at IS NULL AND revoked_at IS NULL
           AND ${activeMemberOf(database, input.groupId, who.accountId)}
         RETURNING id`,
@@ -154,6 +154,8 @@ export interface Valid {
   personId: string;
   inviterName: string;
   keyWrap: string | null;
+  /** The group's sealed name, which the page opens only with the key the link's fragment unwraps (15.5). */
+  groupSealed: string;
 }
 
 /** What a link opens, if it is a live invitation: nothing for anything else, whatever the reason, so every invalid link reads the same. */
@@ -172,10 +174,12 @@ export async function validInvitation(
     tokenHash: string;
     inviterName: string;
     keyWrap: string | null;
+    groupSealed: string;
   }>(
     database,
-    sql`SELECT i.id, i.group_id AS "groupId", i.person_id AS "personId", i.token_hash AS "tokenHash", i.key_wrap AS "keyWrap", c.name AS "inviterName"
-        FROM ${t.invitation} i JOIN ${t.person} c ON c.id = i.created_by
+    sql`SELECT i.id, i.group_id AS "groupId", i.person_id AS "personId", i.token_hash AS "tokenHash", i.key_wrap AS "keyWrap", c.name AS "inviterName",
+               g.sealed AS "groupSealed"
+        FROM ${t.invitation} i JOIN ${t.person} c ON c.id = i.created_by JOIN ${t.grp} g ON g.id = i.group_id
         WHERE i.token_hash = ${hash} AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > ${now}`,
   );
   if (!row || !timingSafeEqual(Buffer.from(row.tokenHash, 'hex'), Buffer.from(hash, 'hex')))
@@ -186,6 +190,7 @@ export async function validInvitation(
     personId: row.personId,
     inviterName: row.inviterName,
     keyWrap: row.keyWrap,
+    groupSealed: row.groupSealed,
   };
 }
 
@@ -202,14 +207,20 @@ export async function acceptInvitation(
   who: Who,
   token: string,
   now: number,
+  selfWrap?: { epoch: number; wrapped: string },
 ): Promise<Claimed> {
   if (!TOKEN.test(token)) throw new OpError('not_found');
   const t = tables(database);
   return transaction(database, async (tx) => {
+    // Whether the link carried the key (15.5): only then is a wrap of it to the claimer's own account key taken with the claim.
+    const carried = await dbGet<{ keyWrap: string | null }>(
+      tx,
+      sql`SELECT key_wrap AS "keyWrap" FROM ${t.invitation} WHERE token_hash = ${hashToken(token)}`,
+    );
     // Used, and so used once: the statement that marks it holds that it is live.
     const taken = await dbAll<{ groupId: string; personId: string }>(
       tx,
-      sql`UPDATE ${t.invitation} SET accepted_by = ${who.personId}, accepted_at = ${now}
+      sql`UPDATE ${t.invitation} SET accepted_by = ${who.personId}, accepted_at = ${now}, key_wrap = NULL
           WHERE token_hash = ${hashToken(token)} AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > ${now}
           RETURNING group_id AS "groupId", person_id AS "personId"`,
     );
@@ -262,13 +273,30 @@ export async function acceptInvitation(
     if (refused.length === 0) {
       await dbAll(
         tx,
-        sql`UPDATE ${t.invitation} SET revoked_at = ${now} WHERE person_id = ${placeholderId} AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id`,
+        sql`UPDATE ${t.invitation} SET revoked_at = ${now}, key_wrap = NULL WHERE person_id = ${placeholderId} AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id`,
       );
       await dbAll(
         tx,
         sql`DELETE FROM ${t.person} WHERE id = ${placeholderId} AND NOT EXISTS (SELECT 1 FROM ${t.member} m WHERE m.person_id = ${placeholderId}) RETURNING id`,
       );
     }
+    // The group's key, opened on the claimer's device from the link's fragment and wrapped to their own account key, kept with the claim, so the group
+    // opens on every device of theirs at once. A wrap that is not in the wrapped form is not kept.
+    if (
+      selfWrap &&
+      carried?.keyWrap &&
+      /^h1\.[A-Za-z0-9_-]{40,2000}$/.test(selfWrap.wrapped) &&
+      Number.isSafeInteger(selfWrap.epoch) &&
+      selfWrap.epoch >= 1
+    )
+      await dbAll(
+        tx,
+        sql`INSERT INTO ${t.keyWrap} (group_id, epoch, account_id, wrapped, wrapped_by, created_at)
+            SELECT ${invitation.groupId}, ${selfWrap.epoch}, ${who.accountId}, ${selfWrap.wrapped}, ${who.accountId}, ${now}
+            WHERE EXISTS (SELECT 1 FROM ${t.grp} g WHERE g.id = ${invitation.groupId} AND g.key_epoch >= ${selfWrap.epoch})
+            ON CONFLICT (group_id, epoch, account_id) DO NOTHING
+            RETURNING group_id`,
+      );
     return { groupId: invitation.groupId, refused };
   });
 }

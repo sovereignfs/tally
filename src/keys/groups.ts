@@ -1,4 +1,4 @@
-import { fromBase64Url, type Bytes } from '../cipher/bytes';
+import { fromBase64Url, randomBytes, toBase64Url, type Bytes } from '../cipher/bytes';
 import { CipherError } from '../cipher/errors';
 import {
   type RowBinding,
@@ -8,7 +8,12 @@ import {
   sealRow,
   epochOf,
 } from '../cipher/seal';
-import { unwrapWithPrivateKey, wrapToPublicKey } from '../cipher/wrap';
+import {
+  unwrapWithPrivateKey,
+  unwrapWithSecret,
+  wrapToPublicKey,
+  wrapToSecret,
+} from '../cipher/wrap';
 import type { AccountKeys } from './unlock';
 
 /**
@@ -236,6 +241,75 @@ export class GroupKeys {
   ): Promise<string | undefined> {
     const newest = await this.newestKey(binding.group, epoch);
     return newest ? sealRow(content, newest.key, newest.epoch, binding) : undefined;
+  }
+
+  /**
+   * **An invitation link that carries the key** (DESIGN.md §6.3, §5.3, task 15.5): a secret made here, the group's key of `epoch` wrapped to it (sent to
+   * the server as `invitation.key_wrap`), and the fragment that holds the epoch and the secret (`#<epoch>.<secret>`), which a browser never sends. The
+   * server keeps a wrap it cannot open; whoever holds the whole link can.
+   */
+  async invitationKey(
+    groupId: string,
+    epoch: number,
+  ): Promise<{ keyWrap: string; fragment: string } | undefined> {
+    const key = await this.account.vault.get(vaultName(groupId, epoch));
+    if (!key) return undefined;
+    const secret = randomBytes(32);
+    const keyWrap = await wrapToSecret(key, secret, 'invitation', [groupId, epoch]);
+    return { keyWrap, fragment: `${epoch}.${toBase64Url(secret)}` };
+  }
+
+  /** A group's key from an invitation's wrap and its link's fragment, or undefined: no fragment, or one that does not open it. */
+  async openInvitation(
+    groupId: string,
+    keyWrap: string,
+    fragment: string,
+  ): Promise<{ key: Bytes; epoch: number } | undefined> {
+    const match = /^(\d{1,9})\.([A-Za-z0-9_-]{43})$/.exec(fragment.replace(/^#/, ''));
+    const secret = match?.[2] ? fromBase64Url(match[2]) : undefined;
+    const epoch = Number(match?.[1]);
+    if (!secret || !Number.isSafeInteger(epoch) || epoch < 1) return undefined;
+    try {
+      return {
+        key: await unwrapWithSecret(keyWrap, secret, 'invitation', [groupId, epoch]),
+        epoch,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** A group's key opened from an invitation, kept on this device and wrapped to this account's own key, for the claim to store (15.5). */
+  async adopt(
+    groupId: string,
+    epoch: number,
+    key: Bytes,
+  ): Promise<{ epoch: number; wrapped: string } | undefined> {
+    const held = await this.account.current();
+    if (!held) return undefined;
+    await this.account.vault.put(vaultName(groupId, epoch), key);
+    return {
+      epoch,
+      wrapped: await wrapToPublicKey(
+        key,
+        held.publicKey,
+        bindingOf(groupId, epoch, this.account.accountId),
+      ),
+    };
+  }
+
+  /** A group's name sealed for its own row, opened with a key in hand (the invitation page has no vault entry yet). */
+  async openNameWith(groupId: string, sealed: string, key: Bytes): Promise<string | undefined> {
+    try {
+      const content = await openRow(sealed, await importGroupKey(key), {
+        group: groupId,
+        table: 'grp',
+        row: groupId,
+      });
+      return typeof content.name === 'string' ? content.name : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /** Seals a group's new name under its current epoch's key, for a rename. */

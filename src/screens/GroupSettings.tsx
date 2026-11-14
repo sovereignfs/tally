@@ -257,19 +257,28 @@ export function GroupSettings({ groupId }: { groupId: string }) {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        void op({ op: 'invite.create', groupId, personId: m.personId }).then(
-                          (answer) => {
-                            const made = answer as
-                              { token?: string; mailed?: boolean; mailOn?: boolean } | undefined;
-                            if (made?.token)
-                              setInvited({
-                                personId: m.personId,
-                                token: made.token,
-                                mailed: Boolean(made.mailed),
-                                mailOn: Boolean(made.mailOn),
-                              });
-                          },
-                        )
+                        void (async () => {
+                          // The copied link carries the group's key in its fragment, made here (15.5); the server keeps only a wrap it cannot open.
+                          const carried = await keys
+                            ?.invitationKey(groupId, view.group.keyEpoch)
+                            .catch(() => undefined);
+                          const answer = await op({
+                            op: 'invite.create',
+                            groupId,
+                            personId: m.personId,
+                            ...(carried ? { keyWrap: carried.keyWrap } : {}),
+                          });
+                          const made = answer as
+                            { token?: string; mailed?: boolean; mailOn?: boolean } | undefined;
+                          if (made?.token)
+                            setInvited({
+                              personId: m.personId,
+                              token: made.token,
+                              fragment: carried?.fragment ?? null,
+                              mailed: Boolean(made.mailed),
+                              mailOn: Boolean(made.mailOn),
+                            });
+                        })()
                       }
                     >
                       {invited?.personId === m.personId ? 'New link' : `Invite ${m.name}`}
@@ -540,6 +549,8 @@ function AddPeople({
 interface Invited {
   personId: string;
   token: string;
+  /** `<epoch>.<secret>`, for the copied link: it opens the group at once. Never sent to the server, never in a mail. */
+  fragment: string | null;
   mailed: boolean;
   mailOn: boolean;
 }
@@ -549,12 +560,12 @@ interface Invited {
  * link is the only way, rather than pretending an email went. The token is shown once; a new link replaces it.
  */
 function InvitationLink({ invitation, name }: { invitation: Invited; name: string }) {
-  const link = `${window.location.origin}/invite/${invitation.token}`;
+  const link = `${window.location.origin}/invite/${invitation.token}${invitation.fragment ? `#${invitation.fragment}` : ''}`;
   return (
     <span className={styles.stack} role="status" aria-label={`Invitation for ${name}`}>
       <span className={styles.small}>
         {invitation.mailed
-          ? `An email with this link is on its way to ${name}. You can also send it yourself:`
+          ? `An email is on its way to ${name}. This link opens the group at once, if you send it yourself:`
           : invitation.mailOn
             ? `${name} has no email address here: send this link yourself.`
             : 'Mail is not set up here, so this link is the only way: send it to them yourself.'}

@@ -12,7 +12,8 @@ test('someone with no account is added, invited by a link, signs up and finds th
 }) => {
   await signedIn(page);
   await hydrated(page);
-  await newGroup(page, `Lisbon ${Date.now()}`);
+  const groupName = `Lisbon ${Date.now()}`;
+  await newGroup(page, groupName);
   const groupId = groupIdOf(page);
   await page.goto(`/g/${groupId}/settings`);
   await hydrated(page);
@@ -34,12 +35,20 @@ test('someone with no account is added, invited by a link, signs up and finds th
   const invitation = page.getByRole('status', { name: 'Invitation for Sam' });
   await expect(invitation).toContainText('Mail is not set up here, so this link is the only way');
   const link = (await invitation.locator('code').textContent()) ?? '';
-  expect(link).toMatch(/\/invite\/[A-Za-z0-9_-]{43}$/);
+  // The copied link carries the group's key in its fragment (15.5): the epoch and a secret.
+  expect(link).toMatch(/\/invite\/[A-Za-z0-9_-]{43}#\d+\.[A-Za-z0-9_-]{43}$/);
+  const secret = link.split('.').pop() ?? '';
 
   await using phone = await secondBrowser(browser);
   const sam = phone.page;
+  // Nothing Sam's browser sends carries the fragment's secret: not an address, not a body.
+  const sent: string[] = [];
+  phone.context.on('request', (request) =>
+    sent.push(`${request.url()} ${request.postData() ?? ''}`),
+  );
   await sam.goto(link);
   await expect(sam.getByRole('heading', { name: 'You are invited' })).toBeVisible();
+  await expect(sam.getByRole('status', { name: 'The group' })).toContainText(groupName);
   await expect(sam.getByText(/added you to a group on Tally/)).toBeVisible();
   await sam.getByRole('link', { name: 'Create an account' }).click();
   await hydrated(sam);
@@ -54,8 +63,13 @@ test('someone with no account is added, invited by a link, signs up and finds th
   await hydrated(sam);
   await sam.getByRole('button', { name: 'Join the group' }).click();
   await expect(sam).toHaveURL(new RegExp(`/g/${groupId}$`), { timeout: 20_000 });
-  // Their place, with the dinner and their balance in it: the figures are plain, the words open once the group's key reaches this device.
+  // Their place, with the dinner and their balance in it, and its words at once: the key came with the link.
   await expect(sam.getByText('you owe €15.00')).toBeVisible({ timeout: 20_000 });
+  await expect(sam.getByRole('heading', { level: 1, name: groupName })).toBeVisible();
+  await expect(
+    sam.getByRole('region', { name: 'Expenses' }).getByRole('link', { name: /Dinner at Ramiro/ }),
+  ).toBeVisible();
+  expect(sent.some((line) => line.includes(secret))).toBe(false);
   await expect(sam.getByRole('region', { name: 'Expenses' }).getByRole('listitem')).toHaveCount(1);
 
   // Used, it reads as any link that cannot be used.

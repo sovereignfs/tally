@@ -131,7 +131,7 @@ code; a device the password cannot open is unlocked by it typed in lower case wi
 test. The browser test failed with the wrap not made. **Left out:** Settings > Recovery key, which shows whether one is kept and makes a new one
 (2.6, with this same offer).
 
-#### 📋 15.5 — An invitation link that carries the key
+#### ✅ 15.5 — An invitation link that carries the key
 
 **Goal:** someone opening a copied invitation reads the group at once. **Design:** §5.3, §6.3. **Depends on:** 8.3, 15.3.
 
@@ -142,6 +142,18 @@ expiring or using the invitation deletes its wrap.
 
 **Accepts when:** a copied link opens the group's words on first load; an emailed link's group is unlocked by a member's device at its next sync; no
 request to the server carries the fragment (checked in Playwright's request log); a used invitation's wrap is gone.
+
+**Done as:** `GroupKeys.invitationKey` makes 32 random bytes on the inviter's device and wraps the group key of the current epoch to them
+(`wrapToSecret`, purpose `invitation`, bound to the group and epoch); the server keeps the wrap as `invitation.key_wrap` and the link's fragment is
+`#<epoch>.<secret>`, shown in the invitation's panel (the emailed link has none, 8.3). `/invite/<token>` gives the page the group's sealed name with
+the wrap; `InviteGroupName` opens the key from the fragment and the name with it, in the browser, or shows nothing and names the inviter alone.
+Accepting adopts the key (`GroupKeys.adopt`: into the vault, and wrapped to the account's own key) and sends that wrap with the claim, which keeps it
+only when the invitation carried a wrap; so the joined group's words are there at once. The fragment is kept in the tab's `sessionStorage` while the
+person signs up or signs in and comes back, since those pages do not carry it, and forgotten after joining. Using, revoking (directly or by a new link)
+and the end of an invitation clear its wrap (the pruning job clears ended ones). An emailed link's group is unlocked by a member's device at its next
+exchange, as 15.3 already does. Tests: in Vitest, the claimer's own wrap kept with the claim and none kept for an invitation without a key, and the wrap
+cleared on use, revocation and expiry; in Playwright, Chromium and WebKit, the copied link's fragment, the group named on the invitation page and in the
+joined group at once with its expense's words, and no request of the new browser carrying the secret.
 
 #### ✅ 15.6 — Rotating a group's key
 

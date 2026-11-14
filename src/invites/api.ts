@@ -13,9 +13,16 @@ export function acceptHandler(databaseOf: () => Promise<Database> = getDatabase)
   return async ({ request, accountId, personId }: AccountContext): Promise<Response> => {
     const text = await readCapped(request, 4096);
     let token: string;
+    let selfWrap: { epoch: number; wrapped: string } | undefined;
     try {
-      const body = JSON.parse(text ?? '') as { token?: unknown };
+      const body = JSON.parse(text ?? '') as {
+        token?: unknown;
+        selfWrap?: { epoch?: unknown; wrapped?: unknown };
+      };
       token = typeof body.token === 'string' ? body.token : '';
+      const wrap = body.selfWrap;
+      if (wrap && typeof wrap.epoch === 'number' && typeof wrap.wrapped === 'string')
+        selfWrap = { epoch: wrap.epoch, wrapped: wrap.wrapped };
     } catch {
       return new Response(null, { status: 400 });
     }
@@ -25,6 +32,7 @@ export function acceptHandler(databaseOf: () => Promise<Database> = getDatabase)
         { accountId, personId },
         token,
         Date.now(),
+        selfWrap,
       );
       return Response.json(claimed);
     } catch (error) {

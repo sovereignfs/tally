@@ -4,6 +4,7 @@ import { AuthShell } from '@/src/auth/screens/AuthShell';
 import { getSession } from '@/src/auth/session';
 import { getDatabase } from '@/src/db/boot';
 import { AcceptInvitation } from '@/src/invites/AcceptInvitation';
+import { InviteGroupName } from '@/src/invites/InviteGroupName';
 import { validInvitation } from '@/src/invites/store';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,17 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   if (session)
     return (
       <AuthShell title="You are invited" lead={lead}>
-        <AcceptInvitation token={token} groupId={invitation.groupId} />
+        <InviteGroupName
+          groupId={invitation.groupId}
+          keyWrap={invitation.keyWrap}
+          groupSealed={invitation.groupSealed}
+        />
+        <AcceptInvitation
+          token={token}
+          groupId={invitation.groupId}
+          accountId={session.user.id}
+          keyWrap={invitation.keyWrap}
+        />
       </AuthShell>
     );
   const settings = authSettings();
@@ -54,6 +65,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         ) : null
       }
       footerAlign="start"
-    />
+    >
+      <InviteGroupName
+        groupId={invitation.groupId}
+        keyWrap={invitation.keyWrap}
+        groupSealed={invitation.groupSealed}
+      />
+    </AuthShell>
   );
 }

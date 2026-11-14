@@ -80,6 +80,12 @@ export async function prune(database: Database, now: number): Promise<Pruned> {
     });
   }
 
+  // An invitation that ended unused keeps no wrap of its group's key (15.5).
+  await dbAll(
+    database,
+    sql`UPDATE ${t.invitation} SET key_wrap = NULL WHERE key_wrap IS NOT NULL AND expires_at <= ${now} RETURNING id`,
+  );
+
   // 3. The record of applied mutations, 90 days old: a device that sends one again after that has long had its answer.
   result.mutations = (
     await dbAll<{ id: string }>(
