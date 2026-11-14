@@ -18,7 +18,7 @@ import { personOfAccount } from '../people/persons';
  *     expenses and payments it carries still add up (ending it where the balance is zero joins with balances, 4.3). The group's order moves on.
  *  2. **Their keys** (§5.3): the account key, its wraps, its requests and every group key wrapped to them.
  *  3. **Their person**: `account_id`, `email` and `core_sub` cleared and `deleted_at` set; the name stays. Placeholders they added that are in no group go.
- *  4. What was kept for them in the app's store: their settings, the mutations they sent (`applied_mutation`), and the counters of rate limits, keyed
+ *  4. What was kept for them in the app's store: their settings, the mutations they sent (`applied_mutation`), mail waiting for them, and the counters of rate limits, keyed
  *     `kind:account`.
  *  5. **The sign-in store**: sessions, sign-ins, second factors, passkeys, pending verifications, and then the account.
  *
@@ -82,6 +82,7 @@ export const ACCOUNT_TABLES = [
   'account_key_wrap',
   'account_settings',
   'key_request',
+  'mail_outbox',
   'person',
 ] as const;
 /** The tables that hold nothing of a person, or only an id that is not theirs to take: decided, and left. */
@@ -198,6 +199,10 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
   await dbAll(
     database,
     sql`DELETE FROM ${t.appliedMutation} WHERE account_id = ${accountId} RETURNING id`,
+  );
+  await dbAll(
+    database,
+    sql`DELETE FROM ${t.mailOutbox} WHERE account_id = ${accountId} RETURNING id`,
   );
   await dbAll(
     database,

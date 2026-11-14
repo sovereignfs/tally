@@ -38,3 +38,20 @@ export function notificationMessage(
     text: `${title}\n\n${body ? `${body}\n\n` : ''}${link}\n\nYou get this because you turned on email from ${app}. To stop it: ${settingsLink}\n`,
   };
 }
+
+/**
+ * An invitation (DESIGN.md §6.3): who invited, and the link. **Never the group's name,** which is sealed and which the server cannot read (§5.3); the
+ * page the link opens says more once it is open. The link is the invitation: whoever holds it can take the place.
+ */
+export function invitationMessage(
+  app: string,
+  to: string,
+  inviterName: string,
+  link: string,
+): Message {
+  return {
+    to,
+    subject: `${inviterName} added you to a group on ${app}`,
+    text: `${inviterName} added you to a group on ${app}, to share expenses.\n\nSee it, and take your place:\n\n${link}\n\nThe link works once, for 14 days. If you were not expecting this, ignore it.\n`,
+  };
+}

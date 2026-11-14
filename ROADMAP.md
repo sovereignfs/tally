@@ -116,7 +116,7 @@ People outside can be in a group before they have an account, and take their pla
 
 | #   | ID                               | Task                                      | Priority | Depends on     | Status |
 | --- | -------------------------------- | ----------------------------------------- | -------- | -------------- | ------ |
-| 51  | [8.1](docs/epics/invites.md)     | The mail outbox                           | P1       | 1.6            | 📋     |
+| 51  | [8.1](docs/epics/invites.md)     | The mail outbox                           | P1       | 1.6            | ✅     |
 | 52  | [8.2](docs/epics/invites.md)     | Adding people and placeholders            | P1       | 7.9, 3.1       | 📋     |
 | 53  | [14.5](docs/epics/upstream.md)   | `AUTH_SIGNUP` by invitation (`sovereign`) | P1       | —              | ✅     |
 | 54  | [8.3](docs/epics/invites.md)     | Invitations and claiming                  | P1       | 8.1, 8.2, 14.5 | 📋     |

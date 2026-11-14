@@ -15,7 +15,7 @@ recorded for them. Mail is Tally's own, sent in the background; with no mail set
 
 ## Tasks
 
-#### 📋 8.1 — The mail outbox
+#### ✅ 8.1 — The mail outbox
 
 **Goal:** mail sent in the background, reliably and quietly. **Design:** §12.3. **Depends on:** 1.6.
 
@@ -26,6 +26,17 @@ mail is off.
 
 **Accepts when:** against a fake SMTP server, a message is sent once from two processes; a failing server is retried and then marked failed; no
 address appears in any log line.
+
+**Done as:** migration `0010_add_mail_outbox` and `src/mail/outbox.ts`, Tally's own (neither Tusk nor Ledger has an outbox): `enqueueMail` writes in
+the caller's transaction, to an account (its address read from the sign-in store when sending) or to an address; `sendDue`, run every minute by the
+`send-mail` job (registered only to do anything when `TALLY_SMTP_HOST` is set), claims each due row with a conditional update that counts the attempt
+and leases it, renders it, sends it through `smtpMailer`, and on a failure retries after 1, 4, 16 and 64 minutes, then marks it failed with the error's
+kind; a message to an account with no address, or of a template this version does not know, is given up at once; sent and failed rows go after a
+week, with their addresses. Logs carry the row's id and a kind, never an address or a link. `mailOn` tells a caller whether to write at all. The one
+template is the invitation (`invitationMessage`): who invited and the link, never the group's name, which is sealed. `People.deletePerson` deletes an
+account's waiting mail. Tests against the fake SMTP server (`SmtpSink`): one message to an address and one to an account sent once by two connections
+at once, a failing server retried with backoff and then failed, a log with no address, and the week's cleanup. **Run locally on a file only:** Docker
+was not running for sqld and PostgreSQL, which CI's legs run.
 
 #### 📋 8.2 — Adding people and placeholders
 

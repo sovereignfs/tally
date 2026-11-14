@@ -347,3 +347,28 @@ export const tombstone = sqliteTable(
     index('tombstone_created_idx').on(table.createdAt),
   ],
 );
+
+/**
+ * **Mail waiting to go** (DESIGN.md §12.3): written in the transaction of the change that causes it, sent in the background by the mail job, which
+ * claims a row, sends it through Tally's SMTP and retries with backoff up to a limit. To an account (`account_id`, its address read at sending) or to an
+ * address (`to_address`, a placeholder's). `data` holds what the template needs, never sealed text. Sent and failed rows go after a week.
+ */
+export const mailOutbox = sqliteTable(
+  'mail_outbox',
+  {
+    id: id('id'),
+    accountId: ref('account_id'),
+    toAddress: text('to_address'),
+    template: text('template').notNull(),
+    data: json('data').notNull(),
+    attempts: counter('attempts').notNull(),
+    nextAttemptAt: epochMs('next_attempt_at').notNull(),
+    sentAt: epochMs('sent_at'),
+    failureKind: text('failure_kind'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    index('mail_outbox_due_idx').on(table.nextAttemptAt),
+    index('mail_outbox_account_idx').on(table.accountId),
+  ],
+);

@@ -306,3 +306,24 @@ export const tombstone = app.table(
     index('tombstone_created_idx').on(table.createdAt),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const mailOutbox = app.table(
+  'mail_outbox',
+  {
+    id: id('id'),
+    accountId: ref('account_id'),
+    toAddress: text('to_address'),
+    template: text('template').notNull(),
+    data: json('data').notNull(),
+    attempts: counter('attempts').notNull(),
+    nextAttemptAt: epochMs('next_attempt_at').notNull(),
+    sentAt: epochMs('sent_at'),
+    failureKind: text('failure_kind'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    index('mail_outbox_due_idx').on(table.nextAttemptAt),
+    index('mail_outbox_account_idx').on(table.accountId),
+  ],
+);
