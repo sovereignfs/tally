@@ -1,5 +1,5 @@
 import { index, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { bool, counter, epochMs, id, ref } from './columns';
+import { bool, counter, epochMs, id, isoDate, json, money, ref } from './columns';
 
 /**
  * What the app holds, in the app store (DESIGN.md §19.3). An account is better-auth's, in the other store, so `account_id` is a reference by
@@ -164,3 +164,120 @@ export const accountSettings = sqliteTable('account_settings', {
   createdAt: epochMs('created_at').notNull(),
   updatedAt: epochMs('updated_at').notNull(),
 });
+
+/**
+ * **An expense** (DESIGN.md §8): its figures plain, so that the server checks them and works out balances; what was written (`{description, note}`)
+ * sealed. `version` moves on with every change, and each is kept in `revision`; `deleted_at` marks a deleted one, which counts for nothing and can be
+ * restored. Written only through `src/sync/apply.ts`.
+ */
+export const expense = sqliteTable(
+  'expense',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    amount: money('amount').notNull(),
+    currency: text('currency').notNull(),
+    date: isoDate('date').notNull(),
+    category: text('category').notNull(),
+    sealed: text('sealed').notNull(),
+    method: text('method').notNull(),
+    version: counter('version').notNull(),
+    createdBy: ref('created_by').notNull(),
+    updatedBy: ref('updated_by').notNull(),
+    deletedAt: epochMs('deleted_at'),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [
+    index('expense_group_seq_idx').on(table.groupId, table.seq),
+    index('expense_group_date_idx').on(table.groupId, table.date),
+  ],
+);
+
+/** Who paid an expense, and how much (§8.2); replaced whole with the expense. */
+export const expensePayer = sqliteTable(
+  'expense_payer',
+  {
+    expenseId: ref('expense_id').notNull(),
+    memberId: ref('member_id').notNull(),
+    groupId: ref('group_id').notNull(),
+    amount: money('amount').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.expenseId, table.memberId] })],
+);
+
+/** Each member's share of an expense (§8.3), with what was typed for it (`units`); replaced whole with the expense. */
+export const expenseShare = sqliteTable(
+  'expense_share',
+  {
+    expenseId: ref('expense_id').notNull(),
+    memberId: ref('member_id').notNull(),
+    groupId: ref('group_id').notNull(),
+    amount: money('amount').notNull(),
+    units: counter('units'),
+  },
+  (table) => [primaryKey({ columns: [table.expenseId, table.memberId] })],
+);
+
+/** **A payment** (DESIGN.md §9): one member gave another money outside Tally. The note is sealed; the rest as an expense's. */
+export const payment = sqliteTable(
+  'payment',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    fromMemberId: ref('from_member_id').notNull(),
+    toMemberId: ref('to_member_id').notNull(),
+    amount: money('amount').notNull(),
+    currency: text('currency').notNull(),
+    date: isoDate('date').notNull(),
+    sealed: text('sealed'),
+    version: counter('version').notNull(),
+    createdBy: ref('created_by').notNull(),
+    updatedBy: ref('updated_by').notNull(),
+    deletedAt: epochMs('deleted_at'),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [
+    index('payment_group_seq_idx').on(table.groupId, table.seq),
+    index('payment_group_date_idx').on(table.groupId, table.date),
+  ],
+);
+
+/**
+ * **Every version of an expense or a payment** (DESIGN.md §8.5): how it came about (`created`, `edited`, `deleted`, `restored`, or `replaced` for a
+ * version a later edit from an older base overwrote, §11.4), the row as it was (`snapshot`, its sealed text still sealed), and who.
+ */
+export const revision = sqliteTable(
+  'revision',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    subject: text('subject').notNull(),
+    subjectId: ref('subject_id').notNull(),
+    version: counter('version').notNull(),
+    kind: text('kind').notNull(),
+    snapshot: json('snapshot').notNull(),
+    actorPersonId: ref('actor_person_id'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [index('revision_subject_idx').on(table.subjectId)],
+);
+
+/** **A mutation applied** (DESIGN.md §11.2): its id, per account, so that the same one sent again writes nothing and answers as before. */
+export const appliedMutation = sqliteTable(
+  'applied_mutation',
+  {
+    accountId: ref('account_id').notNull(),
+    id: ref('id').notNull(),
+    groupId: ref('group_id').notNull(),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.id] }),
+    index('applied_mutation_created_idx').on(table.createdAt),
+  ],
+);

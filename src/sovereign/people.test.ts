@@ -71,6 +71,39 @@ describe(`deleting a person (${leg})`, () => {
           VALUES (${groupId}, 1, ${accountId}, ${wrap('w')}, ${accountId}, 1)`,
     );
   }
+  async function recorded(groupId: string) {
+    const db = tables(t.database);
+    const expenseId = crypto.randomUUID();
+    const paymentId = crypto.randomUUID();
+    await dbRun(
+      t.database,
+      sql`INSERT INTO ${db.expense} (id, group_id, amount, currency, date, category, sealed, method, version, created_by, updated_by, deleted_at, seq, created_at, updated_at)
+          VALUES (${expenseId}, ${groupId}, 100, 'EUR', '2026-11-01', 'general', 's1.1.x', 'equal', 1, ${adaPerson}, ${adaPerson}, NULL, 1, 1, 1)`,
+    );
+    await dbRun(
+      t.database,
+      sql`INSERT INTO ${db.expensePayer} (expense_id, member_id, group_id, amount) VALUES (${expenseId}, 'm-ada', ${groupId}, 100)`,
+    );
+    await dbRun(
+      t.database,
+      sql`INSERT INTO ${db.expenseShare} (expense_id, member_id, group_id, amount, units) VALUES (${expenseId}, 'm-ada', ${groupId}, 100, NULL)`,
+    );
+    await dbRun(
+      t.database,
+      sql`INSERT INTO ${db.payment} (id, group_id, from_member_id, to_member_id, amount, currency, date, sealed, version, created_by, updated_by, deleted_at, seq, created_at, updated_at)
+          VALUES (${paymentId}, ${groupId}, 'm-ada', 'm-grace', 100, 'EUR', '2026-11-01', NULL, 1, ${adaPerson}, ${adaPerson}, NULL, 2, 1, 1)`,
+    );
+    await dbRun(
+      t.database,
+      sql`INSERT INTO ${db.revision} (id, group_id, subject, subject_id, version, kind, snapshot, actor_person_id, created_at)
+          VALUES (${crypto.randomUUID()}, ${groupId}, 'expense', ${expenseId}, 1, 'created', '{}', ${adaPerson}, 1)`,
+    );
+    for (const who of [t.ada.id, t.grace.id])
+      await dbRun(
+        t.database,
+        sql`INSERT INTO ${db.appliedMutation} (account_id, id, group_id, seq, created_at) VALUES (${who}, ${crypto.randomUUID()}, ${groupId}, 1, 1)`,
+      );
+  }
   async function placeholder(id: string, addedBy: string) {
     await dbRun(
       t.database,
@@ -137,6 +170,8 @@ describe(`deleting a person (${leg})`, () => {
     await member(ids.hers, adaPerson, 'member', 2);
     await keyWrap(ids.hers, t.ada.id);
     await keyWrap(ids.hers, t.grace.id);
+    // An expense, a payment, their revisions and the mutation that made them, in Ada's group alone and in the shared one.
+    for (const groupId of [ids.alone, ids.shared]) await recorded(groupId);
     // Placeholders Ada added: one in no group, one in the shared group.
     await placeholder(placeholders.inNoGroup, adaPerson);
     await placeholder(placeholders.inShared, adaPerson);
@@ -191,6 +226,7 @@ describe(`deleting a person (${leg})`, () => {
       [db.keyRequest, 'account_id'],
       [db.keyWrap, 'account_id'],
       [db.accountSettings, 'account_id'],
+      [db.appliedMutation, 'account_id'],
     ] as const) {
       expect(await count(table, sql`${sql.raw(column)} = ${t.ada.id}`)).toBe(0);
     }
@@ -207,8 +243,21 @@ describe(`deleting a person (${leg})`, () => {
   it('deletes the group no other account was in, with every row of it', async () => {
     const db = tables(t.database);
     expect(await count(db.grp, sql`id = ${ids.alone}`)).toBe(0);
-    for (const table of [db.member, db.keyWrap])
+    for (const table of [
+      db.member,
+      db.keyWrap,
+      db.expense,
+      db.expensePayer,
+      db.expenseShare,
+      db.payment,
+      db.revision,
+      db.appliedMutation,
+    ])
       expect(await count(table, sql`group_id = ${ids.alone}`)).toBe(0);
+    // The shared group's record stays whole for Grace: what Ada paid still adds up.
+    for (const table of [db.expense, db.expensePayer, db.expenseShare, db.payment, db.revision])
+      expect(await count(table, sql`group_id = ${ids.shared}`)).toBe(1);
+    expect(await count(db.appliedMutation, sql`account_id = ${t.grace.id}`)).toBe(1);
   });
 
   it('passes a group she alone owned to its longest-standing member with an account, and keeps her place in each, as left Tally', async () => {

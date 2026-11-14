@@ -38,7 +38,7 @@ as one payment mutation per group) and `validate.ts`: the plain-text checks the 
 imports and finds only `src/money` and `src/cipher`. Left for 5.2: the account's membership, the group's state and rows of another group, which need
 the database.
 
-#### 📋 5.2 — Applying a mutation
+#### ✅ 5.2 — Applying a mutation
 
 **Goal:** the server's one path for a recorded change. **Design:** §11.3, §11.4, §11.5, §8.5. **Depends on:** 5.1.
 
@@ -50,6 +50,18 @@ answers as before and writes nothing. Activity and notices hook in here (5.4, 9.
 
 **Accepts when:** on all three databases: two edits from one base leave the later one stored and the earlier as `replaced`; an edit after a delete
 restores; a replayed mutation writes nothing; a refused one writes nothing; a mutation for another person's group reads as not found.
+
+**Done as:** `src/sync/apply.ts` (`applyMutation`) and migration `0005_add_expenses` (`expense`, `expense_payer`, `expense_share`, `payment`,
+`revision`, `applied_mutation`, both dialects). The group's `seq` is moved on first, in an `UPDATE` that carries the open group and the account's
+active membership, which also orders the group's writes; a failed one says `closed` to a member, `not_in_group` to someone who was one, and
+`not_found` to anyone else. The members are read and each change goes through `src/actions/validate.ts` with the members of the stored version
+allowed; a row of another group is `not_found`; refusals throw inside the transaction, so nothing at all is written. **Revisions:** one per version,
+with the row as written (sealed text still sealed); an edit based on an older version keeps the version it overwrote as `replaced`, under its
+author's name, with that version's snapshot (for the notice and "restore my version", 9.1); an edit of a deleted row is `restored`; deleting what
+is deleted, or restoring what is not, is applied and writes nothing more. A replay answers with the first answer's `seq`. `People.deletePerson`
+deletes the new tables with a group that goes (by `group_id`), keeps them on a group that carries on, and deletes the account's `applied_mutation`
+rows; its test seeds one of each. Tested on a file, sqld and PostgreSQL; the replay test failed with the replay check taken out. Comments are refused
+as `malformed` until 5.3; activity and notices hook in with 5.4 and 9.1.
 
 #### 📋 5.3 — Comments
 

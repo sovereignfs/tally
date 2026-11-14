@@ -69,7 +69,7 @@ Expenses, payments and comments can be written through the one path, and every f
 | 22  | [4.2](docs/epics/money.md)       | Splitting and rounding               | P0       | 4.1           | ✅     |
 | 23  | [4.3](docs/epics/money.md)       | Balances, pairwise and simplified    | P0       | 4.2           | ✅     |
 | 24  | [5.1](docs/epics/expenses.md)    | Actions and validators               | P0       | 4.2, 3.2      | ✅     |
-| 25  | [5.2](docs/epics/expenses.md)    | Applying a mutation                  | P0       | 5.1           | 📋     |
+| 25  | [5.2](docs/epics/expenses.md)    | Applying a mutation                  | P0       | 5.1           | ✅     |
 | 26  | [5.3](docs/epics/expenses.md)    | Comments                             | P1       | 5.2           | 📋     |
 | 27  | [5.4](docs/epics/expenses.md)    | The activity log and its words       | P1       | 5.2, 3.2      | 📋     |
 | 28  | [3.3](docs/epics/groups.md)      | Leaving, removing, closing, deleting | P1       | 3.2, 4.3, 5.2 | 📋     |

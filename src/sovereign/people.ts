@@ -13,12 +13,13 @@ import { personOfAccount } from '../people/persons';
  * dealt with, and the account, by which the routine finds them, goes **last**. Its shape is Ledger's; what it does is Tally's.
  *
  *  1. **Their groups**, each in a transaction of its own. A group with no other member who has an account is deleted with every row of it, by
- *     `group_id` (`GROUP_TABLES`). Otherwise, if they were its only owner, it passes to its longest-standing member with an account (who will be told,
+ *     `group_id` (`GROUP_TABLES`: its members, keys, expenses with their payers and shares, payments, revisions and applied mutations). Otherwise, if they were its only owner, it passes to its longest-standing member with an account (who will be told,
  *     `owner_passed`, once notices exist, 9.1); their own role becomes `member`, and **their membership stays**, shown as left Tally, so that the
  *     expenses and payments it carries still add up (ending it where the balance is zero joins with balances, 4.3). The group's order moves on.
  *  2. **Their keys** (§5.3): the account key, its wraps, its requests and every group key wrapped to them.
  *  3. **Their person**: `account_id`, `email` and `core_sub` cleared and `deleted_at` set; the name stays. Placeholders they added that are in no group go.
- *  4. What was kept for them in the app's store: their settings, and the counters of rate limits, keyed `kind:account`.
+ *  4. What was kept for them in the app's store: their settings, the mutations they sent (`applied_mutation`), and the counters of rate limits, keyed
+ *     `kind:account`.
  *  5. **The sign-in store**: sessions, sign-ins, second factors, passkeys, pending verifications, and then the account.
  *
  * `people.test.ts` seeds a row in every table for the person and for a second person, finds nothing personal of the first after (the name aside), the
@@ -31,7 +32,31 @@ export interface PeopleDeps {
 }
 
 /** The tables whose every row belongs to one group, deleted by `group_id` with a group that goes (the group's own row, `grp`, last). */
-export const GROUP_TABLES = ['key_wrap', 'member'] as const;
+export const GROUP_TABLES = [
+  'applied_mutation',
+  'expense',
+  'expense_payer',
+  'expense_share',
+  'key_wrap',
+  'member',
+  'payment',
+  'revision',
+] as const;
+
+/** Each of `GROUP_TABLES` as the dialect has it. */
+function groupTable(database: Database, name: (typeof GROUP_TABLES)[number]) {
+  const t = tables(database);
+  return {
+    applied_mutation: t.appliedMutation,
+    expense: t.expense,
+    expense_payer: t.expensePayer,
+    expense_share: t.expenseShare,
+    key_wrap: t.keyWrap,
+    member: t.member,
+    payment: t.payment,
+    revision: t.revision,
+  }[name];
+}
 /** The tables that hold something of an account, cleared by step 2 or 3. */
 export const ACCOUNT_TABLES = [
   'account_key',
@@ -84,10 +109,9 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
         );
         if (gone.length > 0) {
           for (const name of GROUP_TABLES) {
-            const table = name === 'key_wrap' ? t.keyWrap : t.member;
             await dbAll(
               tx,
-              sql`DELETE FROM ${table} WHERE group_id = ${groupId} RETURNING group_id`,
+              sql`DELETE FROM ${groupTable(tx, name)} WHERE group_id = ${groupId} RETURNING group_id`,
             );
           }
           return true;
@@ -155,7 +179,12 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
     });
   }
 
-  // 4. What was kept for them in the app's store: their settings, and the counters of rate limits, keyed `kind:account`.
+  // 4. What was kept for them in the app's store: their settings, the record of the mutations they sent, and the counters of rate limits, keyed
+  // `kind:account`.
+  await dbAll(
+    database,
+    sql`DELETE FROM ${t.appliedMutation} WHERE account_id = ${accountId} RETURNING id`,
+  );
   await dbAll(
     database,
     sql`DELETE FROM ${t.accountSettings} WHERE account_id = ${accountId} RETURNING account_id`,

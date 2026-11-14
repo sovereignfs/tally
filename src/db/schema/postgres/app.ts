@@ -1,6 +1,6 @@
 import { index, pgSchema, primaryKey, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { APP_STORE } from '../../config';
-import { bool, counter, epochMs, id, ref } from './columns';
+import { bool, counter, epochMs, id, isoDate, json, money, ref } from './columns';
 
 /** The app's schema; better-auth's is `tally_auth` (DESIGN.md §19.1). */
 export const app = pgSchema(APP_STORE);
@@ -142,3 +142,113 @@ export const accountSettings = app.table('account_settings', {
   createdAt: epochMs('created_at').notNull(),
   updatedAt: epochMs('updated_at').notNull(),
 });
+
+/** See `schema/sqlite/app.ts`. */
+export const expense = app.table(
+  'expense',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    amount: money('amount').notNull(),
+    currency: text('currency').notNull(),
+    date: isoDate('date').notNull(),
+    category: text('category').notNull(),
+    sealed: text('sealed').notNull(),
+    method: text('method').notNull(),
+    version: counter('version').notNull(),
+    createdBy: ref('created_by').notNull(),
+    updatedBy: ref('updated_by').notNull(),
+    deletedAt: epochMs('deleted_at'),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [
+    index('expense_group_seq_idx').on(table.groupId, table.seq),
+    index('expense_group_date_idx').on(table.groupId, table.date),
+  ],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const expensePayer = app.table(
+  'expense_payer',
+  {
+    expenseId: ref('expense_id').notNull(),
+    memberId: ref('member_id').notNull(),
+    groupId: ref('group_id').notNull(),
+    amount: money('amount').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.expenseId, table.memberId] })],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const expenseShare = app.table(
+  'expense_share',
+  {
+    expenseId: ref('expense_id').notNull(),
+    memberId: ref('member_id').notNull(),
+    groupId: ref('group_id').notNull(),
+    amount: money('amount').notNull(),
+    units: counter('units'),
+  },
+  (table) => [primaryKey({ columns: [table.expenseId, table.memberId] })],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const payment = app.table(
+  'payment',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    fromMemberId: ref('from_member_id').notNull(),
+    toMemberId: ref('to_member_id').notNull(),
+    amount: money('amount').notNull(),
+    currency: text('currency').notNull(),
+    date: isoDate('date').notNull(),
+    sealed: text('sealed'),
+    version: counter('version').notNull(),
+    createdBy: ref('created_by').notNull(),
+    updatedBy: ref('updated_by').notNull(),
+    deletedAt: epochMs('deleted_at'),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [
+    index('payment_group_seq_idx').on(table.groupId, table.seq),
+    index('payment_group_date_idx').on(table.groupId, table.date),
+  ],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const revision = app.table(
+  'revision',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    subject: text('subject').notNull(),
+    subjectId: ref('subject_id').notNull(),
+    version: counter('version').notNull(),
+    kind: text('kind').notNull(),
+    snapshot: json('snapshot').notNull(),
+    actorPersonId: ref('actor_person_id'),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [index('revision_subject_idx').on(table.subjectId)],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const appliedMutation = app.table(
+  'applied_mutation',
+  {
+    accountId: ref('account_id').notNull(),
+    id: ref('id').notNull(),
+    groupId: ref('group_id').notNull(),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.id] }),
+    index('applied_mutation_created_idx').on(table.createdAt),
+  ],
+);
