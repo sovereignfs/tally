@@ -198,7 +198,7 @@ operation's own sentence. Leaving and deleting go back to `/groups`. **Not yet:*
 Playwright, Chromium and WebKit: the sentences of close, leave and remove while a balance is not zero, Delete absent once an expense exists and
 deleting an empty group, and a rename seen in the sidebar.
 
-#### 📋 7.10 — Activity
+#### ✅ 7.10 — Activity
 
 **Goal:** every group's activity. **Design:** §15.8. **Depends on:** 5.4, 7.1.
 
@@ -206,6 +206,14 @@ deleting an empty group, and a rename seen in the sidebar.
 sentence offline.
 
 **Accepts when:** each kind of §12.1 shows in words; filters combine.
+
+**Done as:** `src/screens/ActivityView.tsx`: `/activity` and a group's Activity view (`?view=activity`), by day, newest first, each line from
+`describeActivity` with the reader as "You", names from the members the device holds, and the text the line carries opened on the device with the
+group's key; filters for group, person and kind written to the address locally; Show earlier pages with the cursor; read again after each sync, so
+what the device just sent shows; offline it says it needs a connection. **Changed:** a comment's activity line now carries the comment's id, which its
+sealed body is bound to, so that the device can open it (`commentId`, optional, since lines written before have none). Each kind's words are tested in
+`describe.test.ts` (5.4); here, in Playwright, Chromium and WebKit: an expense, a comment and the group's making in words in the group and on
+`/activity`, and a kind filter combined with a group filter.
 
 #### 📋 7.11 — The phone
 

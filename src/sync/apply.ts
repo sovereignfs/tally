@@ -541,6 +541,7 @@ async function applyComment(
     subjectId: checked.value.subjectId,
     details: {
       subject: checked.value.subject,
+      commentId: change.id,
       sealed: checked.value.sealed,
       subjectSealed: on?.sealed ?? null,
     },

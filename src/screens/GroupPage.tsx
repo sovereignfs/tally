@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
+import { ActivityList } from './ActivityView';
 import { BalancesView } from './BalancesView';
 import { GroupScreen } from './GroupScreen';
 
@@ -11,7 +12,10 @@ export function GroupPage({ groupId }: { groupId: string }) {
       <GroupScreen
         groupId={groupId}
         settleUp
-        views={{ balances: (view) => <BalancesView view={view} /> }}
+        views={{
+          balances: (view) => <BalancesView view={view} />,
+          activity: () => <ActivityList groupId={groupId} />,
+        }}
       />
     </Suspense>
   );

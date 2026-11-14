@@ -1,18 +1,14 @@
 import type { Metadata } from 'next';
-import { EmptyState, PageContainer, PageHeader } from '@sovereignfs/ui';
+import { Suspense } from 'react';
+import { ActivityPage } from '@/src/screens/ActivityView';
 
 export const metadata: Metadata = { title: 'Activity' };
 
-/** A place the shell has, with nothing in it yet: task 7.10 builds it. */
+/** Every group's activity (DESIGN.md §15.8), read online and said in words on the device. */
 export default function Page() {
   return (
-    <PageContainer>
-      <PageHeader title="Activity" description="What happened in your groups." />
-      <EmptyState
-        icon="activity"
-        heading="Nothing to show yet"
-        description="This arrives with a later task of the roadmap."
-      />
-    </PageContainer>
+    <Suspense fallback={null}>
+      <ActivityPage />
+    </Suspense>
   );
 }

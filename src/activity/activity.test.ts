@@ -251,6 +251,7 @@ describe(`activity (${leg})`, () => {
     );
     expect(JSON.parse(comment?.details ?? '{}')).toEqual({
       subject: 'expense',
+      commentId: expect.any(String),
       sealed,
       subjectSealed: sealed,
     });

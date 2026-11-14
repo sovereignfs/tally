@@ -59,6 +59,8 @@ export interface PaymentDetails {
 
 export interface CommentDetails {
   subject: 'expense' | 'payment';
+  /** The comment's own id, which its sealed body is bound to (§5.3), so that the device can open it. */
+  commentId?: string;
   /** The comment's sealed `{body}`. */
   sealed: string;
   /** What it is on, sealed as it was: an expense's `{description, note}`; null for a payment. */
