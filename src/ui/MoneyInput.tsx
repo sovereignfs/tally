@@ -39,7 +39,15 @@ export function MoneyInput({
   useEffect(() => {
     if (!focusOnOpen) return;
     // After the sheet or drawer around it has placed its own focus, which it does as it opens.
-    const handle = window.setTimeout(() => ref.current?.focus(), 80);
+    const handle = window.setTimeout(() => {
+      // Only if the person has not already moved on to another field: never take their typing away from where it is going.
+      const active = document.activeElement;
+      const typing =
+        active instanceof HTMLElement &&
+        active !== ref.current &&
+        (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
+      if (!typing) ref.current?.focus();
+    }, 80);
     return () => window.clearTimeout(handle);
   }, [focusOnOpen]);
   const [text, setText] = useState(value === null ? '' : decimalText(value, currency));

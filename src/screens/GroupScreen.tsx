@@ -19,7 +19,7 @@ import type { LocalExpense, LocalPayment } from '../local/db';
 import { pendingRows } from '../local/store';
 import { toMinor } from '../money/amount';
 import { formatMoney } from '../money/text';
-import { useLocal, useMe } from '../sync/react';
+import { useLocal, useMe, useSync } from '../sync/react';
 import { LocalLink, goLocally, sheetHref } from './AddSheet';
 import { Balance, GroupDot } from './Balance';
 import { CATEGORY_VIEW } from './categories';
@@ -53,6 +53,17 @@ export function GroupScreen({
   const me = useMe();
   const params = useSearchParams();
   const pathname = usePathname();
+  const client = useSync();
+  // A group not on the device yet (just made, or just joined) is looked for once, by a sync, before the page says it is not here.
+  const [looked, setLooked] = useState(false);
+  useEffect(() => {
+    if (!client) return;
+    let live = true;
+    void client.sync().finally(() => live && setLooked(true));
+    return () => {
+      live = false;
+    };
+  }, [client, groupId]);
   const view = useLocal(
     (db) => readGroupView(db, groupId, me?.personId ?? ''),
     [groupId, me?.personId],
@@ -60,7 +71,7 @@ export function GroupScreen({
   const names = useGroupNames(view ? [view.group] : []);
   const current = (params.get('view') as GroupViewName | null) ?? 'expenses';
 
-  if (view === undefined) return null;
+  if (view === undefined || (view === null && !looked)) return null;
   if (!view || !view.me)
     return (
       <PageContainer>

@@ -183,7 +183,11 @@ export async function newGroup(page: Page, name: string) {
   await hydrated(page);
   await page.getByRole('main').getByRole('button', { name: 'New group' }).click();
   const form = page.getByRole('form', { name: 'New group' });
-  await form.getByLabel('Name').fill(name);
+  // Typed, and typed again if the dialog was still settling as it opened and the text did not stay.
+  await expect(async () => {
+    await form.getByLabel('Name').fill(name);
+    await expect(form.getByLabel('Name')).toHaveValue(name, { timeout: 500 });
+  }).toPass({ timeout: 10_000 });
   await form.getByRole('button', { name: 'Make the group' }).click();
   // It closes once the device has pulled the new group, which on a loaded runner can take longer than a click's wait.
   await expect(form).toHaveCount(0, { timeout: 15_000 });

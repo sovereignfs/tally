@@ -45,7 +45,8 @@ export function NewGroupDialog({ open, onClose }: { open: boolean; onClose: () =
         return setProblem(body.message ?? 'That group could not be made.');
       }
       if (!reply.ok) return setProblem('That group could not be made. Try again.');
-      await client?.sync();
+      // Brought into the store by a sync, waited for a moment only: the group's page syncs itself if it is not there yet.
+      await Promise.race([client?.sync(), new Promise((resolve) => setTimeout(resolve, 3_000))]);
       setName('');
       onClose();
       router.push(`/g/${prepared.groupId}`);
