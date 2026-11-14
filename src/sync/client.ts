@@ -113,8 +113,20 @@ export class SyncClient {
     this.announce('pull');
   }
 
-  /** One sync: rounds of outbox and pull until nothing is waiting on either side, or `maxRounds`. */
-  async sync(): Promise<SyncOutcome> {
+  private queue: Promise<unknown> = Promise.resolve();
+
+  /**
+   * One sync: rounds of outbox and pull until nothing is waiting on either side, or `maxRounds`. **One at a time in this page:** a sync asked for while
+   * another runs waits for it, because two settling at once could each take back the other's unanswered changes (the loop's Web Lock does the same
+   * between tabs).
+   */
+  sync(): Promise<SyncOutcome> {
+    const run = this.queue.then(() => this.syncOnce());
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async syncOnce(): Promise<SyncOutcome> {
     const rounds = this.options.maxRounds ?? 10;
     for (let round = 0; round < rounds; round++) {
       const sent = await readOutbox(this.options.db, LIMITS.mutationsPerRequest);

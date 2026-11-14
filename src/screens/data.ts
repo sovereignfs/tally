@@ -30,9 +30,9 @@ export async function readGroupView(
   db: LocalDatabase,
   groupId: string,
   personId: string,
-): Promise<GroupView | undefined> {
+): Promise<GroupView | null> {
   const rows = await readGroupRows(db, groupId);
-  if (!rows.group) return undefined;
+  if (!rows.group) return null;
   const order = memberOrder(rows.members.map((m) => ({ id: m.id, joinedAt: m.joinedAt })));
   const me =
     rows.members.find((m) => m.personId === personId && m.leftAt === null) ??

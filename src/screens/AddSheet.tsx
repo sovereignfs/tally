@@ -49,7 +49,8 @@ function AddSheetHost() {
   const names = useGroupNames(views?.map((v) => v.group) ?? []);
   const keys = useGroupKeys();
   const adding = params.get('add') === 'expense';
-  const groupFromAddress = params.get('g') ?? undefined;
+  // The group named in the address, or the group whose page this is (§15.9: opened from a group, the group is filled in).
+  const groupFromAddress = params.get('g') ?? /^\/g\/([^/]+)/.exec(pathname)?.[1] ?? undefined;
   const editId = params.get('e');
   const [editing, setEditing] = useState<Editing | null | undefined>(undefined);
 

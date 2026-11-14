@@ -48,7 +48,7 @@ export function NewGroupDialog({ open, onClose }: { open: boolean; onClose: () =
       await client?.sync();
       setName('');
       onClose();
-      router.push(`/groups`);
+      router.push(`/g/${prepared.groupId}`);
     } catch {
       setProblem('Making a group needs a connection.');
     } finally {

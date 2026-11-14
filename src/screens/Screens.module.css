@@ -81,3 +81,40 @@
   padding: var(--sv-space-4);
   box-sizing: border-box;
 }
+
+.list {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* A row of a list: an icon, what it is and who, and on the right the reader's part and the date. */
+.line {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-3);
+  padding: var(--sv-space-2) var(--sv-space-1);
+  color: inherit;
+  text-decoration: none;
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+.line:hover {
+  background: var(--sv-color-surface-sunken);
+}
+
+.lineMain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lineEnd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}

@@ -180,3 +180,20 @@ export async function newGroup(page: Page, name: string) {
   await form.getByRole('button', { name: 'Make the group' }).click();
   await expect(form).toHaveCount(0);
 }
+
+/** Adds an expense through the sheet, from the current page (DESIGN.md §15.9): amount, description, and optionally a category, saved with Enter. */
+export async function addExpense(
+  page: Page,
+  amount: string,
+  description: string,
+  category?: string,
+) {
+  await page.locator('body').click({ position: { x: 1, y: 1 } });
+  await page.keyboard.press('n');
+  const form = page.getByRole('form', { name: 'Add expense' });
+  await form.getByLabel('Amount', { exact: true }).fill(amount);
+  await form.getByLabel('Description').fill(description);
+  if (category) await form.getByLabel('Category').selectOption({ label: category });
+  await form.getByLabel('Description').press('Enter');
+  await expect(form).toHaveCount(0);
+}

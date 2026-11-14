@@ -128,7 +128,7 @@ test('opens a signed-in address with no network, from the device, after one visi
       await page.goto('/groups');
       await expect(page.getByRole('heading', { name: 'Your groups' })).toBeVisible();
       await expect(
-        page.getByRole('list', { name: 'Groups on this device' }).getByRole('listitem'),
+        page.getByRole('list', { name: 'Your groups' }).getByRole('listitem'),
       ).not.toHaveCount(0);
       await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
       // An address the device cannot answer says it needs a connection.

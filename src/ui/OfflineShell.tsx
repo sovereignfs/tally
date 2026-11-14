@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { EmptyState, PageContainer, PageHeader } from '@sovereignfs/ui';
+import { PageContainer, PageHeader } from '@sovereignfs/ui';
 import { AccountMenu } from '../auth/screens/AccountMenu';
 import { type Identity, readIdentity } from '../identity';
-import { readGroups } from '../local/store';
 import { site } from '../site';
-import { SyncProvider, useGroupKeys, useStoreChanges, useSync } from '../sync/react';
+import { SyncProvider } from '../sync/react';
+import { GroupPage } from '../screens/GroupPage';
+import { GroupsList } from '../screens/GroupsList';
 import { AppShell } from './AppShell';
 import { AddSheet } from '../screens/AddSheet';
 
@@ -16,7 +18,7 @@ import { AddSheet } from '../screens/AddSheet';
  * holds nothing of a person; this is that page. It finds who is signed in on the device (`src/identity.ts`), draws the same frame the server's layout
  * draws, and starts the device's sync, which reads the store and sends what is recorded once the network is back. Tusk's `OfflineApp`, for Tally.
  *
- * The screens of a group arrive with Milestone E; until then it lists the groups this device holds.
+ * It chooses the screen from the address, as Tusk's does: a group's page, or the groups.
  */
 export function OfflineShell() {
   // Not known until the page is in the browser: the server renders nothing of a person.
@@ -40,55 +42,25 @@ export function OfflineShell() {
         name={site.name}
         account={<AccountMenu accountId={who.id} name={who.name} email={who.email} />}
       >
-        <DeviceGroups />
+        <OfflineScreen />
         <AddSheet />
       </AppShell>
     </SyncProvider>
   );
 }
 
-function DeviceGroups() {
-  const client = useSync();
-  const keys = useGroupKeys();
-  const changes = useStoreChanges();
-  const [groups, setGroups] = useState<{ id: string; name: string | undefined }[] | null>(null);
-  useEffect(() => {
-    if (!client) return;
-    let live = true;
-    void (async () => {
-      const held = await readGroups(client.db);
-      const named = await Promise.all(
-        held.map(async (group) => ({
-          id: group.id,
-          name: await keys?.openName(group).catch(() => undefined),
-        })),
-      );
-      if (live) setGroups(named);
-    })();
-    return () => {
-      live = false;
-    };
-  }, [client, keys, changes]);
-
+/** The screen for the address (DESIGN.md §15.11): the page the worker answered with is not the page of the address, so it is chosen here. */
+function OfflineScreen() {
+  const pathname = usePathname();
+  const group = /^\/g\/([A-Za-z0-9_-]{1,64})/.exec(pathname)?.[1];
+  if (group) return <GroupPage groupId={group} />;
   return (
     <PageContainer>
       <PageHeader
         title="Your groups"
         description="You are offline. What you record is sent when you are back online."
       />
-      {groups === null ? null : groups.length === 0 ? (
-        <EmptyState
-          icon="users"
-          heading="No groups on this device yet"
-          description="Groups open here once this device has been online with them."
-        />
-      ) : (
-        <ul aria-label="Groups on this device">
-          {groups.map((group) => (
-            <li key={group.id}>{group.name ?? 'A group not yet unlocked on this device'}</li>
-          ))}
-        </ul>
-      )}
+      <GroupsList />
     </PageContainer>
   );
 }

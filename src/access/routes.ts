@@ -30,6 +30,7 @@ export const ROUTES: RouteRule[] = [
   // The places of the app (DESIGN.md §15.3), for someone signed in.
   { route: '/home', page: account },
   { route: '/groups', page: account },
+  { route: '/g/[id]', page: account },
   { route: '/people', page: account },
   { route: '/activity', page: account },
   { route: '/insights', page: account },

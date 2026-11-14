@@ -62,7 +62,7 @@ than buttons opening popovers, which keeps it quick by keyboard; a `Popover` sen
 has only its maker until adding people (Milestone F); the form supports several payers and the unit tests of the split cover it. Tests in Playwright,
 Chromium and WebKit: an expense with each method added by keyboard alone, one of them offline, and a split that does not add up refused with its reason.
 
-#### 📋 7.3 — A group: expenses
+#### ✅ 7.3 — A group: expenses
 
 **Goal:** a group's page and its list. **Design:** §15.5. **Depends on:** 7.2.
 
@@ -71,6 +71,18 @@ Chromium and WebKit: an expense with each method added by keyboard alone, one of
 search (`/`), filters by person and category, deleted behind a toggle; a closed group read-only; the not-found state for a group the reader is not in.
 
 **Accepts when:** a list of a thousand expenses paints from the device without a spinner; search and filters live in the address.
+
+**Done as:** `app/(app)/g/[id]/page.tsx` and `src/screens/GroupScreen.tsx` (with `GroupPage`, which the offline shell now also chooses by address):
+the header (dot, name, `AvatarStack`, the gear to the group's settings, the reader's balance per currency in words, Add expense; Settle up waits
+for 7.5 behind a prop), the views by `?view=` as `Tabs` once a second view exists, and Expenses: by month, newest first, each row the category's
+icon, the description opened on the device, who paid and how much, the reader's part ("you lent", "you borrowed", "not involved", `myPart`), the date
+and the clock mark while unsent (`pendingRows`); payments as rows; search (`/` focuses it) over the opened description and note, filters by person and
+category and a deleted toggle, all kept as one state and written whole to the address; a closed group read-only; a group the device does not hold,
+or the reader is not in, "This group is not here". `readGroupView` answers `null` for a group not held. Fixed on the way: `N` opened the sheet
+without the page's group (it now takes the group from the page), and `SyncClient.sync` runs one sync at a time in a page, since New group's own sync
+could overlap the loop's (not reproduced as a loss in a test, so kept as a guard without a regression test). Tests in Playwright, Chromium and WebKit,
+three times each: the page after adding, the reader's part, search and filters in the address and back after a reload, a thousand expenses painted
+from the device within the time with no progress bar, and not found.
 
 #### 📋 7.4 — A group: balances
 
