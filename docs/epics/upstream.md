@@ -26,7 +26,11 @@ accessible table of the same data, no chart library loaded from elsewhere. Ledge
 
 **Accepts when:** a `@sovereignfs/ui` release carrying them is published.
 
-**Not yet, and an interim in Tally (decided by the owner on 2026-11-14):** `@sovereignfs/ui` 0.96.1 has `CurrencyInput` with a currency's own
+**Not yet, and an interim in Tally for charts too (decided by the owner on 2026-11-14):** Tally draws a bar chart and a chart over
+months of its own in `src/ui/charts/`, in the design system's tokens only, each with a table of the same figures, no chart library; they are to move
+here, and be replaced in Tally by the release, when this task is done.
+
+**The money input, the same way (decided by the owner on 2026-11-14):** `@sovereignfs/ui` 0.96.1 has `CurrencyInput` with a currency's own
 decimals but no picker, and it turns typed text into an amount through floating point (`Math.round(parsed * 10 ** decimals)`), which Tally's rule
 forbids. Until this task lands, Tally composes its own money input and currency picker in `src/ui/` from the published `Input` and `Combobox`, with
 `src/money/text.ts`'s exact parsing; they are to move here, and be replaced in Tally by the release, when this task is done.

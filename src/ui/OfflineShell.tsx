@@ -1,5 +1,6 @@
 'use client';
 
+import { InsightsPage } from '../screens/InsightsView';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -69,6 +70,7 @@ function OfflineScreen() {
   const person = /^\/people\/([A-Za-z0-9_-]{1,64})$/.exec(pathname)?.[1];
   if (person) return <PersonScreen personId={person} />;
   if (pathname === '/people') return <PeopleList />;
+  if (pathname === '/insights') return <InsightsPage />;
   if (pathname === '/' || pathname === '/home') return <Home />;
   return (
     <PageContainer>

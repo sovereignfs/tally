@@ -1,0 +1,114 @@
+/*
+ * Interim charts (DESIGN.md §13, §15.10), until `@sovereignfs/ui` has its own (epic 14, task 14.1): drawn with the design system's tokens alone, so
+ * they follow light and dark, and hidden from a screen reader, which reads the table of the same figures beside each.
+ */
+.chart {
+  display: grid;
+  gap: var(--sv-space-3);
+  margin: 0;
+}
+
+.bars {
+  display: grid;
+  gap: var(--sv-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) 1fr auto;
+  align-items: center;
+  gap: var(--sv-space-2);
+  font-size: var(--sv-font-size-sm);
+}
+
+.track {
+  height: var(--sv-space-3);
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-surface-sunken);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--sv-radius-full);
+  background: var(--sv-color-accent);
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  color: var(--sv-color-text-muted);
+}
+
+.columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: var(--sv-space-1);
+  height: 8rem;
+  padding-bottom: var(--sv-space-1);
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.columnFill {
+  min-height: 1px;
+  border-radius: var(--sv-radius-sm) var(--sv-radius-sm) 0 0;
+  background: var(--sv-color-accent);
+}
+
+.columnLabels {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--sv-space-1);
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+  text-align: center;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--sv-font-size-sm);
+}
+
+.table caption {
+  text-align: start;
+  color: var(--sv-color-text-muted);
+  padding-bottom: var(--sv-space-1);
+}
+
+.table th,
+.table td {
+  padding: var(--sv-space-1) 0;
+  border-bottom: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  text-align: start;
+  font-weight: var(--sv-font-weight-regular);
+}
+
+.table td {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table tfoot th,
+.table tfoot td {
+  font-weight: var(--sv-font-weight-semibold);
+  border-bottom: none;
+}

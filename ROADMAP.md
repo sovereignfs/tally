@@ -141,7 +141,7 @@ Looking back at what was spent. **Done when** every figure matches a hand-worked
 | --- | ------------------------------ | -------------------- | -------- | --------------- | ------ |
 | 60  | [14.1](docs/epics/upstream.md) | Charts (`sovereign`) | P1       | —               | 📋     |
 | 61  | [10.1](docs/epics/insights.md) | The figures          | P1       | 4.2             | ✅     |
-| 62  | [10.2](docs/epics/insights.md) | The screens          | P1       | 10.1, 7.3, 14.1 | 📋     |
+| 62  | [10.2](docs/epics/insights.md) | The screens          | P1       | 10.1, 7.3, 14.1 | ✅     |
 
 ### Milestone I — The suite, and the person's data
 

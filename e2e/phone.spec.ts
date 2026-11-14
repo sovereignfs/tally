@@ -32,10 +32,13 @@ test('the floating Add opens the sheet, Insights is in the avatar menu, and no s
     `/g/${groupId}`,
     `/g/${groupId}?view=balances`,
     `/g/${groupId}?view=activity`,
+    `/g/${groupId}?view=insights`,
     expenseHref,
     `/g/${groupId}/settings`,
     '/people',
     '/activity',
+    '/insights',
+    '/notifications',
     '/settings',
   ]) {
     await page.goto(path);

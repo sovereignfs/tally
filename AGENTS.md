@@ -17,9 +17,9 @@ fully on its own, with every feature, needing no instance**: its own accounts, p
 `sovereignfs/sovereign-plugin-tally`, whose behaviour is the starting point and none of whose code, data or interface is carried over. It is a PWA on
 Next.js, with its own database (sqld, a SQLite file or PostgreSQL), signing people in locally, through a Sovereign core, or both, from one image.
 
-**Being built: Milestones A to G are done** (the foundation; accounts, people, groups and the keys that seal what is written; the arithmetic and the
+**Being built: Milestones A to H are done** (the foundation; accounts, people, groups and the keys that seal what is written; the arithmetic and the
 write path; offline and sync; the screens, with an interim money input until the design system has one; bringing people in, by placeholders, invitations and
-mail; notices, by the bell and email, and reminders). `DESIGN.md` is the
+mail; notices, by the bell and email, and reminders; insights, with interim charts until the design system has them). `DESIGN.md` is the
 design, `ROADMAP.md` the order.
 
 ## Source of truth

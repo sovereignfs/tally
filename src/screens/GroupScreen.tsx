@@ -29,10 +29,10 @@ import styles from './Screens.module.css';
 
 /**
  * **A group** (DESIGN.md §15.5): its header (the dot and name, the members, the reader's balance, Add expense, Settle up and the gear) and its views by
- * `?view=`: Expenses (this file), Balances (7.4), Activity (7.10). Everything is read from the device, so it paints at once and offline; a group the
+ * `?view=`: Expenses (this file), Balances (7.4), Activity (7.10), Insights (§13). Everything is read from the device, so it paints at once and offline; a group the
  * reader is not in, or that the device does not hold, is not found.
  */
-export type GroupViewName = 'expenses' | 'balances' | 'activity';
+export type GroupViewName = 'expenses' | 'balances' | 'activity' | 'insights';
 
 export function GroupScreen({
   groupId,
@@ -90,6 +90,7 @@ export function GroupScreen({
     { label: 'Expenses', value: 'expenses' },
     ...(views?.balances ? [{ label: 'Balances', value: 'balances' }] : []),
     ...(views?.activity ? [{ label: 'Activity', value: 'activity' }] : []),
+    ...(views?.insights ? [{ label: 'Insights', value: 'insights' }] : []),
   ];
   return (
     <PageContainer>
@@ -171,6 +172,8 @@ export function GroupScreen({
         views.balances(view, name)
       ) : current === 'activity' && views?.activity ? (
         views.activity(view, name)
+      ) : current === 'insights' && views?.insights ? (
+        views.insights(view, name)
       ) : (
         <ExpensesView view={view} />
       )}
