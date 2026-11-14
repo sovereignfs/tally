@@ -8,7 +8,11 @@ import { GroupScreen } from './GroupScreen';
 export function GroupPage({ groupId }: { groupId: string }) {
   return (
     <Suspense fallback={null}>
-      <GroupScreen groupId={groupId} views={{ balances: (view) => <BalancesView view={view} /> }} />
+      <GroupScreen
+        groupId={groupId}
+        settleUp
+        views={{ balances: (view) => <BalancesView view={view} /> }}
+      />
     </Suspense>
   );
 }

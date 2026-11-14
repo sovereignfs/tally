@@ -103,7 +103,7 @@ so the browser tests seed placeholders straight into their own SQLite file (`e2e
 would). Tests in Playwright, Chromium and WebKit: a hand-worked case (you pay for you and Sam, Sam pays for Sam and Lee) gives each balance and the
 two pairs, and turning simplify on gives the one payment that settles everyone.
 
-#### 📋 7.5 — Payments and settling up
+#### ✅ 7.5 — Payments and settling up
 
 **Goal:** recording payments, suggested and by hand. **Design:** §9, §15.9. **Depends on:** 7.4.
 
@@ -111,6 +111,14 @@ two pairs, and turning simplify on gives the one payment that settles everyone.
 reader) with a confirmation; payments edited, deleted and restored from their page (7.6).
 
 **Accepts when:** settling a suggested payment zeroes that pair on both devices; a partial payment reduces it by its amount.
+
+**Done as:** `src/screens/AddPayment.tsx`, opened by the same host as the expense sheet (`?add=payment`, filled from `from`, `to`, `amount` and
+`currency`, `p` to edit one; `P` wherever no field has focus): who paid whom, the amount (interim `MoneyInput`), the currency, the group, the date and a
+note sealed on the device. Filled from a suggestion it says "Record that Sam paid you €10.00?" and records it in one press, which is the
+confirmation; opened from the group's Settle up with nothing chosen, it offers the reader's suggestions as buttons. Settle up is now on in the group's
+header. Editing, deleting and restoring a payment from its page is 7.6, through `p`. Tests in Playwright, Chromium and WebKit: a suggested payment
+settled zeroes the pair here and on a second device at its next sync; a part recorded by hand with `P` reduces it by its amount and shows as a row.
+The browser tests' helpers now wait for hydration and for the address before each sheet, which removed the flakes seen while building this.
 
 #### 📋 7.6 — An expense: comments and history
 

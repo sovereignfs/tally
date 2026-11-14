@@ -185,6 +185,10 @@ export async function newGroup(page: Page, name: string) {
   await form.getByLabel('Name').fill(name);
   await form.getByRole('button', { name: 'Make the group' }).click();
   await expect(form).toHaveCount(0);
+  // It opens the new group's page, which is where the next step starts.
+  await expect(page).toHaveURL(/\/g\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+  await hydrated(page);
 }
 
 /** Adds an expense through the sheet, from the current page (DESIGN.md §15.9): amount, description, and optionally a category, saved with Enter. */
@@ -197,6 +201,7 @@ export async function addExpense(
 ) {
   // The last sheet's closing has reached the address before this one opens: the router updates it after a moment.
   await expect(page).not.toHaveURL(/add=expense/);
+  await hydrated(page);
   await page.locator('body').click({ position: { x: 1, y: 1 } });
   await page.keyboard.press('n');
   const form = page.getByRole('form', { name: 'Add expense' });
