@@ -38,7 +38,7 @@ account's waiting mail. Tests against the fake SMTP server (`SmtpSink`): one mes
 at once, a failing server retried with backoff and then failed, a log with no address, and the week's cleanup. **Run locally on a file only:** Docker
 was not running for sqld and PostgreSQL, which CI's legs run.
 
-#### 📋 8.2 — Adding people and placeholders
+#### ✅ 8.2 — Adding people and placeholders
 
 **Goal:** one field to add anyone. **Design:** §6.2, §6.1. **Depends on:** 7.9, 3.1.
 
@@ -49,6 +49,19 @@ operation writes activity and, for an account, the `added_to_group` notice (once
 
 **Accepts when:** a placeholder can be a payer and in a split from the moment it is added; the email lookup's limit refuses with a sentence; another
 member cannot see a placeholder's email.
+
+**Done as:** `src/groups/people.ts`, `member.add` and `person.edit` in `POST /api/ops`. `member.add` takes a person the adder already knows (someone
+they share a group with, or a placeholder they added, checked in the statement), an exact email (the account's person when one has it, else a new
+placeholder with it; looked up at most 30 times an hour per account, `rate_limited` with a sentence beyond) or a name alone; one transaction moves the
+group's `seq` on (open group, active membership), holds the 50-member limit, adds the member (or brings back one who left), and writes
+`member_added`. `already_member` and `too_many_members` are refused with sentences. `person.edit` renames a placeholder, or changes its email, for
+whoever added it or an owner of a group it is in, and moves those groups on so devices pull the new name. **Changed from the epic:** an account added
+by email is given the group's key by any member's device at its next exchange (15.3), not by the adder's in the same operation; the effect is the
+same, and an adder whose device is offline does not hold anyone up. In a group's settings, **Add people** is one field: matching people from the
+reader's other groups, "Add <email>" for an address, and "Add “Sam” as not on Tally yet" for a name. The `added_to_group` notice joins with 9.1, the
+directory with 11.2, Invite with 8.3. Tests on the file database: a placeholder paying and in a split at once, an account by email and refused again,
+a placeholder's email seen by its adder and not by another member, the edit rule, and the lookup's limit; in Playwright, Chromium, WebKit and the phone:
+a name added in settings in the next expense's split.
 
 #### 📋 8.3 — Invitations and claiming
 

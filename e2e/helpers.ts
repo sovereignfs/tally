@@ -185,7 +185,8 @@ export async function newGroup(page: Page, name: string) {
   const form = page.getByRole('form', { name: 'New group' });
   await form.getByLabel('Name').fill(name);
   await form.getByRole('button', { name: 'Make the group' }).click();
-  await expect(form).toHaveCount(0);
+  // It closes once the device has pulled the new group, which on a loaded runner can take longer than a click's wait.
+  await expect(form).toHaveCount(0, { timeout: 15_000 });
   // It opens the new group's page, which is where the next step starts.
   await expect(page).toHaveURL(/\/g\/[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();

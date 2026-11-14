@@ -11,7 +11,10 @@ export class OpError extends Error {
       | 'last_owner'
       | 'too_many_groups'
       | 'unsettled'
-      | 'not_empty',
+      | 'not_empty'
+      | 'already_member'
+      | 'too_many_members'
+      | 'rate_limited',
     readonly sentence?: string,
   ) {
     super(sentence ?? code);

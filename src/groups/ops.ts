@@ -11,6 +11,7 @@ import { type PersonView, viewPerson } from '../people/visibility';
 import { isGroupColor } from './colors';
 import { OpError } from './errors';
 import { closeGroup, deleteGroup, leaveGroup, removeMember, reopenGroup } from './lifecycle';
+import { addPerson, editPlaceholder } from './people';
 
 export { OpError } from './errors';
 
@@ -414,6 +415,8 @@ export const OPERATIONS = {
   'group.reopen': (db: Database, who: Who, input: Record<string, unknown>) =>
     reopenGroup(db, who, input).then(() => readGroup(db, who, string(input.groupId))),
   'group.delete': deleteGroup,
+  'member.add': addPerson,
+  'person.edit': editPlaceholder,
 } as const;
 
 export type OperationName = keyof typeof OPERATIONS;

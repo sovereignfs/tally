@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -20,6 +20,7 @@ import { useGroupKeys, useLocal, useMe, useSync } from '../sync/react';
 import { CurrencyPicker } from '../ui/CurrencyPicker';
 import { readGroupView } from './data';
 import { useGroupNames } from './hooks';
+import { useGroupViews } from './useGroups';
 import styles from './Screens.module.css';
 
 /**
@@ -292,9 +293,15 @@ export function GroupSettings({ groupId }: { groupId: string }) {
                 </li>
               ))}
           </ul>
-          <p className={styles.muted}>
-            Adding people and inviting them arrive with a later release.
-          </p>
+          {closed ? null : (
+            <AddPeople
+              groupId={groupId}
+              inGroup={
+                new Set(view.members.filter((m) => m.leftAt === null).map((m) => m.personId))
+              }
+              add={(body, said) => op({ op: 'member.add', groupId, ...body }, { said })}
+            />
+          )}
         </section>
 
         <section className={styles.stack} aria-label="Notifications">
@@ -417,5 +424,87 @@ export function GroupSettings({ groupId }: { groupId: string }) {
         }}
       />
     </PageContainer>
+  );
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * **Add people** (DESIGN.md §6.2), one field: typing a name offers the people the reader shares a group with (from the device); an exact email adds the
+ * account that has it, or a placeholder with that email; a name alone is added as "not on Tally yet". Each is `member.add`, online.
+ */
+function AddPeople({
+  groupId,
+  inGroup,
+  add,
+}: {
+  groupId: string;
+  inGroup: Set<string>;
+  add: (body: Record<string, unknown>, said: string) => Promise<unknown>;
+}) {
+  const me = useMe();
+  const views = useGroupViews();
+  const [text, setText] = useState('');
+  const typed = text.trim();
+  const known = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const view of views ?? [])
+      if (view.group.id !== groupId && view.me)
+        for (const m of view.members)
+          if (m.personId !== me?.personId && !inGroup.has(m.personId)) out.set(m.personId, m.name);
+    return [...out];
+  }, [views, groupId, inGroup, me?.personId]);
+  const matches = typed
+    ? known.filter(([, name]) => name.toLowerCase().includes(typed.toLowerCase())).slice(0, 5)
+    : [];
+  const isEmail = EMAIL.test(typed);
+  const done = async (body: Record<string, unknown>, said: string) => {
+    if (await add(body, said)) setText('');
+  };
+  return (
+    <div className={styles.stack}>
+      <FormField label="Add people">
+        {(field) => (
+          <Input
+            {...field}
+            value={text}
+            placeholder="A name or an email"
+            maxLength={254}
+            onChange={(event) => setText(event.target.value)}
+          />
+        )}
+      </FormField>
+      {typed ? (
+        <div className={styles.row} role="group" aria-label="Who to add">
+          {matches.map(([personId, name]) => (
+            <Button
+              key={personId}
+              variant="secondary"
+              size="sm"
+              onClick={() => void done({ personId }, `${name} is added.`)}
+            >
+              Add {name}
+            </Button>
+          ))}
+          {isEmail ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void done({ email: typed }, `${typed} is added.`)}
+            >
+              Add {typed}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void done({ name: typed }, `${typed} is added, not on Tally yet.`)}
+            >
+              Add “{typed}” as not on Tally yet
+            </Button>
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
