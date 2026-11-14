@@ -6,7 +6,7 @@ import { tables } from '../db/tables';
 import { enqueueMail } from '../mail/outbox';
 import type { NoticeMailData } from '../mail/templates';
 import { GROUP_KIND_OF, type NoticeKind, type NoticeRow } from './kinds';
-import { noticeMail } from './mail';
+import { coreOn, noticeMail, smtpOn } from './mail';
 import { defaultOn } from './prefs';
 import { noticeHref } from './words';
 
@@ -18,8 +18,9 @@ import { noticeHref } from './words';
  *  - A line of a group's kind (`GROUP_KIND_OF`) is told to every active member by their choice for the group: `all`; `involved` when the line is about
  *    them (they paid or are in the split of the expense, made or received the payment, are on what a comment is on or commented on it before; closing
  *    and reopening involve everyone); `none` never.
- *  - **Email,** where the server sends mail (`mail.ts`) and the person has that kind's email on (`prefs.ts`): a row in the mail outbox in the same
- *    transaction, made of who, a figure and links, never sealed text (§5.3).
+ *  - **Email and core's bell,** by the person's choice for that kind (`prefs.ts`) and what this server can send (`mail.ts`): a row in the outbox in
+ *    the same transaction, made of who, a figure and links, never sealed text (§5.3); core's bell and core's email only for someone linked to it
+ *    (`person.core_sub`), sent by the mail job after the transaction (§14.5).
  *  - The personal kinds: `added_to_group` to the person added, `edit_replaced` to the author of the version an edit replaced, `owner_passed` to a member
  *    made owner by deletion (a `role_changed` line with no actor), and whatever the caller adds in `tell` (`invite_accepted`, to whoever invited).
  */
@@ -94,29 +95,45 @@ async function write(
   mail: MailContext | undefined,
 ) {
   const t = tables(tx);
-  const accounts = await dbAll<{ accountId: string; email: number | boolean | null }>(
+  const accounts = await dbAll<{
+    accountId: string;
+    coreSub: string | null;
+    email: number | boolean | null;
+    bell: number | boolean | null;
+  }>(
     tx,
-    sql`SELECT p.account_id AS "accountId",
-               (SELECT np.enabled FROM ${t.noticePref} np WHERE np.account_id = p.account_id AND np.kind = ${kind} AND np.channel = 'email') AS email
+    sql`SELECT p.account_id AS "accountId", p.core_sub AS "coreSub",
+               (SELECT np.enabled FROM ${t.noticePref} np WHERE np.account_id = p.account_id AND np.kind = ${kind} AND np.channel = 'email') AS email,
+               (SELECT nb.enabled FROM ${t.noticePref} nb WHERE nb.account_id = p.account_id AND nb.kind = ${kind} AND nb.channel = 'core_bell') AS bell
         FROM ${t.member} m JOIN ${t.person} p ON p.id = m.person_id
         WHERE m.group_id = ${line.groupId} AND m.left_at IS NULL AND p.account_id IS NOT NULL
           AND (${line.actorPersonId === null ? sql`1 = 1` : sql`m.person_id <> ${line.actorPersonId}`}) AND ${who}`,
   );
-  for (const { accountId, email } of accounts) {
+  for (const { accountId, coreSub, email, bell } of accounts) {
     await dbAll(
       tx,
       sql`INSERT INTO ${t.notice} (id, account_id, group_id, activity_id, kind, read_at, dismissed_at, created_at)
           VALUES (${crypto.randomUUID()}, ${accountId}, ${line.groupId}, ${line.id}, ${kind}, NULL, NULL, ${line.now})
           RETURNING id`,
     );
-    const emailOn =
-      email === null || email === undefined
-        ? defaultOn(kind, 'email')
-        : email === true || Number(email) === 1;
-    if (mail && emailOn)
+    const chosen = (value: number | boolean | null, channel: 'email' | 'core_bell') =>
+      value === null || value === undefined
+        ? defaultOn(kind, channel)
+        : value === true || Number(value) === 1;
+    if (!mail) continue;
+    const linked = coreOn(mail.channels) && coreSub !== null;
+    // Email: by core's for someone linked to it (Tally's own if core will not), by Tally's own otherwise (§12.3).
+    if (chosen(email, 'email') && (smtpOn(mail.channels) || linked))
       await enqueueMail(
         tx,
         { to: { accountId }, template: 'notice', data: { ...mail.data, kind } },
+        line.now,
+      );
+    // Core's bell, for someone linked to it.
+    if (linked && chosen(bell, 'core_bell'))
+      await enqueueMail(
+        tx,
+        { to: { accountId }, template: 'core_notice', data: { ...mail.data, kind } },
         line.now,
       );
   }
@@ -124,6 +141,7 @@ async function write(
 
 interface MailContext {
   data: Omit<NoticeMailData, 'kind'>;
+  channels: NonNullable<ReturnType<typeof noticeMail>>;
 }
 
 /** What every email of a line carries, when mail is on: who did it (by their name in Tally), its figure, and links. */
@@ -158,6 +176,7 @@ async function mailContext(
       link: `${mail.origin}${path}`,
       settingsLink: `${mail.origin}/settings?section=notifications`,
     },
+    channels: mail,
   };
 }
 

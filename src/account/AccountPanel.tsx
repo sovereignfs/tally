@@ -5,7 +5,7 @@ import { AccountShell } from './AccountShell';
 import { DataSection } from './DataSection';
 import { DeviceSection } from './DeviceSection';
 import { NotificationsSection } from './NotificationsSection';
-import { noticeMail } from '../notices/mail';
+import { noticeMail, smtpOn } from '../notices/mail';
 import { prefsOf } from '../notices/prefs';
 import { NOTICE_KINDS } from '../notices/kinds';
 import { PreferencesSection } from './PreferencesSection';
@@ -32,6 +32,9 @@ export async function AccountPanel({ query }: { query: AccountQuery }) {
     (typeof NOTICE_KINDS)[number],
     boolean
   >;
+  const bell = Object.fromEntries(
+    NOTICE_KINDS.map((kind) => [kind, prefs[kind].core_bell]),
+  ) as Record<(typeof NOTICE_KINDS)[number], boolean>;
   return (
     <AccountShell
       initial={sectionOf(query)}
@@ -58,7 +61,14 @@ export async function AccountPanel({ query }: { query: AccountQuery }) {
         unlocking: <UnlockingSection accountId={accountId} hasPassword={signIns.hasPassword} />,
         preferences: <PreferencesSection />,
         device: <DeviceSection accountId={accountId} />,
-        notifications: <NotificationsSection email={email} mailOn={Boolean(noticeMail())} />,
+        notifications: (
+          <NotificationsSection
+            email={email}
+            bell={bell}
+            mailOn={smtpOn(noticeMail()) || signIns.sovereignAccountId !== null}
+            core={settings?.sovereign ? { linked: signIns.sovereignAccountId !== null } : null}
+          />
+        ),
         data: <DataSection accountId={accountId} email={address} />,
       }}
     />

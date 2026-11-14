@@ -15,7 +15,7 @@ older core, or a scope not granted, Tally does the same work alone and nothing f
 
 ## Tasks
 
-#### 📋 11.1 — Core's bell, email and activity
+#### ✅ 11.1 — Core's bell, email and activity
 
 **Goal:** notices and email through core for people linked to it. **Design:** §12.3, §14.5. **Depends on:** 2.3, 9.2.
 
@@ -27,6 +27,21 @@ needed.
 
 **Accepts when:** against `createFakeCore`, each kind reaches core's bell by its preference; a core without the scope, or an older one, changes nothing
 but that.
+
+**Done as:** `raiseNotices` now writes, beside each notice, a `core_notice` row to the outbox for someone linked to core (`person.core_sub`) whose
+`core_bell` is on for that kind (on by default for every kind), and the email row as before, which for someone linked goes through core. The mail job
+sends both after the transaction, from the same claim (`deliver` in `src/mail/outbox.ts`), through `sv.app` (`src/sovereign/core.ts`, `@sovereignfs/sdk`'s
+client as the app itself, made from the settings alone, as Tusk's): `notifications.send` with a link back, `email.sendToUser` by `sub`, and
+`activity.log`, each keyed by the row's id so that a repeat after a lost answer is one send. A refusal (`NotSupportedError`, or 403 for a scope not
+granted) is not retried: core's email then falls back to Tally's own mail, and core's bell is given up as `not_permitted`; a core that is down is
+retried with the outbox's backoff. A placeholder, and an account not linked, are reached by Tally's mail only. Deleting an account linked to core notes
+it on the person's activity page in core. The job runs where there is Tally's mail or a core. Settings shows, for an account linked to core, a switch
+for Sovereign's bell beside each kind's email. **The `core` floor stays `>=0.57.0`:** the three services first shipped in core v0.80.0, and an older core
+answers "not supported", which changes nothing but that, so Tally works with both. **Left out:** the activity lines for export and import join those
+tasks (12.1, 12.2), which write a `core_activity` row. Tests: on each database, against the SDK's fake core, a notice reaching core's bell by the
+choice for its kind, only for someone linked, sent once; the choice off writing no row while the bell in Tally keeps it; email through core with no
+sealed text, and through Tally's mail where core has no mail; a core too old sending nothing to its bell while Tally's mail still goes; a core that is
+down retried and then sent; the deletion noted on the activity page. The choice and the fallback each seen failing when removed.
 
 #### 📋 11.2 — Core's directory
 

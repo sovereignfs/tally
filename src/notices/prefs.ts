@@ -12,8 +12,8 @@ import { NOTICE_KINDS, type NoticeKind, isNoticeKind } from './kinds';
  */
 export const CHANNELS = ['email', 'core_bell', 'push'] as const;
 export type Channel = (typeof CHANNELS)[number];
-/** The channels a person can choose today. */
-export const OFFERED_CHANNELS: readonly Channel[] = ['email'];
+/** The channels a person can choose today: push is for phase 2. Core's bell only reaches someone linked to a core (§14.5). */
+export const OFFERED_CHANNELS: readonly Channel[] = ['email', 'core_bell'];
 
 const EMAIL_BY_DEFAULT: ReadonlySet<NoticeKind> = new Set([
   'added_to_group',

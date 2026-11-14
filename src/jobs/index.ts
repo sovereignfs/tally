@@ -4,6 +4,7 @@ import { getAuthDatabase, getDatabase } from '../db/boot';
 import { mailJob } from '../mail/outbox';
 import { smtpMailer } from '../mail/smtp';
 import { site } from '../site';
+import { coreSender } from '../sovereign/core';
 import { pruneJob } from '../sync/prune';
 import { JobRunner, realDeps, type JobDefinition, type RunnerDeps } from './runner';
 
@@ -14,14 +15,17 @@ import { JobRunner, realDeps, type JobDefinition, type RunnerDeps } from './runn
  */
 export const jobs: readonly JobDefinition[] = [
   pruneJob(getDatabase),
-  // Mail only when there is SMTP: with none the job has nothing to do, and nothing is ever written to the outbox.
+  // The outbox, where there is a way to send: Tally's own mail, or a core (its bell, email and activity, DESIGN.md §14.5). With neither, nothing is
+  // ever written to it, and the job has nothing to do.
   mailJob(async () => {
-    const mail = getConfig().mail;
-    if (!mail) return undefined;
+    const config = getConfig();
+    const core = coreSender(config.url, config.auth?.sovereign);
+    if (!config.mail && !core) return undefined;
     return {
       database: await getDatabase(),
       authDatabase: await getAuthDatabase(),
-      mailer: smtpMailer(mail),
+      mailer: config.mail ? smtpMailer(config.mail) : undefined,
+      core,
       app: site.name,
       log: (line) => console.info(line),
     };

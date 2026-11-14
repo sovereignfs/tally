@@ -5,6 +5,8 @@ import * as postgresSchema from '../db/schema/postgres';
 import * as sqliteSchema from '../db/schema/sqlite';
 import { tables } from '../db/tables';
 import { recordActivity } from '../activity/record';
+import { enqueueMail } from '../mail/outbox';
+import { coreOn, noticeMail } from '../notices/mail';
 import { personOfAccount } from '../people/persons';
 
 /**
@@ -234,6 +236,22 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
     database,
     sql`DELETE FROM ${t.rateBucket} WHERE "key" LIKE ${`%:${accountId}`} RETURNING "key"`,
   );
+
+  // A line on the person's own activity page in core, for someone linked to it (DESIGN.md §14.5): what Tally did, and nothing of what was in it.
+  if (person?.coreSub && coreOn(noticeMail()))
+    await enqueueMail(
+      database,
+      {
+        to: { core: true },
+        template: 'core_activity',
+        data: {
+          sub: person.coreSub,
+          summary:
+            'You deleted your Tally account. Everything personal of yours there is gone; your name stays on what you shared with others.',
+        },
+      },
+      now,
+    );
 
   // 5. The sign-in store. The address is read first, for the verifications named by it; the account goes last.
   const auth = authDatabase.dialect === 'postgres' ? postgresSchema : sqliteSchema;

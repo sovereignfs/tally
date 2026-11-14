@@ -7,7 +7,7 @@ import { dbAll, dbGet, transaction } from '../db/exec';
 import { tables } from '../db/tables';
 import { createInvitationIn } from '../invites/store';
 import { formatMoney } from '../money/text';
-import { noticeMail } from '../notices/mail';
+import { noticeMail, smtpOn } from '../notices/mail';
 import { groupRows } from './lifecycle';
 import { OpError } from './errors';
 import { dayOf, nextReminderAt, waitWords } from './reminder-time';
@@ -44,7 +44,9 @@ export async function remindMember(
   const groupId = id(input.groupId);
   const memberId = id(input.memberId);
   const t = tables(database);
-  const mail = noticeMail();
+  // A placeholder is reached only by Tally's own mail (§12.3): core's email is for people linked to it.
+  const notice = noticeMail();
+  const mail = smtpOn(notice) ? notice : undefined;
   return transaction(database, async (tx) => {
     // The reader an active member of an open group, and the one reminded an active member of it who is someone else: in the statement.
     const target = await dbGet<{
