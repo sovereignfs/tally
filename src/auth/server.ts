@@ -1,4 +1,6 @@
 import { getConfig } from '../config/current';
+import { putCredential } from '../crypto/credentials';
+import { CORE_TOKEN } from '../sovereign/tokens';
 import { getAuthDatabase, getDatabase } from '../db/boot';
 import { ensurePerson, linkCoreIdentity, updatePersonFromAccount } from '../people/persons';
 import { smtpMailer } from '../mail/smtp';
@@ -44,6 +46,12 @@ export function getAuth(): Promise<Auth | null> {
         },
         onCoreIdentity: async (account, sub) => {
           await linkCoreIdentity(await getDatabase(), account, sub);
+        },
+        // Kept sealed under the instance key, for the directory (§14.4); without a key there is nowhere to keep it, and the directory is off.
+        onCoreToken: async (accountId, _sub, refreshToken) => {
+          const ring = getConfig().encryption;
+          if (ring)
+            await putCredential(await getDatabase(), ring, accountId, CORE_TOKEN, refreshToken);
         },
       });
     })

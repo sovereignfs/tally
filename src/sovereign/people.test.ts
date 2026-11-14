@@ -1,4 +1,8 @@
 import { getTableName, is, sql } from 'drizzle-orm';
+import { putCredential } from '../crypto/credentials';
+import { ringOf } from '../crypto/keys';
+
+const RING = ringOf(Buffer.alloc(32, 3)) as NonNullable<ReturnType<typeof ringOf>>;
 import { setPref } from '../notices/prefs';
 import { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -163,6 +167,7 @@ describe(`deleting a person (${leg})`, () => {
       await createRequest(t.database, who, pk(c), 'Phone');
       await setPrimaryCurrency(t.database, who, 'JPY');
       await setPref(t.database, who, 'expense_added', 'email', true);
+      await putCredential(t.database, RING, who, 'core-refresh-token', `token-of-${c}`);
       await dbRun(
         t.database,
         sql`INSERT INTO ${tables(t.database).rateBucket} ("key", window_start, "count") VALUES (${`sign-in:${who}`}, 1, 1)`,
@@ -248,6 +253,7 @@ describe(`deleting a person (${leg})`, () => {
       [db.appliedMutation, 'account_id'],
       [db.notice, 'account_id'],
       [db.noticePref, 'account_id'],
+      [db.credential, 'account_id'],
     ] as const) {
       expect(await count(table, sql`${sql.raw(column)} = ${t.ada.id}`)).toBe(0);
     }

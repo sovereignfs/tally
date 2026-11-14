@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { searchDirectory } from '../sovereign/directory';
 import type { Database } from '../db/client';
 import { dbAll, dbGet, transaction } from '../db/exec';
 import { tables } from '../db/tables';
@@ -419,6 +420,7 @@ export const OPERATIONS = {
     reopenGroup(db, who, input).then(() => readGroup(db, who, string(input.groupId))),
   'group.delete': deleteGroup,
   'member.add': addPerson,
+  'directory.search': searchDirectory,
   'member.remind': remindMember,
   'member.merge': (db: Database, who: Who, input: Record<string, unknown>) =>
     mergePlaceholder(db, who, input).then(() => readGroup(db, who, string(input.groupId))),

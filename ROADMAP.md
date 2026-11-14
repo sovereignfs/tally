@@ -152,7 +152,7 @@ Part of the suite, and a person can leave. **Done when** it signs in through cor
 | 63  | [2.3](docs/epics/accounts.md)     | Sign-in through core         | P0       | 2.1, 3.1   | ✅     |
 | 64  | [2.4](docs/epics/accounts.md)     | Core's notices               | P0       | 2.3, 2.5   | ✅     |
 | 65  | [11.1](docs/epics/suite.md)       | Core's bell, email, activity | P2       | 2.3, 9.2   | ✅     |
-| 66  | [11.2](docs/epics/suite.md)       | Core's directory             | P2       | 2.3, 8.2   | 📋     |
+| 66  | [11.2](docs/epics/suite.md)       | Core's directory             | P2       | 2.3, 8.2   | ✅     |
 | 67  | [12.1](docs/epics/portability.md) | Export                       | P2       | 5.3, 3.3   | 📋     |
 | 68  | [12.2](docs/epics/portability.md) | Import                       | P2       | 12.1, 8.2  | 📋     |
 

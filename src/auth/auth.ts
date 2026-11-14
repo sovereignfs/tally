@@ -1,6 +1,7 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { betterAuth } from 'better-auth';
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
+import { symmetricDecrypt } from 'better-auth/crypto';
 import { nextCookies } from 'better-auth/next-js';
 import { genericOAuth, twoFactor } from 'better-auth/plugins';
 import { passkey } from '@better-auth/passkey';
@@ -52,6 +53,12 @@ export interface AuthDependencies {
   onCoreIdentity?:
     | ((account: { id: string; name: string; email: string }, sub: string) => Promise<void>)
     | undefined;
+  /**
+   * Called with core's refresh token whenever a sign-in through core hands one over (DESIGN.md §14.4), opened from better-auth's own encryption: the
+   * app keeps it sealed for the directory (`src/sovereign/tokens.ts`). Never logged; a failure here never fails the sign-in.
+   */
+  onCoreToken?:
+    ((accountId: string, sub: string, refreshToken: string) => Promise<void>) | undefined;
 }
 
 /**
@@ -83,11 +90,32 @@ export function createAuth({
   onAccountCreated,
   onAccountUpdated,
   onCoreIdentity,
+  onCoreToken,
 }: AuthDependencies) {
   const schema = database.dialect === 'postgres' ? postgresAuth : sqliteAuth;
   const { local, sovereign } = settings;
   // Mail is for the password's account: an address is verified, and a password reset, only where there is a password.
   const mail = local ? mailer : undefined;
+
+  /** Hands core's refresh token to the app, opened from better-auth's encryption of it (`encryptOAuthTokens`). */
+  const keepCoreToken = async (account: {
+    providerId?: string | null;
+    userId?: string | null;
+    accountId?: string | null;
+    refreshToken?: string | null;
+  }) => {
+    if (!onCoreToken || account.providerId !== SOVEREIGN_PROVIDER_ID) return;
+    const { userId, accountId, refreshToken } = account;
+    if (!userId || !accountId || !refreshToken) return;
+    try {
+      const plain = /^\$ba\$|^[0-9a-f]+$/i.test(refreshToken)
+        ? await symmetricDecrypt({ key: settings.secret, data: refreshToken })
+        : refreshToken;
+      await onCoreToken(userId, accountId, plain);
+    } catch {
+      // Nothing of it is said: the directory waits for the next sign-in.
+    }
+  };
 
   return betterAuth({
     appName: name,
@@ -210,9 +238,16 @@ export function createAuth({
     },
     databaseHooks: {
       account: {
+        // Each sign-in through core writes its tokens to the account row: the refresh token is handed to the app (§14.4).
+        update: {
+          after: async (account) => {
+            await keepCoreToken(account);
+          },
+        },
         create: {
           // A core identity joined to an account, at its first sign-in through core or linked from Settings: its `sub` is kept on the person.
           after: async (account, context) => {
+            await keepCoreToken(account);
             if (account.providerId !== SOVEREIGN_PROVIDER_ID || !onCoreIdentity) return;
             const user = await context?.context.internalAdapter
               .findUserById(account.userId)

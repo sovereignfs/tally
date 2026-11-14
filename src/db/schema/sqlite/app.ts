@@ -467,3 +467,27 @@ export const reminder = sqliteTable(
     index('reminder_created_idx').on(table.createdAt),
   ],
 );
+
+/**
+ * **A secret a person's account holds, kept sealed** (DESIGN.md §14.4): core's refresh token, for finding people in core's directory as the person.
+ * **Only `src/crypto/credentials.ts` writes or reads `sealed`**, envelope-encrypted under the instance key (`TALLY_ENCRYPTION_KEY`) and bound to this
+ * row's `id` and `purpose`; `key_fingerprint` names the key that wraps it, so that rotation can find the rows it has to move. One per account and
+ * purpose. `locked_until` is a lease, so that one process at a time refreshes it (two sending the same token look like theft to core). From Tusk's.
+ */
+export const credential = sqliteTable(
+  'credential',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    purpose: text('purpose').notNull(),
+    sealed: text('sealed').notNull(),
+    keyFingerprint: text('key_fingerprint').notNull(),
+    lockedUntil: epochMs('locked_until'),
+    createdAt: epochMs('created_at').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('credential_account_purpose_idx').on(table.accountId, table.purpose),
+    index('credential_key_idx').on(table.keyFingerprint),
+  ],
+);

@@ -749,11 +749,11 @@ Back-channel logout at `/api/sovereign/backchannel-logout` ends every session of
 }
 ```
 
-- **`directory` and `offline_access`** join the manifest with the task that uses them (11.2); until then it asks for `openid`, `profile` and `email`
-  alone. They are for finding people in core's directory, which the SDK does as the person (`sv.as({ sub })`) with their
+- **`directory` and `offline_access`** are for finding people in core's directory, which the SDK does as the person (`sv.as({ sub })`) with their
   refresh token. That token is a credential, so it is kept only through envelope encryption under `TALLY_ENCRYPTION_KEY` (`src/crypto/`), in the SDK's
-  `tokenStore`. How better-auth's `genericOAuth` hands the refresh token to that store is checked in the task that builds it (11.2, §22); if a core
-  refuses the scopes, or the person did not grant them, adding people works exactly as alone.
+  `tokenStore`. better-auth's `genericOAuth` keeps the refresh token encrypted under its own secret; at each sign-in through core, Tally opens it
+  in the account hooks and seals it under the instance key for that store (`src/sovereign/tokens.ts`). If a core refuses the scopes, or the person did
+  not grant them, adding people works exactly as alone.
 - **The `core` floor** is raised, if needed, to the first release that shipped the directory scope and the app scopes Tally calls, checked against
   core's changelog in that task.
 - `pooling` is not set; `data` is not needed until receipts (§21.1).

@@ -384,6 +384,11 @@ export function GroupSettings({ groupId }: { groupId: string }) {
                 new Set(view.members.filter((m) => m.leftAt === null).map((m) => m.personId))
               }
               add={(body, said) => op({ op: 'member.add', groupId, ...body }, { said })}
+              search={(q) =>
+                op({ op: 'directory.search', groupId, q }, { quiet: true }) as Promise<
+                  { available: boolean; people: DirectoryFound[] } | undefined
+                >
+              }
             />
           )}
         </section>
@@ -534,21 +539,48 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * **Add people** (DESIGN.md §6.2), one field: typing a name offers the people the reader shares a group with (from the device); an exact email adds the
- * account that has it, or a placeholder with that email; a name alone is added as "not on Tally yet". Each is `member.add`, online.
+ * account that has it, or a placeholder with that email; a name alone is added as "not on Tally yet". On an instance with core's directory (§6.2,
+ * §14.4), a name of two characters or more also searches it, after a pause in typing, and someone found is added by their `sub`. Without the
+ * directory nothing of it shows. Each is `member.add`, online.
  */
+interface DirectoryFound {
+  sub: string;
+  name: string;
+  personId: string | null;
+}
+
 function AddPeople({
   groupId,
   inGroup,
   add,
+  search,
 }: {
   groupId: string;
   inGroup: Set<string>;
   add: (body: Record<string, unknown>, said: string) => Promise<unknown>;
+  search: (q: string) => Promise<{ available: boolean; people: DirectoryFound[] } | undefined>;
 }) {
   const me = useMe();
   const views = useGroupViews();
   const [text, setText] = useState('');
   const typed = text.trim();
+  const [found, setFound] = useState<DirectoryFound[]>([]);
+  // Core's directory, from two characters, after a pause in typing; never for an email, which Tally looks up itself.
+  useEffect(() => {
+    setFound([]);
+    if (typed.length < 2 || EMAIL.test(typed)) return;
+    let live = true;
+    const timer = window.setTimeout(() => {
+      void search(typed).then((answer) => {
+        if (live && answer?.available) setFound(answer.people);
+      });
+    }, 300);
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+    // `search` is made anew each render; the typed text is what asks again.
+  }, [typed]);
   const known = useMemo(() => {
     const out = new Map<string, string>();
     for (const view of views ?? [])
@@ -589,6 +621,20 @@ function AddPeople({
               Add {name}
             </Button>
           ))}
+          {found
+            .filter((f) => !(f.personId && inGroup.has(f.personId)) && f.personId !== me?.personId)
+            .filter((f) => !matches.some(([personId]) => personId === f.personId))
+            .map((f) => (
+              <Button
+                key={f.sub}
+                variant="secondary"
+                size="sm"
+                aria-label={`Add ${f.name}, from Sovereign`}
+                onClick={() => void done({ coreSub: f.sub, name: f.name }, `${f.name} is added.`)}
+              >
+                Add {f.name} · Sovereign
+              </Button>
+            ))}
           {isEmail ? (
             <Button
               variant="secondary"

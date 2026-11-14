@@ -39,8 +39,11 @@ export interface SovereignSettings {
 /** The id Sovereign sign-in is known by: it is in the redirect address registered with core, and it is the `provider_id` of the account it makes. */
 export const SOVEREIGN_PROVIDER_ID = 'sovereign';
 
-/** What Tally asks core for. The manifest (`sovereign.manifest.json`) says the same, which a test holds it to. */
-export const SOVEREIGN_SCOPES = ['openid', 'profile', 'email'];
+/**
+ * What Tally asks core for. The manifest (`sovereign.manifest.json`) says the same, which a test holds it to. `offline_access` and `directory` are for
+ * finding people in core's directory as the person (DESIGN.md §14.4): without them, adding people works as alone.
+ */
+export const SOVEREIGN_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'directory'];
 
 export const MIN_SECRET_LENGTH = 32;
 const DEFAULT_PASSWORD_MIN_LENGTH = 10;

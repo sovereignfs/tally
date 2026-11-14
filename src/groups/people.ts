@@ -1,4 +1,6 @@
 import { sql } from 'drizzle-orm';
+import { enqueueMail } from '../mail/outbox';
+import { coreOn, noticeMail } from '../notices/mail';
 import { activeMemberOf } from '../access/membership';
 import { recordActivity } from '../activity/record';
 import type { Database } from '../db/client';
@@ -16,7 +18,9 @@ import { MAX_MEMBERS } from './ops';
  *  - **an exact email**: the account here that has it, whose person is added (its device is given the group's key by any member's at their next exchange,
  *    §5.3), or else a new placeholder with that email. Telling the two apart tells the adder whether an address has an account here, so it is limited
  *    per account and hour, as Tusk's lookup is;
- *  - **a name alone**: a placeholder with no email ("not on Tally yet").
+ *  - **a name alone**: a placeholder with no email ("not on Tally yet");
+ *  - **someone found in core's directory** (`src/sovereign/directory.ts`), by their `sub`: their person here, or a placeholder linked to it, told by
+ *    core's bell.
  *
  * The group's `seq` moves on so that devices pull the new member, and the activity says who was added. Someone already in the group is refused with a
  * sentence; someone who left comes back. A placeholder is renamed, and its email changed, by whoever added it or an owner of a group it is in
@@ -53,7 +57,8 @@ export async function addPerson(
   // Who is being added: a known person, an account by its exact email, or a new placeholder.
   let target:
     | { personId: string; placeholder: boolean; email: string | null }
-    | { create: { name: string; email: string | null } };
+    | { create: { name: string; email: string | null; coreSub?: string } };
+  let fromDirectory: string | undefined;
   if (typeof input.personId === 'string') {
     const known = await dbGet<{
       id: string;
@@ -100,6 +105,22 @@ export async function addPerson(
       );
       target = { create: { name, email } };
     }
+  } else if (typeof input.coreSub === 'string') {
+    // Someone found in core's directory (§6.2): the person here with that `sub` if there is one, or a new one linked to it, with the directory's
+    // name, whom their account claims by `sub` when they first sign in through core (§14.2).
+    const coreSub = input.coreSub;
+    if (!/^[A-Za-z0-9._:@|-]{1,200}$/.test(coreSub)) throw new OpError('invalid');
+    const found = await dbGet<{ id: string; accountId: string | null }>(
+      database,
+      sql`SELECT id, account_id AS "accountId" FROM ${t.person} WHERE core_sub = ${coreSub} AND deleted_at IS NULL`,
+    );
+    if (found) target = { personId: found.id, placeholder: found.accountId === null, email: null };
+    else {
+      const name = cleanName(typeof input.name === 'string' ? input.name : '');
+      if (!name) throw new OpError('invalid', 'A name is needed.');
+      target = { create: { name, email: null, coreSub } };
+    }
+    fromDirectory = coreSub;
   } else if (typeof input.name === 'string') {
     const name = cleanName(input.name);
     if (!name) throw new OpError('invalid', 'A name is needed.');
@@ -134,7 +155,8 @@ export async function addPerson(
       await dbAll(
         tx,
         sql`INSERT INTO ${t.person} (id, account_id, core_sub, name, email, added_by, claimed_at, deleted_at, created_at, updated_at)
-            VALUES (${personId}, NULL, NULL, ${target.create.name}, ${email}, ${who.personId}, NULL, NULL, ${now}, ${now}) RETURNING id`,
+            VALUES (${personId}, NULL, ${target.create.coreSub ?? null}, ${target.create.name}, ${email}, ${who.personId}, NULL, NULL, ${now}, ${now})
+            RETURNING id`,
       );
     } else {
       ({ personId, placeholder, email } = target);
@@ -171,6 +193,33 @@ export async function addPerson(
       details: { memberId, personId },
       now,
     });
+    // Someone from the directory who is not on Tally yet is told by core's bell, which is where they are (§6.2); an account here is told by its own
+    // notice, raised with the line above.
+    const mail = noticeMail();
+    if (placeholder && fromDirectory && mail && coreOn(mail)) {
+      const adder = await dbGet<{ name: string }>(
+        tx,
+        sql`SELECT name FROM ${t.person} WHERE id = ${who.personId}`,
+      );
+      await enqueueMail(
+        tx,
+        {
+          to: { core: true },
+          template: 'core_notice',
+          data: {
+            kind: 'added_to_group',
+            lineKind: 'member_added',
+            actorName: adder?.name ?? 'Someone',
+            amount: null,
+            currency: null,
+            link: `${mail.origin}/`,
+            settingsLink: `${mail.origin}/settings?section=notifications`,
+            sub: fromDirectory,
+          },
+        },
+        now,
+      );
+    }
     return { memberId, personId, placeholder, email };
   });
 }

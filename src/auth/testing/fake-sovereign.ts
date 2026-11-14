@@ -72,6 +72,8 @@ export interface FakeSovereign {
   authorizations: URL[];
   /** The access tokens handed out, so a test can look for them where they must not be. */
   accessTokensIssued: string[];
+  /** The refresh tokens handed out (core gives one with `offline_access`), likewise. */
+  refreshTokensIssued: string[];
   /** The token requests received: the headers and the form, newest last. */
   tokenRequests: { authorization: string | undefined; form: URLSearchParams }[];
   close(): Promise<void>;
@@ -95,6 +97,7 @@ export async function startFakeSovereign(
   const codes = new Map<string, Pending>();
   const accessTokens = new Map<string, FakeUser>();
   const accessTokensIssued: string[] = [];
+  const refreshTokensIssued: string[] = [];
   let next: { user: FakeUser; overrides: LoginOverrides } | undefined;
   let deny = false;
   const authorizations: URL[] = [];
@@ -148,7 +151,7 @@ export async function startFakeSovereign(
             jwks_uri: `${issuer}/jwks`,
             userinfo_endpoint: `${issuer}/oauth2/userinfo`,
             end_session_endpoint: `${issuer}/oauth2/end-session`,
-            scopes_supported: ['openid', 'profile', 'email', 'offline_access'],
+            scopes_supported: ['openid', 'profile', 'email', 'offline_access', 'directory'],
             response_types_supported: ['code'],
             response_modes_supported: ['query'],
             grant_types_supported: ['authorization_code', 'client_credentials', 'refresh_token'],
@@ -244,12 +247,15 @@ export async function startFakeSovereign(
             ...(pending.nonce && !overrides.omitNonce ? { nonce: pending.nonce } : {}),
             ...overrides.claims,
           });
+          const refreshToken = randomBytes(24).toString('base64url');
+          refreshTokensIssued.push(refreshToken);
           return json(200, {
             access_token: accessToken,
             token_type: 'Bearer',
             expires_in: 3600,
-            scope: 'openid profile email',
+            scope: 'openid profile email offline_access directory',
             id_token: idToken,
+            refresh_token: refreshToken,
           });
         }
 
@@ -284,6 +290,7 @@ export async function startFakeSovereign(
     denyNext: () => void (deny = true),
     authorizations,
     accessTokensIssued,
+    refreshTokensIssued,
     tokenRequests,
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };

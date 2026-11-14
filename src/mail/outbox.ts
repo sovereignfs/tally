@@ -265,7 +265,8 @@ async function deliver(
     return bySmtp((to) => render(deps.app, to, row.template, data));
   }
   if (row.template === 'core_notice') {
-    const sub = await subOf();
+    const named = (data as NoticeMailData | null)?.sub;
+    const sub = typeof named === 'string' ? named : await subOf();
     const core = deps.core;
     if (!sub || !core) return { kind: 'give_up', why: 'no_channel' };
     const message = render(deps.app, '', 'notice', data);

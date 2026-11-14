@@ -1,3 +1,4 @@
+import { SOVEREIGN_SCOPES } from './auth/config';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -58,8 +59,15 @@ describe('sovereign.manifest.json', () => {
   });
 
   // The scopes and the redirect are held to the sign-in's own constants by task 2.3, and the notices' addresses to their routes by task 2.4.
-  it('asks core for the scopes the design uses: who they are, and the name and address to greet them', () => {
-    expect(manifest.signIn.scopes).toEqual(['openid', 'profile', 'email']);
+  it('asks core for the scopes the design uses: who they are, the name and address to greet them, and its directory as them', () => {
+    expect(manifest.signIn.scopes).toEqual(SOVEREIGN_SCOPES);
+    expect(manifest.signIn.scopes).toEqual([
+      'openid',
+      'profile',
+      'email',
+      'offline_access',
+      'directory',
+    ]);
     expect(manifest.signIn.redirect).toEqual(['/api/auth/callback/sovereign']);
   });
 

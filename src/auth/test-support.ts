@@ -38,6 +38,7 @@ export async function makeAuth(
   onAccountUpdated?: AuthDependencies['onAccountUpdated'],
   invitationValid?: AuthDependencies['invitationValid'],
   onCoreIdentity?: AuthDependencies['onCoreIdentity'],
+  onCoreToken?: AuthDependencies['onCoreToken'],
 ): Promise<TestAuth> {
   const { database } = await freshDatabase('auth');
   await runMigrations(database);
@@ -51,6 +52,7 @@ export async function makeAuth(
     onAccountCreated,
     onAccountUpdated,
     onCoreIdentity,
+    onCoreToken,
   });
   return {
     auth,

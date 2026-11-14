@@ -43,7 +43,7 @@ choice for its kind, only for someone linked, sent once; the choice off writing 
 sealed text, and through Tally's mail where core has no mail; a core too old sending nothing to its bell while Tally's mail still goes; a core that is
 down retried and then sent; the deletion noted on the activity page. The choice and the fallback each seen failing when removed.
 
-#### 📋 11.2 — Core's directory
+#### ✅ 11.2 — Core's directory
 
 **Goal:** finding people on the instance, and their placeholders claimed when they arrive. **Design:** §6.2, §14.2, §14.4. **Depends on:** 2.3, 8.2.
 
@@ -56,3 +56,20 @@ alone.
 
 **Accepts when:** against the fake core, a directory person added to a group signs in for the first time and finds the group with their history; the
 refresh token is never in a log, an error or the browser; the field works unchanged without the scope.
+
+**Done as:** the manifest and the sign-in ask for `offline_access` and `directory` as well. better-auth keeps core's refresh token encrypted under its
+own secret; at every sign-in through core its account hooks hand it to Tally opened (`onCoreToken` in `src/auth/auth.ts`), which seals it under the
+instance key in `credential` (migration `0015_add_credentials`, Tusk's table with a unique account and purpose and a lease column;
+`src/crypto/credentials.ts` is the one place that writes or reads it). So the SDK could be fed as it stands, and nothing was raised in `sovereign`.
+`coreTokenStore` (`src/sovereign/tokens.ts`) is the SDK's `TokenStore` by `sub` over it: a write stores only in place of the token it replaces (a
+conditional update on the sealed text read), and a lease in the database lets one process at a time refresh. `directory.search` (`src/sovereign/directory.ts`,
+an operation over `/api/ops`, limited per account and minute) searches as the person, from two characters, and says who already has a person here; the
+Add people field asks it after a pause in typing and offers whom it finds ("Add Sam · Sovereign"). Choosing one is `member.add` with their `sub`: their
+person here, or a placeholder with their `core_sub` and the directory's name, told by core's bell (a `core_notice` row naming the `sub`). Signing in
+through core claims it by `sub` (2.3). The token is deleted with the account. Anywhere without core, the instance key or the person's link, and whenever
+core says no, the search answers "not available" and the field is as before. Tests: on each database, against the SDK's fake core, the token sealed,
+swapped only in place of its predecessor, one lease at a time; a search as the person rotating the token with no reuse, herself left out; someone found
+added as a placeholder with their `sub` and told by core's bell, added twice refused, and their first sign-in claiming the group with their share; no
+scope, no source and no link answering "not available"; at sign-in, the token handed over opened while better-auth keeps its copy encrypted, at every
+sign-in; the token deleted with the account. **Left out:** a browser test of the directory, since the browser tests' fake core (Tusk's) signs in but
+serves no directory; the field without it is covered by the existing browser tests.

@@ -11,9 +11,15 @@
     "redirect": ["/api/auth/callback/sovereign"],
     "backChannel": "/api/sovereign/backchannel-logout",
     "accountDeleted": "/api/sovereign/account-deleted",
-    "scopes": ["openid", "profile", "email"]
+    "scopes": ["openid", "profile", "email", "offline_access", "directory"]
   },
   "database": true,
-  "generate": ["TALLY_AUTH_SECRET", { "name": "TALLY_ENCRYPTION_KEY", "bytes": 32 }],
+  "generate": [
+    "TALLY_AUTH_SECRET",
+    {
+      "name": "TALLY_ENCRYPTION_KEY",
+      "bytes": 32
+    }
+  ],
   "core": ">=0.57.0 <1.0.0"
 }

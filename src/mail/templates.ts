@@ -30,6 +30,8 @@ export interface NoticeMailData {
   currency: string | null;
   link: string;
   settingsLink: string;
+  /** For core's bell to someone not on Tally yet, found in core's directory: whom it is for (§6.2). */
+  sub?: string;
 }
 
 /** The sentence of a notice's email, or nothing for a kind this version does not know. */

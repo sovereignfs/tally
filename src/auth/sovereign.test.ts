@@ -687,6 +687,7 @@ describe(`a core identity, handed to the app (${leg})`, () => {
   let fake: FakeSovereign;
   let t: TestAuth;
   const joined: { account: string; sub: string }[] = [];
+  const tokens: { account: string; sub: string; token: string }[] = [];
   beforeAll(async () => {
     fake = await startFakeSovereign();
     t = await makeAuth(
@@ -706,6 +707,9 @@ describe(`a core identity, handed to the app (${leg})`, () => {
       async (account, sub) => {
         joined.push({ account: account.id, sub });
       },
+      async (account, sub, token) => {
+        tokens.push({ account, sub, token });
+      },
     );
   });
   afterAll(async () => {
@@ -721,6 +725,24 @@ describe(`a core identity, handed to the app (${leg})`, () => {
     expect(joined.filter((j) => j.sub === who.sub)).toEqual([
       { account: got(made).id, sub: who.sub },
     ]);
+  });
+
+  it('hands over core’s refresh token at each sign-in, opened, while better-auth keeps its own copy encrypted', async () => {
+    const who = person();
+    await login(t, fake, visitor(t), who);
+    const issued = fake.refreshTokensIssued[fake.refreshTokensIssued.length - 1];
+    const handed = tokens.filter((x) => x.sub === who.sub);
+    expect(handed.map((x) => x.token)).toEqual([issued]);
+    const stored = (await accounts(t)).find((a) => a.account_id === who.sub);
+    expect(stored).toBeDefined();
+    const raw = await dbAll<{ refresh_token: string | null }>(
+      t.database,
+      sql`SELECT refresh_token FROM ${tables(t).account} WHERE account_id = ${who.sub}`,
+    );
+    expect(raw[0]?.refresh_token).not.toBe(issued);
+    // The next sign-in brings a new one, handed over too.
+    await login(t, fake, visitor(t), who);
+    expect(tokens.filter((x) => x.sub === who.sub)).toHaveLength(2);
   });
 
   it('is handed over when a signed-in local account links core', async () => {

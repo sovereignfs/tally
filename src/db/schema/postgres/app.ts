@@ -408,3 +408,22 @@ export const reminder = app.table(
     index('reminder_created_idx').on(table.createdAt),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const credential = app.table(
+  'credential',
+  {
+    id: id('id'),
+    accountId: ref('account_id').notNull(),
+    purpose: text('purpose').notNull(),
+    sealed: text('sealed').notNull(),
+    keyFingerprint: text('key_fingerprint').notNull(),
+    lockedUntil: epochMs('locked_until'),
+    createdAt: epochMs('created_at').notNull(),
+    updatedAt: epochMs('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('credential_account_purpose_idx').on(table.accountId, table.purpose),
+    index('credential_key_idx').on(table.keyFingerprint),
+  ],
+);
