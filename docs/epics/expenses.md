@@ -16,7 +16,7 @@ expense, a payment or a comment.
 
 ## Tasks
 
-#### 📋 5.1 — Actions and validators
+#### ✅ 5.1 — Actions and validators
 
 **Goal:** every recorded action is a pure function, and one module says what is valid. **Design:** §11.2, §11.5. **Depends on:** 4.2, 3.2.
 
@@ -28,6 +28,15 @@ of refusals with a reason the screen can say.
 
 **Accepts when:** each action builds the mutation the design's example shows; each refusal in §11.5 has a test; the module imports nothing from the
 browser or the server.
+
+**Done as:** `src/actions/`: `types.ts` (the mutation and its changes; each carries `op`, `put`, `delete` or `restore`, which `DESIGN.md` §11.2's
+example now shows), `categories.ts` (§8.4's list), `index.ts` (the actions, `expenseRow` from the add sheet's intent through `split.ts`, and `settleUp`
+as one payment mutation per group) and `validate.ts`: the plain-text checks the device runs before sealing (`checkExpenseText`, `checkPaymentText`,
+`checkCommentText`, counted by code point), `parseMutation` for the shape of what arrived, and `checkExpense`, `checkPayment`, `checkComment` against a
+`GroupContext` (member order, active members, the key epoch), with the members of the version being edited allowed though they have left. One
+`Checked` result with a `Refusal` code; `refusalSentence` says it with the names the device opened ("Lisbon was closed."). A test reads the module's
+imports and finds only `src/money` and `src/cipher`. Left for 5.2: the account's membership, the group's state and rows of another group, which need
+the database.
 
 #### 📋 5.2 — Applying a mutation
 

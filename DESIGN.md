@@ -524,6 +524,7 @@ changes, with an id.
   "changes": [
     {
       "table": "expense",
+      "op": "put",
       "id": "…",
       "baseVersion": 3,
       "row": {
@@ -545,7 +546,8 @@ changes, with an id.
   the server records what it has applied.
 - **What syncs offline:** creating, editing, deleting and restoring expenses and payments; creating and deleting comments. Everything else is online
   (§11.6).
-- **An expense or payment travels whole,** with `baseVersion`, the version the device edited (§11.4). A comment is only ever made or deleted.
+- **An expense or payment travels whole,** with `baseVersion`, the version the device edited (§11.4; `null` for a new one), and `op` is `put`,
+  `delete` or `restore`. A comment is only ever made or deleted (`put`, `delete`).
 - **The validators are one module,** run by the browser before it queues and by the server before it applies. The browser checks the sealed
   text before sealing it; the server checks its form and length (§5.3). A group not yet unlocked on the device queues the action with its text, and it
   is sealed and sent when the key arrives.
