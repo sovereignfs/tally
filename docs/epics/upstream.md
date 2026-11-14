@@ -63,7 +63,7 @@ system, and the currency table they read moves with them or is passed in.
 
 **Accepts when:** a `@sovereignfs/ui` release carrying them is published.
 
-#### 📋 14.5 — `AUTH_SIGNUP` by invitation
+#### ✅ 14.5 — `AUTH_SIGNUP` by invitation
 
 **Goal:** `invite` as a value of the shared `AUTH_SIGNUP`. **Design:** §6.4. **Depends on:** nothing here.
 
@@ -71,6 +71,11 @@ system, and the currency table they read moves with them or is passed in.
 `@sovereignfs/config`'s declaration of the shared name to accept it, so that every app can offer it.
 
 **Accepts when:** the contract change is merged and a `@sovereignfs/config` release accepting it is published.
+
+**Done as:** merged in `sovereign` as `3eb5aee` ("docs(contracts): AUTH_SIGNUP=invite, for an app that issues invitations"): `contracts/env.md` lists
+`invite` (the first account, and anyone holding a valid invitation the app issued) and says what an app that issues none must do. **No
+`@sovereignfs/config` release was needed:** the contract has an app declare the setting as its own choice among the modes it supports, which Tally
+already does in `src/auth/config.ts`; 8.3 adds `invite` there.
 
 #### 📋 14.6 — Tally's port in the guide
 

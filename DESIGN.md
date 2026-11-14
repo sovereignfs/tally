@@ -352,8 +352,7 @@ An invitation lets someone take a placeholder's place, with every expense, share
 | `closed`               | The first account only; an invitation can be accepted only by signing in |
 
 **Signing in through core always gets an account,** whatever the value: the instance has already decided who may be there (`app-manifest.md` §4).
-The value `invite` is not yet in `contracts/env.md`, which allows `open` and `closed`; adding it there for every app is a task in `sovereign` that comes
-first (§22).
+The value `invite` is in `contracts/env.md`, for every app that issues invitations of its own.
 
 ## 7. Groups
 
@@ -1144,8 +1143,6 @@ a key an operator replaced can be caught (§5.3).
 
 ## 22. Not settled in the platform
 
-- **`AUTH_SIGNUP`'s `invite`** (§6.4) is not in `contracts/env.md`; it is added there first, for every app, as a task in `sovereign` (14.5). Until it
-  lands, Tally does not ship it.
 - **The directory as a person** (§14.4) needs the SDK's `tokenStore` fed from better-auth's `genericOAuth`; whether that works without a change to the
   SDK is checked in 11.2, and a gap is raised in `sovereign`.
 - The kit of research 0004 is not published, so the infrastructure is copied from Tusk (§5.1); when the kit lands, Tally adopts it in a task of its own.
