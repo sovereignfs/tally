@@ -36,7 +36,7 @@ in the auth store and the person in the app store: better-auth's after-create ho
 test of a new account's person failed with the hook taken out. **Left out:** the only read that returns a person today is one's own; group reads
 (3.2, 8.2) bring the owner relation and their own tests; Settings keeping name and email in step is 2.6.
 
-#### 📋 3.2 — Groups, members and access
+#### ✅ 3.2 — Groups, members and access
 
 **Goal:** a person makes a group, is its owner, and nobody else can reach it. **Design:** §5.2, §5.3, §7.1, §7.2. **Depends on:** 3.1, 4.1, 15.2.
 
@@ -47,6 +47,17 @@ statement; `src/access/routes.ts` and the second-person test; limits (§7.3).
 
 **Accepts when:** a second person gets not found from every operation on the first person's group; a group never has no owner; the limits refuse with a
 sentence.
+
+**Done as:** `grp`, `member` (with `notify`, `all` by default, §12.2) and `key_wrap` (migration `0003_add_groups`), the last made here because
+creating a group stores its first wrap; 15.3 brings the granting. `src/access/membership.ts`: `activeMemberOf` and `ownerOf`, the one SQL fragment each
+statement carries. `src/groups/ops.ts` and `POST /api/ops` (`src/groups/api.ts`, in `routes.ts`): `group.read`, `group.create` (an id the browser made,
+a sealed name of epoch 1, a colour, a currency, the first key wrapped to the creator; an id that is another group's refused), `group.rename`,
+`group.recolour`, `group.currency`, `group.simplify`, `member.role` (the last owner held in the same statement) and `member.notify`; each owner's
+operation carries the role and that the group is open, and moves `seq` on. A group's state answers with each member through `viewPerson`, an owner
+seeing the emails of those still in it. Colours are Tusk's swatches and any `#rrggbb` (`src/groups/colors.ts`), since the design system has no accent
+palette; §7.1 is corrected. Run here: 394 tests on sqld and a file, 393 on PostgreSQL; boot-check on each; planted faults (the member condition in
+place of the owner's, the last-owner condition removed) each failed their test. **Left out:** the screens (7.1, 7.9); adding people (8.2), which
+checks `MAX_MEMBERS`; leaving, removing, closing and deleting (3.3).
 
 #### 📋 3.3 — Leaving, removing, closing, deleting
 

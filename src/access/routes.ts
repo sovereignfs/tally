@@ -48,6 +48,8 @@ export const ROUTES: RouteRule[] = [
       },
     },
   },
+  // The online operations of groups (DESIGN.md §11.6): each carries the account's membership, or an owner's role, in its own statements.
+  { route: '/api/ops', methods: { POST: account } },
   // The account's key and its wraps, and a new device's request to be given it (DESIGN.md §5.3): each the account's own, by its session.
   { route: '/api/keys', methods: { GET: account, POST: account, PUT: account } },
   { route: '/api/keys/wraps', methods: { POST: account } },

@@ -359,7 +359,7 @@ first (§22).
 
 ### 7.1 A group
 
-A name (sealed, §5.3), a colour (one of the design system's accent tokens, shown as the group's dot), a **default currency** (pre-filling its expenses; from the
+A name (sealed, §5.3), a colour (any `#rrggbb` a person picks, with `ColorPicker`'s suggestions, shown as the group's dot and never as a background or text, as Tusk's lists; the design system has no accent palette), a **default currency** (pre-filling its expenses; from the
 creator's primary currency), **simplify debts** (off by default, §10.3), and whether it is closed. Its members, expenses, payments, comments and
 activity belong to it and carry its `group_id`.
 

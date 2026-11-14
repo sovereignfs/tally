@@ -1,5 +1,5 @@
-import { index, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { counter, epochMs, id, ref } from './columns';
+import { index, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { bool, counter, epochMs, id, ref } from './columns';
 
 /**
  * What the app holds, in the app store (DESIGN.md §19.3). An account is better-auth's, in the other store, so `account_id` is a reference by
@@ -95,4 +95,64 @@ export const keyRequest = sqliteTable(
     expiresAt: epochMs('expires_at').notNull(),
   },
   (table) => [index('key_request_account_idx').on(table.accountId)],
+);
+
+/**
+ * **A group** (DESIGN.md §7.1): its name is sealed (`sealed`, `{name}` under the group's key, §5.3); its colour, default currency and whether debts
+ * are simplified are plain. `key_epoch` is the epoch of its key that new text is sealed under; `seq` orders every change of the group (§11.3).
+ */
+export const grp = sqliteTable('grp', {
+  id: id('id'),
+  sealed: text('sealed').notNull(),
+  color: text('color').notNull(),
+  defaultCurrency: text('default_currency').notNull(),
+  simplifyDebts: bool('simplify_debts').notNull(),
+  closedAt: epochMs('closed_at'),
+  keyEpoch: counter('key_epoch').notNull(),
+  seq: counter('seq').notNull(),
+  createdBy: ref('created_by').notNull(),
+  createdAt: epochMs('created_at').notNull(),
+  updatedAt: epochMs('updated_at').notNull(),
+});
+
+/**
+ * **A person's place in a group** (DESIGN.md §7.2): a role (`owner`, `member`, or none for a placeholder), what they hear of it (`notify`, §12.2),
+ * and when they joined and left. A membership row is never deleted once something points at it; leaving sets `left_at`.
+ */
+export const member = sqliteTable(
+  'member',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    personId: ref('person_id').notNull(),
+    role: text('role'),
+    notify: text('notify').notNull(),
+    addedBy: ref('added_by'),
+    joinedAt: epochMs('joined_at').notNull(),
+    leftAt: epochMs('left_at'),
+    seq: counter('seq').notNull(),
+  },
+  (table) => [
+    index('member_person_idx').on(table.personId),
+    index('member_group_idx').on(table.groupId),
+  ],
+);
+
+/**
+ * **A group's key, wrapped to a member's account key** (DESIGN.md §5.3): one row per epoch and account. The server stores it and can open none.
+ */
+export const keyWrap = sqliteTable(
+  'key_wrap',
+  {
+    groupId: ref('group_id').notNull(),
+    epoch: counter('epoch').notNull(),
+    accountId: ref('account_id').notNull(),
+    wrapped: text('wrapped').notNull(),
+    wrappedBy: ref('wrapped_by').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.groupId, table.epoch, table.accountId] }),
+    index('key_wrap_account_idx').on(table.accountId),
+  ],
 );
