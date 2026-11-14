@@ -1,0 +1,74 @@
+/* What the screens share (DESIGN.md §15): a group's dot, balances in words, tiles and rows. Tokens only. */
+.dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--sv-radius-full);
+}
+
+.owed {
+  color: var(--sv-color-success-text);
+}
+
+.owe {
+  color: var(--sv-color-error-text);
+}
+
+.settled,
+.muted {
+  color: var(--sv-color-text-muted);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sv-space-3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-2);
+  padding: var(--sv-space-4);
+  color: inherit;
+  text-decoration: none;
+  border: var(--sv-border-width-hairline) solid var(--sv-color-border);
+  border-radius: var(--sv-radius-md);
+  background: var(--sv-color-surface-raised);
+}
+
+.tile:hover {
+  border-color: var(--sv-color-text-muted);
+}
+
+.closed {
+  opacity: 0.6;
+}
+
+.tileHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sv-space-2);
+  font-weight: var(--sv-font-weight-semibold);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sv-space-3);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sv-space-2);
+}
+
+.small {
+  font-size: var(--sv-font-size-sm);
+}

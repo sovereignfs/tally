@@ -16,7 +16,7 @@ built there first (epic 14), never here.
 
 ## Tasks
 
-#### 📋 7.1 — The shell's places and the groups list
+#### ✅ 7.1 — The shell's places and the groups list
 
 **Goal:** the sidebar's Groups section and `/groups`. **Design:** §15.2, §15.3. **Depends on:** 6.2, 3.2.
 
@@ -25,6 +25,17 @@ _New group_ (a dialog: name, colour, currency; online, §11.6); `/groups` with t
 and Insights wired to their routes with empty states until their tasks.
 
 **Accepts when:** a new group appears in the sidebar at once and on a second device at its next pull; offline, New group says it needs a connection.
+
+**Done as:** `src/screens/` begins: `data.ts` (`readGroupView`, `readGroupViews`, `myBalances`, pure reads of the store with balances from
+`src/balances/`), `hooks.ts` (`useOpened`, `useGroupNames`: sealed text opened on the device, tried again on every store change), `useGroups.ts`,
+`Balance.tsx` (a balance in words, "you owe €63.00", in the currency's own decimals; the design system's `BalanceChip` assumes cents, a gap worth
+raising in `sovereign`) and the group's dot, `NewGroupDialog.tsx` (name, colour with `ColorPicker`, currency with the interim `CurrencyPicker`;
+`GroupKeys.prepareGroup` and `group.create`, online only) and `GroupsList.tsx` (`/groups`, tiles with `AvatarStack`). The sidebar lists the groups
+from the store, open by latest activity with the reader's balance in short, closed dimmed after, and opens New group. `SyncProvider` now wraps the
+whole shell, carries the reader (`useMe`, with the primary currency) and offers `useLocal`; `GroupKeys` gains `openText` and `sealText`. Fixed on the
+way: a group's key arriving in a sync now tells the screens, so names opened on a second device. The other places keep their empty states until their
+tasks. A group's page is 7.3, so New group goes to `/groups` for now. Tests in Playwright, Chromium and WebKit: a new group in the sidebar and on
+`/groups` at once and on a second device at its next sync, and offline, "Making a group needs a connection."
 
 #### 📋 7.2 — Adding an expense
 

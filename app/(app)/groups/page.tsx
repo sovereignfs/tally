@@ -1,18 +1,15 @@
 import type { Metadata } from 'next';
-import { EmptyState, PageContainer, PageHeader } from '@sovereignfs/ui';
+import { PageContainer, PageHeader } from '@sovereignfs/ui';
+import { GroupsList } from '@/src/screens/GroupsList';
 
 export const metadata: Metadata = { title: 'Groups' };
 
-/** A place the shell has, with nothing in it yet: task 7.1 builds it. */
+/** Every group the person is in (DESIGN.md §15.3), read from the device. */
 export default function Page() {
   return (
     <PageContainer>
       <PageHeader title="Groups" description="Every group you are in, open and closed." />
-      <EmptyState
-        icon="layers"
-        heading="Nothing to show yet"
-        description="This arrives with a later task of the roadmap."
-      />
+      <GroupsList />
     </PageContainer>
   );
 }

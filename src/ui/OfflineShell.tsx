@@ -34,14 +34,14 @@ export function OfflineShell() {
       </main>
     );
   return (
-    <AppShell
-      name={site.name}
-      account={<AccountMenu accountId={who.id} name={who.name} email={who.email} />}
-    >
-      <SyncProvider accountId={who.id} personId={who.personId}>
+    <SyncProvider accountId={who.id} personId={who.personId}>
+      <AppShell
+        name={site.name}
+        account={<AccountMenu accountId={who.id} name={who.name} email={who.email} />}
+      >
         <DeviceGroups />
-      </SyncProvider>
-    </AppShell>
+      </AppShell>
+    </SyncProvider>
   );
 }
 

@@ -275,3 +275,14 @@
 .more {
   padding: var(--sv-space-2) var(--sv-space-4) var(--sv-space-4);
 }
+
+/* A group in the sidebar: its balance at the end of the row, a closed one dimmed (DESIGN.md §15.2). */
+.trailing {
+  margin-left: auto;
+  font-size: var(--sv-font-size-xs);
+  color: var(--sv-color-text-muted);
+}
+
+.dim {
+  opacity: 0.6;
+}

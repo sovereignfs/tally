@@ -214,6 +214,30 @@ export class GroupKeys {
     return sealRow(await openRow(sealed, key, from), target.key, target.epoch, to);
   }
 
+  /** A row's sealed text, opened here, or undefined while its epoch's key is not on this device. */
+  async openText(
+    sealed: string,
+    binding: RowBinding,
+  ): Promise<Record<string, string | null> | undefined> {
+    const key = await this.keyFor(binding.group, epochOf(sealed));
+    if (!key) return undefined;
+    try {
+      return await openRow(sealed, key, binding);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Seals a row's text under the newest epoch of its group this device holds (at most `epoch`), or undefined while it holds none. */
+  async sealText(
+    content: Record<string, string | null>,
+    binding: RowBinding,
+    epoch: number,
+  ): Promise<string | undefined> {
+    const newest = await this.newestKey(binding.group, epoch);
+    return newest ? sealRow(content, newest.key, newest.epoch, binding) : undefined;
+  }
+
   /** Seals a group's new name under its current epoch's key, for a rename. */
   async sealName(groupId: string, epoch: number, name: string): Promise<string> {
     const key = await this.keyFor(groupId, epoch);

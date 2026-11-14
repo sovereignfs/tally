@@ -39,7 +39,9 @@ export type Transport = (
 
 /** The key exchange of a sync's answer (`GroupKeys.exchange`): wraps it opened, and the grants it made, which the next request carries. */
 export interface KeyExchange {
-  exchange(keys: SyncResponse['keys']): Promise<{ grants: NonNullable<SyncRequest['grants']> }>;
+  exchange(
+    keys: SyncResponse['keys'],
+  ): Promise<{ grants: NonNullable<SyncRequest['grants']>; opened?: number }>;
 }
 
 export interface SyncClientOptions {
@@ -147,7 +149,10 @@ export class SyncClient {
       );
       if (this.options.keys) {
         try {
-          this.grants = (await this.options.keys.exchange(reply.answer.keys)).grants;
+          const exchanged = await this.options.keys.exchange(reply.answer.keys);
+          this.grants = exchanged.grants;
+          // A group's key arrived: what was "…" can now be opened, so whoever reads is told.
+          if ((exchanged.opened ?? 0) > 0) this.announce('pull');
         } catch {
           // The key exchange is tried again at the next sync; nothing recorded depends on it.
         }

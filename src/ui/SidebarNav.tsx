@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { Icon } from '@sovereignfs/ui';
+import { GroupDot } from '../screens/Balance';
+import { myBalances } from '../screens/data';
+import { useGroupNames } from '../screens/hooks';
+import { NewGroupDialog } from '../screens/NewGroupDialog';
+import { useGroupViews } from '../screens/useGroups';
+import { toMinor } from '../money/amount';
+import { formatMoney } from '../money/text';
 import { SIDEBAR_PLACES, placeById, placeOf } from './nav';
 import styles from './AppShell.module.css';
 
@@ -11,11 +19,13 @@ import styles from './AppShell.module.css';
  * with _New group_ last. Full, or a rail of icons (the header's toggle, `data-sidebar` on the page): a rail shows each row by its icon, with its name
  * as the label and the tooltip. Its rows are the app's own, as Tusk's are, since the design system's `NavList` has no rail.
  *
- * Add expense and New group are drawn disabled until the add sheet (7.2) and the new-group dialog (7.1) exist, and the groups themselves arrive with the
- * device's store (7.1), so that the frame is the one the design describes.
+ * The groups are read from the device's store: open ones by latest activity, with the dot and the person's balance in it, closed ones after, dimmed.
+ * Add expense is drawn disabled until the add sheet (7.2) exists.
  */
 export function SidebarNav() {
-  const current = placeOf(usePathname())?.id;
+  const pathname = usePathname();
+  const current = placeOf(pathname)?.id;
+  const [making, setMaking] = useState(false);
   return (
     <nav className={styles.sidebar} aria-label="Main">
       <button
@@ -57,17 +67,56 @@ export function SidebarNav() {
           <Icon name="layers" aria-hidden className={styles.headingIcon} />
           <span className={styles.label}>Groups</span>
         </Link>
+        <SidebarGroups />
         <button
           type="button"
           className={`${styles.row} ${styles.quiet}`}
-          disabled
           aria-label="New group"
-          title="Making a group arrives with the groups list"
+          title="New group"
+          onClick={() => setMaking(true)}
         >
           <Icon name="folder-plus" aria-hidden />
           <span className={styles.label}>New group</span>
         </button>
+        <NewGroupDialog open={making} onClose={() => setMaking(false)} />
       </section>
     </nav>
+  );
+}
+
+/** The sidebar's groups (DESIGN.md §15.2): each a link with its dot, its name and the person's balance in it, in short. */
+function SidebarGroups() {
+  const views = useGroupViews();
+  const names = useGroupNames(views?.map((v) => v.group) ?? []);
+  const pathname = usePathname();
+  if (!views || views.length === 0) return null;
+  return (
+    <ul className={styles.list}>
+      {views.map((view) => {
+        const [first] = myBalances(view, view.me?.id);
+        const name = names[view.group.id] ?? '…';
+        const short =
+          view.group.closedAt !== null
+            ? 'closed'
+            : first
+              ? `${first.amount > 0 ? 'owed' : 'owe'} ${formatMoney(toMinor(Math.abs(first.amount)), first.currency)}`
+              : '';
+        return (
+          <li key={view.group.id} className={view.group.closedAt !== null ? styles.dim : undefined}>
+            <Link
+              href={`/g/${view.group.id}`}
+              className={styles.row}
+              aria-current={pathname.startsWith(`/g/${view.group.id}`) ? 'page' : undefined}
+              aria-label={short ? `${name}, ${short}` : name}
+              title={name}
+            >
+              <GroupDot color={view.group.color} />
+              <span className={styles.label}>{name}</span>
+              {short ? <span className={`${styles.label} ${styles.trailing}`}>{short}</span> : null}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
