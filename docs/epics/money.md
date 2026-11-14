@@ -75,7 +75,7 @@ have left, so the pieces add up to every share and to every payment of the expen
 suggestions settles everyone (and pairwise, every pair); simplified needs fewer payments than there are people with a balance; nothing depends on the
 order of rows, payers or shares.
 
-#### 📋 4.4 — Across groups
+#### ✅ 4.4 — Across groups
 
 **Goal:** what lies between two people, and a person's whole position. **Design:** §10.4. **Depends on:** 4.3.
 
@@ -84,3 +84,9 @@ suggested payments between them; for the reader alone, owed and owing per curren
 "settle up with a person" would record (§9).
 
 **Accepts when:** a person shared across two groups in two currencies shows both figures, never one; the settle-up list zeroes every pair when applied.
+
+**Done as:** `src/balances/across.ts`: `betweenTwo` (per group and currency, the pairwise debt between the two members, or the suggested payments
+between them where simplify is on), `totalBetween`, `position` (owed and owing per currency, summed apart since one group cannot pay off another,
+the primary currency first, then the largest) and `settleWithPerson` (one payment per group and currency). A person is matched across groups by the
+caller, by person. Tests on a hand-worked pair of groups in two currencies: the figures per group and currency, the simplified case, the position
+and the settle-up list zeroing every pair when recorded.
