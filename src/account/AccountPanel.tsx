@@ -69,7 +69,23 @@ export async function AccountPanel({ query }: { query: AccountQuery }) {
             core={settings?.sovereign ? { linked: signIns.sovereignAccountId !== null } : null}
           />
         ),
-        data: <DataSection accountId={accountId} email={address} />,
+        data: (
+          <DataSection
+            accountId={accountId}
+            email={address}
+            profile={{
+              name: person.name,
+              email: address,
+              primaryCurrency,
+              notifications: Object.fromEntries(
+                NOTICE_KINDS.map((kind) => [
+                  kind,
+                  { email: prefs[kind].email, coreBell: prefs[kind].core_bell },
+                ]),
+              ),
+            }}
+          />
+        ),
       }}
     />
   );

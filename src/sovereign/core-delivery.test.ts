@@ -17,6 +17,7 @@ import { setPref } from '../notices/prefs';
 import { personOfAccount } from '../people/persons';
 import { applyMutation } from '../sync/apply';
 import { coreSender } from './core';
+import { noteOnCore } from './activity';
 import { deletePerson } from './people';
 
 /**
@@ -282,5 +283,24 @@ describe(`core's bell, email and activity (${leg})`, () => {
     expect(fake.activityRecorded).toHaveLength(1);
     expect(fake.activityRecorded[0]).toMatchObject({ to: 'core-grace' });
     expect(fake.activityRecorded[0]?.summary).toMatch(/^You deleted your Tally account/);
+  });
+
+  it('notes an export on the activity page in core for someone linked, and for nobody else', async () => {
+    setNoticeMailForTests({ origin: ORIGIN, smtp: false, core: true });
+    await clear();
+    const adaPerson = (await personOfAccount(t.database, t.ada.id))?.id ?? '';
+    await noteOnCore(t.database, adaPerson, 'You downloaded your data from Tally.');
+    expect(await dbAll(t.database, sql`SELECT id FROM ${db().mailOutbox}`)).toEqual([]);
+    await dbRun(
+      t.database,
+      sql`UPDATE ${db().person} SET core_sub = 'core-ada' WHERE id = ${adaPerson}`,
+    );
+    await noteOnCore(t.database, adaPerson, 'You downloaded your data from Tally.');
+    const { fake, core } = coreWith(ALL);
+    fake.addPerson({ sub: 'core-ada', name: 'Ada' });
+    await send(core);
+    expect(fake.activityRecorded.map((a) => [a.to, a.summary])).toEqual([
+      ['core-ada', 'You downloaded your data from Tally.'],
+    ]);
   });
 });

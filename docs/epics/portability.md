@@ -14,7 +14,7 @@ A person can take their groups with them, and bring them into a Tally as new gro
 
 ## Tasks
 
-#### 📋 12.1 — Export
+#### ✅ 12.1 — Export
 
 **Goal:** one file of what is the person's to take. **Design:** §17. **Depends on:** 5.3, 3.3.
 
@@ -25,6 +25,20 @@ when hosted (11.1).
 
 **Accepts when:** the file holds every table the design lists for a group, and no email but the person's own; a test fails when a new table is neither
 exported nor named as left out.
+
+**Done as:** `src/portability/format.ts`, pure: `buildExport` makes the file (`format: "tally"`, `version: 1`, `exportedAt`) from the device's rows
+and the opened text: the profile (name, the person's own address, primary currency, the choices of what they are told), and every group whole, its
+members by name with their role and kind, its expenses with payers, shares and comments, and its payments with theirs, ids kept, in order of date,
+time and id. What is there, not what was deleted. The device holds no one else's address, so none can be in it. `EXPORTED_TABLES` and
+`LEFT_OUT_TABLES` say what of every table the file carries or why it is left out (keys and secrets, versions and activity, markers and counters).
+`src/portability/collect.ts` makes it in the browser from the device's store, opening each sealed text with the group's key here, and counts what
+cannot be opened yet, which the file leaves out rather than guessing and the screen says. Settings, Data, Export downloads it after a sync, saying
+the file is plain text, and notes it on the person's activity page in core when hosted (`/api/account/exported`, `src/sovereign/activity.ts`, which
+import will use too). Tests: the file from a fixture of two groups, text opened, the deleted out, comments under what they are on with their author,
+what could not be opened counted, no address but the person's own, the same twice but for its time; every table of the store decided, seen failing
+for one left undecided; the note on core for someone linked and nobody else; in Playwright, Chromium and WebKit, the download from Settings holding
+the group by name and its expense's words, and no other address. Tusk's export format was the model; nothing of it is copied, since Tally's
+groups are not Tusk's boards.
 
 #### 📋 12.2 — Import
 

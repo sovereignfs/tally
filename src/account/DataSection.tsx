@@ -1,8 +1,23 @@
+import type { ExportFile } from '../portability/format';
 import { DeleteAccountSection } from './DeleteAccountSection';
+import { ExportSection } from './ExportSection';
 
 /**
- * Settings, Data (DESIGN.md §16): what ends. Deleting the account is here; export and import join with tasks 12.1 and 12.2.
+ * Settings, Data (DESIGN.md §16, §17): taking your data with you, and deleting the account. Import joins with task 12.2.
  */
-export function DataSection({ accountId, email }: { accountId: string; email: string }) {
-  return <DeleteAccountSection accountId={accountId} email={email} />;
+export function DataSection({
+  accountId,
+  email,
+  profile,
+}: {
+  accountId: string;
+  email: string;
+  profile: ExportFile['profile'];
+}) {
+  return (
+    <>
+      <ExportSection profile={profile} />
+      <DeleteAccountSection accountId={accountId} email={email} />
+    </>
+  );
 }

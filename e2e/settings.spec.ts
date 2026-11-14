@@ -1,7 +1,9 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import {
   EMAIL,
   PASSWORD,
+  addExpense,
   holdsKey,
   hydrated,
   newGroup,
@@ -211,4 +213,46 @@ test('Notifications says mail is not set up here, so the bell is the only way, a
   ).toBeDisabled();
   await section.getByRole('link', { name: groupName }).click();
   await expect(page).toHaveURL(/\/g\/[0-9a-f-]{36}\/settings$/);
+});
+
+test('Data downloads one plain file of the profile and every group, with what was written opened, and no one else’s address', async ({
+  page,
+}) => {
+  await signedIn(page);
+  await hydrated(page);
+  const groupName = `Taken ${Date.now()}`;
+  await newGroup(page, groupName);
+  const groupId = /\/g\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? '';
+  await addExpense(page, '42.00', 'Ferry to Cacilhas');
+
+  await openSettings(page, 'data');
+  const section = page.getByRole('region', { name: 'Data' });
+  await expect(section).toContainText('The file is plain text');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    section.getByRole('button', { name: 'Download your data' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^tally-export-\d{4}-\d{2}-\d{2}\.json$/);
+  const text = await readFile((await download.path()) ?? '', 'utf8');
+  const file = JSON.parse(text) as {
+    format: string;
+    version: number;
+    profile: { email: string };
+    groups: {
+      id: string;
+      name: string | null;
+      expenses: { description: string | null; amount: number }[];
+    }[];
+  };
+  expect(file).toMatchObject({ format: 'tally', version: 1, profile: { email: EMAIL } });
+  const group = file.groups.find((g) => g.id === groupId);
+  expect(group?.name).toBe(groupName);
+  expect(group?.expenses).toEqual([
+    expect.objectContaining({ description: 'Ferry to Cacilhas', amount: 4200 }),
+  ]);
+  // The person's own address and nobody else's.
+  expect(new Set(text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}/g))).toEqual(
+    new Set([EMAIL]),
+  );
+  await expect(section.getByRole('status')).toHaveText('Downloaded.');
 });
