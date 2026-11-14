@@ -88,6 +88,7 @@ export const grp = app.table('grp', {
   closedAt: epochMs('closed_at'),
   keyEpoch: counter('key_epoch').notNull(),
   keyRotationDue: bool('key_rotation_due').notNull().default(false),
+  prunedThrough: counter('pruned_through').notNull().default(0),
   seq: counter('seq').notNull(),
   createdBy: ref('created_by').notNull(),
   createdAt: epochMs('created_at').notNull(),
@@ -287,4 +288,21 @@ export const activity = app.table(
     createdAt: epochMs('created_at').notNull(),
   },
   (table) => [index('activity_group_time_idx').on(table.groupId, table.createdAt)],
+);
+
+/** See `schema/sqlite/app.ts`. */
+export const tombstone = app.table(
+  'tombstone',
+  {
+    rowTable: text('row_table').notNull(),
+    id: ref('id').notNull(),
+    groupId: ref('group_id').notNull(),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.rowTable, table.id] }),
+    index('tombstone_group_seq_idx').on(table.groupId, table.seq),
+    index('tombstone_created_idx').on(table.createdAt),
+  ],
 );

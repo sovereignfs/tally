@@ -64,6 +64,13 @@
       "when": 1794644476733,
       "tag": "0008_add_key_rotation",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794648059236,
+      "tag": "0009_add_tombstones",
+      "breakpoints": true
     }
   ]
 }

@@ -311,6 +311,7 @@ describe(`a group's lifecycle (${leg})`, () => {
       member: db().member,
       payment: db().payment,
       revision: db().revision,
+      tombstone: db().tombstone,
     };
     for (const name of GROUP_TABLES) expect(await count(byName[name]), name).toBe(0);
   });

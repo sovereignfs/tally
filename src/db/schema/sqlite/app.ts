@@ -100,7 +100,8 @@ export const keyRequest = sqliteTable(
 /**
  * **A group** (DESIGN.md §7.1): its name is sealed (`sealed`, `{name}` under the group's key, §5.3); its colour, default currency and whether debts
  * are simplified are plain. `key_epoch` is the epoch of its key that new text is sealed under, and `key_rotation_due` says someone left since it was made, so the next
- * remaining member's device makes a new one (§5.3); `seq` orders every change of the group (§11.3).
+ * remaining member's device makes a new one (§5.3); `seq` orders every change of the group (§11.3), and `pruned_through` is the `seq` up to which its
+ * tombstones have been forgotten (§11.8).
  */
 export const grp = sqliteTable('grp', {
   id: id('id'),
@@ -111,6 +112,7 @@ export const grp = sqliteTable('grp', {
   closedAt: epochMs('closed_at'),
   keyEpoch: counter('key_epoch').notNull(),
   keyRotationDue: bool('key_rotation_due').notNull().default(false),
+  prunedThrough: counter('pruned_through').notNull().default(0),
   seq: counter('seq').notNull(),
   createdBy: ref('created_by').notNull(),
   createdAt: epochMs('created_at').notNull(),
@@ -323,4 +325,25 @@ export const activity = sqliteTable(
     createdAt: epochMs('created_at').notNull(),
   },
   (table) => [index('activity_group_time_idx').on(table.groupId, table.createdAt)],
+);
+
+/**
+ * **A row removed for good** (DESIGN.md §11.8): its table, id and group, and the group's `seq` of its removal, so that a device learns of it at its next
+ * pull and deletes its copy. Kept 90 days; a device whose cursor is older gets a fresh snapshot of the group (`grp.pruned_through`). `row_table` is the
+ * design's `table`, a word SQL keeps for itself.
+ */
+export const tombstone = sqliteTable(
+  'tombstone',
+  {
+    rowTable: text('row_table').notNull(),
+    id: ref('id').notNull(),
+    groupId: ref('group_id').notNull(),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.rowTable, table.id] }),
+    index('tombstone_group_seq_idx').on(table.groupId, table.seq),
+    index('tombstone_created_idx').on(table.createdAt),
+  ],
 );

@@ -279,6 +279,12 @@ export async function settle(
 
   for (const changes of answer.groups) {
     const groupId = changes.group.id;
+    // The group afresh (§11.8): the device's copy of it is replaced, not added to. What it still has to send is laid over again below.
+    if (changes.reset)
+      for (const table of ['member', 'expense', 'payment', 'comment'] as const) {
+        const index = tx.objectStore(table).index('byGroup');
+        for (const key of await index.getAllKeys(groupId)) await tx.objectStore(table).delete(key);
+      }
     await tx.objectStore('grp').put(changes.group);
     for (const member of changes.members)
       await tx.objectStore('member').put({ ...member, groupId });

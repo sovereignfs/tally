@@ -1,4 +1,6 @@
 import type { Config } from '../config';
+import { getDatabase } from '../db/boot';
+import { pruneJob } from '../sync/prune';
 import { JobRunner, realDeps, type JobDefinition, type RunnerDeps } from './runner';
 
 /**
@@ -6,7 +8,7 @@ import { JobRunner, realDeps, type JobDefinition, type RunnerDeps } from './runn
  * (8.1) and keeping notices to 90 days (9.1).
  * Each claims its work with a conditional update (`claim.ts`), so any process may run it at any time and one does the work.
  */
-export const jobs: readonly JobDefinition[] = [];
+export const jobs: readonly JobDefinition[] = [pruneJob(getDatabase)];
 
 /**
  * Starts the jobs, or says why not. `TALLY_WORKER=off` runs nothing in this process: when several share a database, one runs the jobs and the

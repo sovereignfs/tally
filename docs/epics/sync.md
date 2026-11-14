@@ -110,7 +110,7 @@ shell lists the groups the device holds, and when they land it chooses the scree
 and with the network off, `/groups` opens from the device with the group it holds and the account menu, and `/settings` says it needs a connection;
 the identity is read back only when it is exactly one.
 
-#### 📋 6.5 — Keeping the history small
+#### ✅ 6.5 — Keeping the history small
 
 **Goal:** tombstones and records that do not grow for ever. **Design:** §11.8. **Depends on:** 6.1, 1.6.
 
@@ -118,3 +118,15 @@ the identity is read back only when it is exactly one.
 older than what was pruned answered with a fresh snapshot of that group, the device sending its outbox first.
 
 **Accepts when:** a device away for longer than the window resyncs to the same rows as a fresh device; the job is safe from two processes.
+
+**Done as:** migration `0009_add_tombstones` (`tombstone`, with `row_table` for the design's `table`, a word SQL keeps; `grp.pruned_through`),
+`src/sync/prune.ts` (`prune`, and `pruneJob`, `prune-history`, every six hours and at start, the app's first job in `src/jobs/index.ts`), shaped
+after Tusk's `purge.ts` but per group: comments deleted 30 days ago go, each leaving a tombstone stamped with a new `seq` of its group, in one
+transaction that moves the `seq` first; tombstones and applied mutations go after 90 days, a group's forgotten tombstones raising its
+`pruned_through`. The pull sends tombstones past the cursor (not to a device starting from nothing) and answers a cursor older than `pruned_through`
+with the group afresh, `reset`, **whole and in one answer**, so that a device never stands on a cursor that would send it back to the start; the
+device's `settle` replaces its copy of the group and lays what it still has to send over it. **Changed from the design:** a device away too long gets
+a reset of that group in the same answer as its outbox, rather than being told to send its outbox first and then ask again; the order within one
+request is the same. `tombstone` goes with a group that goes (`People.deletePerson`). Tests on a file, sqld and PostgreSQL: a comment removed and a
+device learning of it from the tombstone, the job twice and two at once removing nothing twice, and a device away past 90 days ending with the same
+rows as a fresh one (seen failing without the reset).

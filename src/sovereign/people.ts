@@ -43,6 +43,7 @@ export const GROUP_TABLES = [
   'member',
   'payment',
   'revision',
+  'tombstone',
 ] as const;
 
 /**
@@ -72,6 +73,7 @@ function groupTable(database: Database, name: (typeof GROUP_TABLES)[number]) {
     member: t.member,
     payment: t.payment,
     revision: t.revision,
+    tombstone: t.tombstone,
   }[name];
 }
 /** The tables that hold something of an account, cleared by step 2 or 3. */

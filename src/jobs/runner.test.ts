@@ -329,7 +329,7 @@ describe('starting the jobs', () => {
     await runner?.stop();
   });
 
-  it('has no job of its own yet: each task that has one adds it, and its test says what it is', () => {
-    expect(jobs.map((job) => job.name)).toEqual([]);
+  it('has the jobs the tasks added, each with its own test: pruning the history (src/sync/prune.test.ts)', () => {
+    expect(jobs.map((job) => job.name)).toEqual(['prune-history']);
   });
 });

@@ -120,6 +120,8 @@ export interface GroupChanges {
   tombstones: { table: string; id: string }[];
   cursor: number;
   more: boolean;
+  /** The device's cursor was older than what the server still remembers (§11.8): this is the whole group afresh, and the device replaces its copy. */
+  reset: boolean;
 }
 
 export interface SyncResponse {

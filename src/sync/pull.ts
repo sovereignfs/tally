@@ -44,7 +44,7 @@ export async function pull(
   const groups = await dbAll<Record<string, unknown>>(
     database,
     sql`SELECT g.id, g.sealed, g.color, g.default_currency AS "defaultCurrency", g.simplify_debts AS "simplifyDebts", g.closed_at AS "closedAt",
-               g.key_epoch AS "keyEpoch", g.seq
+               g.key_epoch AS "keyEpoch", g.seq, g.pruned_through AS "prunedThrough"
         FROM ${t.grp} g WHERE ${activeMemberOf(database, sql`g.id`, accountId)} ORDER BY g.id`,
   );
   let left = budget;
@@ -61,24 +61,34 @@ export async function pull(
       seq: num(raw.seq),
     };
     let cursor = cursors[group.id] ?? 0;
-    // A cursor past the group's own counter is not one this group gave: start it again from its snapshot.
-    if (cursor > group.seq) cursor = 0;
+    // A cursor past the group's own counter is not one this group gave, and one older than the tombstones the server still keeps may have missed a
+    // removal: either starts the group again from its snapshot, **whole and in one answer**, so that a device never stands on a cursor that would send
+    // it back to the start again.
+    const reset = cursor > group.seq || (cursor > 0 && cursor < num(raw.prunedThrough));
+    if (reset) cursor = 0;
     const empty = { group, members: [], expenses: [], payments: [], comments: [], tombstones: [] };
     if (cursor === group.seq) {
-      out.push({ ...empty, cursor, more: false });
+      out.push({ ...empty, cursor, more: false, reset });
       continue;
     }
-    if (left <= 0) {
-      out.push({ ...empty, cursor, more: true });
+    if (left <= 0 && !reset) {
+      out.push({ ...empty, cursor, more: true, reset: false });
       continue;
     }
-    const changes = await groupSince(database, accountId, group, cursor, left);
+    const changes = await groupSince(
+      database,
+      accountId,
+      group,
+      cursor,
+      reset ? Number.MAX_SAFE_INTEGER - 1 : left,
+    );
     left -=
       changes.members.length +
       changes.expenses.length +
       changes.payments.length +
-      changes.comments.length;
-    out.push(changes);
+      changes.comments.length +
+      changes.tombstones.length;
+    out.push({ ...changes, reset });
   }
   return { groups: out, ids: new Set(out.map((g) => g.group.id)) };
 }
@@ -89,7 +99,7 @@ async function groupSince(
   group: SyncedGroup,
   cursor: number,
   budget: number,
-): Promise<GroupChanges> {
+): Promise<Omit<GroupChanges, 'reset'>> {
   const t = tables(database);
   const allowed = activeMemberOf(database, group.id, accountId);
   const since = (table: unknown, columns: SQL) =>
@@ -99,7 +109,7 @@ async function groupSince(
           ORDER BY x.seq, x.id LIMIT ${budget + 1}`,
     );
 
-  const [members, expenses, payments, comments] = await Promise.all([
+  const [members, expenses, payments, comments, tombstones] = await Promise.all([
     dbAll<Record<string, unknown>>(
       database,
       sql`SELECT x.id, x.person_id AS "personId", p.name, x.role, p.account_id AS "accountId", p.deleted_at AS "deletedAt",
@@ -124,11 +134,17 @@ async function groupSince(
       sql`x.id, x.subject, x.subject_id AS "subjectId", x.author_person_id AS "authorPersonId", x.sealed, x.deleted_at AS "deletedAt",
           x.created_at AS "createdAt", x.seq`,
     ),
+    dbAll<Record<string, unknown>>(
+      database,
+      sql`SELECT x.row_table AS "table", x.id, x.seq FROM ${t.tombstone} x
+          WHERE x.group_id = ${group.id} AND x.seq > ${cursor} AND ${allowed}
+          ORDER BY x.seq, x.id LIMIT ${budget + 1}`,
+    ),
   ]);
 
   // Where this page ends: all of it, or the last `seq` of the first `budget` rows, every row of that `seq` included. Each list was read to `budget + 1`,
   // so every row at or before that `seq` is among them.
-  const seqs = [...members, ...expenses, ...payments, ...comments]
+  const seqs = [...members, ...expenses, ...payments, ...comments, ...tombstones]
     .map((r) => num(r.seq))
     .sort((a, b) => a - b);
   const more = seqs.length > budget;
@@ -220,7 +236,11 @@ async function groupSince(
       createdAt: num(r.createdAt),
       seq: num(r.seq),
     })),
-    tombstones: [],
+    // A device starting from nothing has nothing to delete.
+    tombstones:
+      cursor === 0
+        ? []
+        : within(tombstones).map((r) => ({ table: String(r.table), id: String(r.id) })),
     cursor: through,
     more,
   };
