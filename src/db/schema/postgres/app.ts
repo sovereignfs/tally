@@ -252,3 +252,23 @@ export const appliedMutation = app.table(
     index('applied_mutation_created_idx').on(table.createdAt),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const comment = app.table(
+  'comment',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    subject: text('subject').notNull(),
+    subjectId: ref('subject_id').notNull(),
+    authorPersonId: ref('author_person_id').notNull(),
+    sealed: text('sealed').notNull(),
+    deletedAt: epochMs('deleted_at'),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    index('comment_subject_idx').on(table.subjectId),
+    index('comment_group_seq_idx').on(table.groupId, table.seq),
+  ],
+);

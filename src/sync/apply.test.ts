@@ -3,8 +3,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   type ExpenseRow,
   type PaymentRow,
+  addComment,
   addExpense,
   addPayment,
+  deleteComment,
   deleteExpense,
   editExpense,
   editPayment,
@@ -470,5 +472,157 @@ describe(`applying a mutation (${leg})`, () => {
         }),
       ),
     ).toEqual({ status: 'refused', refusal: { code: 'same_person' } });
+  });
+  describe('comments', () => {
+    const comment = (
+      subjectId: string,
+      commentId = crypto.randomUUID(),
+      subject: 'expense' | 'payment' = 'expense',
+    ) => addComment({ mutationId: mid(), groupId, commentId, subject, subjectId, sealed });
+
+    it('are made by a member on the group’s expense, and deleted by their author alone', async () => {
+      const expenseId = crypto.randomUUID();
+      await applyMutation(
+        t.database,
+        ada,
+        addExpense({ mutationId: mid(), groupId, expenseId, row: dinner() }),
+      );
+      const commentId = crypto.randomUUID();
+      expect((await applyMutation(t.database, ada, comment(expenseId, commentId))).status).toBe(
+        'applied',
+      );
+      const db = tables(t.database);
+      expect(
+        await dbGet(
+          t.database,
+          sql`SELECT author_person_id AS author, deleted_at AS "deletedAt" FROM ${db.comment} WHERE id = ${commentId}`,
+        ),
+      ).toEqual({
+        author: ada.personId,
+        deletedAt: null,
+      });
+      // Grace joins, and may comment, but may not delete Ada's.
+      const graceMember = crypto.randomUUID();
+      await member(graceMember, groupId, grace.personId, 10);
+      try {
+        expect(
+          await applyMutation(
+            t.database,
+            grace,
+            deleteComment({ mutationId: mid(), groupId, commentId }),
+          ),
+        ).toEqual({
+          status: 'refused',
+          refusal: { code: 'not_author' },
+        });
+        expect((await applyMutation(t.database, grace, comment(expenseId))).status).toBe('applied');
+      } finally {
+        await dbRun(
+          t.database,
+          sql`UPDATE ${db.member} SET left_at = 11 WHERE id = ${graceMember}`,
+        );
+      }
+      expect(
+        (
+          await applyMutation(
+            t.database,
+            ada,
+            deleteComment({ mutationId: mid(), groupId, commentId }),
+          )
+        ).status,
+      ).toBe('applied');
+      expect(
+        await dbGet(
+          t.database,
+          sql`SELECT deleted_at AS "deletedAt" FROM ${db.comment} WHERE id = ${commentId}`,
+        ),
+      ).not.toEqual({
+        deletedAt: null,
+      });
+      // Deleted twice: nothing more.
+      expect(
+        (
+          await applyMutation(
+            t.database,
+            ada,
+            deleteComment({ mutationId: mid(), groupId, commentId }),
+          )
+        ).status,
+      ).toBe('applied');
+    });
+
+    it('written against an expense deleted meanwhile, is kept, and is there when it is restored', async () => {
+      const expenseId = crypto.randomUUID();
+      await applyMutation(
+        t.database,
+        ada,
+        addExpense({ mutationId: mid(), groupId, expenseId, row: dinner() }),
+      );
+      await applyMutation(
+        t.database,
+        ada,
+        deleteExpense({ mutationId: mid(), groupId, current: { id: expenseId, version: 1 } }),
+      );
+      const commentId = crypto.randomUUID();
+      expect((await applyMutation(t.database, ada, comment(expenseId, commentId))).status).toBe(
+        'applied',
+      );
+      await applyMutation(
+        t.database,
+        ada,
+        restoreExpense({ mutationId: mid(), groupId, current: { id: expenseId, version: 2 } }),
+      );
+      const db = tables(t.database);
+      expect(await count(db.comment, sql`subject_id = ${expenseId} AND deleted_at IS NULL`)).toBe(
+        1,
+      );
+    });
+
+    it('on something not the group’s, or in a group the account has left, are refused', async () => {
+      const graces = await applyMutation(
+        t.database,
+        grace,
+        addComment({
+          mutationId: mid(),
+          groupId,
+          commentId: crypto.randomUUID(),
+          subject: 'expense',
+          subjectId: crypto.randomUUID(),
+          sealed,
+        }),
+      );
+      // Grace was in the group and left (above): she is told so, and nothing is written.
+      expect(graces).toEqual({ status: 'refused', refusal: { code: 'not_in_group' } });
+      // From Grace's own group, on Ada's expense.
+      const adas = await dbGet<{ id: string }>(
+        t.database,
+        sql`SELECT id FROM ${tables(t.database).expense} WHERE group_id = ${groupId} LIMIT 1`,
+      );
+      expect(
+        await applyMutation(
+          t.database,
+          grace,
+          addComment({
+            mutationId: mid(),
+            groupId: gracesGroup,
+            commentId: crypto.randomUUID(),
+            subject: 'expense',
+            subjectId: adas?.id ?? '',
+            sealed,
+          }),
+        ),
+      ).toEqual({ status: 'refused', refusal: { code: 'not_found' } });
+      // An expense id named as a payment is not there either.
+      expect(
+        await applyMutation(
+          t.database,
+          ada,
+          comment(adas?.id ?? '', crypto.randomUUID(), 'payment'),
+        ),
+      ).toEqual({
+        status: 'refused',
+        refusal: { code: 'not_found' },
+      });
+    });
   });
 });

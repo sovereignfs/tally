@@ -4,6 +4,7 @@ import type { Change, CommentChange, ExpenseRow, Mutation, PaymentRow } from '..
 import {
   type GroupContext,
   type Refusal,
+  checkComment,
   checkExpense,
   checkPayment,
   parseMutation,
@@ -407,15 +408,50 @@ async function previousSnapshot(tx: Database, subjectId: string, version: number
   return row?.snapshot ?? '{}';
 }
 
-/** Comments join with their own task (5.3); until then a mutation carrying one is not one this version knows. */
+/**
+ * A comment (§8.6): made by the account's person on an expense or payment of the same group (a deleted one too: it shows if that is restored, §11.4),
+ * or deleted by its author alone. Deleting what is deleted changes nothing. The group being open was carried by the `seq` statement.
+ */
 async function applyComment(
-  _tx: Database,
-  _actor: Actor,
-  _groupId: string,
-  _change: CommentChange,
-  _context: GroupContext,
-  _seq: number,
-  _now: number,
+  tx: Database,
+  actor: Actor,
+  groupId: string,
+  change: CommentChange,
+  context: GroupContext,
+  seq: number,
+  now: number,
 ): Promise<void> {
-  refuse('malformed');
+  const t = tables(tx);
+  const stored = await dbGet<{ groupId: string; author: string; deletedAt: number | null }>(
+    tx,
+    sql`SELECT group_id AS "groupId", author_person_id AS author, deleted_at AS "deletedAt" FROM ${t.comment} WHERE id = ${change.id}`,
+  );
+  if (stored && stored.groupId !== groupId) refuse('not_found');
+
+  if (change.op === 'delete') {
+    if (!stored) return refuse('not_found');
+    if (stored.author !== actor.personId) return refuse('not_author');
+    if (stored.deletedAt !== null) return;
+    await dbAll(
+      tx,
+      sql`UPDATE ${t.comment} SET deleted_at = ${now}, seq = ${seq}
+          WHERE id = ${change.id} AND group_id = ${groupId} AND author_person_id = ${actor.personId} RETURNING id`,
+    );
+    return;
+  }
+
+  if (stored) refuse('malformed');
+  const checked = checkComment(change.row, context);
+  if (!checked.ok) return refuse(checked.refusal);
+  const subject = checked.value.subject === 'expense' ? t.expense : t.payment;
+  const made = await dbAll<{ id: string }>(
+    tx,
+    sql`INSERT INTO ${t.comment} (id, group_id, subject, subject_id, author_person_id, sealed, deleted_at, seq, created_at)
+        SELECT ${change.id}, ${groupId}, ${checked.value.subject}, ${checked.value.subjectId}, ${actor.personId}, ${checked.value.sealed}, NULL,
+               ${seq}, ${now}
+        WHERE EXISTS (SELECT 1 FROM ${subject} s WHERE s.id = ${checked.value.subjectId} AND s.group_id = ${groupId})
+        RETURNING id`,
+  );
+  // What it is on is the group's, in the same statement, or it is not there.
+  if (made.length === 0) refuse('not_found');
 }

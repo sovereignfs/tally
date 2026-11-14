@@ -98,6 +98,11 @@ describe(`deleting a person (${leg})`, () => {
       sql`INSERT INTO ${db.revision} (id, group_id, subject, subject_id, version, kind, snapshot, actor_person_id, created_at)
           VALUES (${crypto.randomUUID()}, ${groupId}, 'expense', ${expenseId}, 1, 'created', '{}', ${adaPerson}, 1)`,
     );
+    await dbRun(
+      t.database,
+      sql`INSERT INTO ${db.comment} (id, group_id, subject, subject_id, author_person_id, sealed, deleted_at, seq, created_at)
+          VALUES (${crypto.randomUUID()}, ${groupId}, 'expense', ${expenseId}, ${adaPerson}, 's1.1.x', NULL, 3, 1)`,
+    );
     for (const who of [t.ada.id, t.grace.id])
       await dbRun(
         t.database,
@@ -251,11 +256,20 @@ describe(`deleting a person (${leg})`, () => {
       db.expenseShare,
       db.payment,
       db.revision,
+      db.comment,
       db.appliedMutation,
     ])
       expect(await count(table, sql`group_id = ${ids.alone}`)).toBe(0);
     // The shared group's record stays whole for Grace: what Ada paid still adds up.
-    for (const table of [db.expense, db.expensePayer, db.expenseShare, db.payment, db.revision])
+    // Her comment stays too, by her name (DESIGN.md §24).
+    for (const table of [
+      db.expense,
+      db.expensePayer,
+      db.expenseShare,
+      db.payment,
+      db.revision,
+      db.comment,
+    ])
       expect(await count(table, sql`group_id = ${ids.shared}`)).toBe(1);
     expect(await count(db.appliedMutation, sql`account_id = ${t.grace.id}`)).toBe(1);
   });

@@ -281,3 +281,26 @@ export const appliedMutation = sqliteTable(
     index('applied_mutation_created_idx').on(table.createdAt),
   ],
 );
+
+/**
+ * **A comment** on an expense or a payment (DESIGN.md §8.6): its body sealed, its author the account's person. Only made or deleted, never edited; a
+ * deleted one is marked, and removed later by pruning (§11.8). A deleted account's comments stay, by its name (§24).
+ */
+export const comment = sqliteTable(
+  'comment',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    subject: text('subject').notNull(),
+    subjectId: ref('subject_id').notNull(),
+    authorPersonId: ref('author_person_id').notNull(),
+    sealed: text('sealed').notNull(),
+    deletedAt: epochMs('deleted_at'),
+    seq: counter('seq').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [
+    index('comment_subject_idx').on(table.subjectId),
+    index('comment_group_seq_idx').on(table.groupId, table.seq),
+  ],
+);

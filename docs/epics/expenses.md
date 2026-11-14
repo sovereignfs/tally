@@ -63,7 +63,7 @@ deletes the new tables with a group that goes (by `group_id`), keeps them on a g
 rows; its test seeds one of each. Tested on a file, sqld and PostgreSQL; the replay test failed with the replay check taken out. Comments are refused
 as `malformed` until 5.3; activity and notices hook in with 5.4 and 9.1.
 
-#### 📋 5.3 — Comments
+#### ✅ 5.3 — Comments
 
 **Goal:** comments on expenses and payments. **Design:** §8.6. **Depends on:** 5.2.
 
@@ -71,6 +71,12 @@ as `malformed` until 5.3; activity and notices hook in with 5.4 and 9.1.
 allowed; refused in a closed group; plain text, at most 2,000 characters.
 
 **Accepts when:** only the author can delete a comment; a comment written against an expense deleted meanwhile is kept and shows when it is restored.
+
+**Done as:** the `comment` table (migration `0006_add_comments`) and `applyComment` in `src/sync/apply.ts`. A comment is inserted only where its
+expense or payment is the same group's, in the same statement (a deleted one included); its author is the account's person; only the author's delete
+is applied (`not_author` otherwise), and deleting it twice changes nothing. A closed group refuses it through the `seq` statement, as everything
+else. The text is checked on the device (`checkCommentText`, 5.1) and for its sealed form on the server. Comments go with a group that goes and stay,
+by the author's name, on one that carries on (`People.deletePerson`, tested). Pruning deleted comments after 30 days joins with 6.x (§11.8).
 
 #### 📋 5.4 — The activity log and its words
 
