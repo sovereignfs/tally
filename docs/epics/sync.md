@@ -16,7 +16,7 @@ several people (`DESIGN.md` §11.3). Each task says what it took from Tusk and w
 
 ## Tasks
 
-#### 📋 6.1 — The sync endpoint
+#### ✅ 6.1 — The sync endpoint
 
 **Goal:** `POST /api/sync`. **Design:** §11.3. **Depends on:** 5.2.
 
@@ -27,6 +27,16 @@ wraps it is asked for); a rate limit. Shape from Tusk's `src/sync/`, with cursor
 
 **Accepts when:** a device starting at zero gets each group whole; a cursor gets only what is new; a group left between two syncs is named gone and its
 rows stop; a lost answer retried applies nothing twice.
+
+**Done as:** `src/sync/format.ts` (the protocol, version 1, and its limits), `src/sync/pull.ts` and `src/sync/endpoint.ts` (`handleSync`,
+`syncHandler`), routed at `app/api/sync/route.ts`. From Tusk's `src/sync/endpoint.ts`: the body read to a limit (413), the protocol checked first (426
+with the version), a request refused whole only when it is not one (400) or comes too often (429, `sync:<account>`, 120 a minute), and each mutation
+answered on its own; `readCapped` was already Tally's. **Changed from Tusk:** a cursor per group (`cursors`), answered per group with the group's row,
+its members (names only, never an email), expenses with payers and shares, payments and comments past the cursor, paged at `seq` boundaries with a
+row budget shared by the request's groups; a cursor past a group's counter restarts that group from its snapshot; groups the device named and the
+account is no longer in are `gone`; the key exchange is folded in (`grants` in the request; `wraps`, `needed` and `rotations` in the answer), so a
+device needs no second request. Every statement of the pull carries the account's active membership. Tombstones are in the shape and empty until
+pruning (6.5) removes rows. Tested on a file, sqld and PostgreSQL; the paging test failed when a page ended past its boundary.
 
 #### 📋 6.2 — The device's store, outbox and loop
 

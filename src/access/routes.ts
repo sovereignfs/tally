@@ -70,5 +70,7 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/keys/requests', methods: { POST: account } },
   // The activity of the account's groups (DESIGN.md §12.1): only groups the account is an active member of, in the statement.
   { route: '/api/activity', methods: { GET: account } },
+  // Sync (DESIGN.md §11.3): every mutation applied through the one path, every pull carrying the account's membership in its statements.
+  { route: '/api/sync', methods: { POST: account } },
   { route: '/api/keys/requests/[id]', methods: { GET: account, POST: account, DELETE: account } },
 ];

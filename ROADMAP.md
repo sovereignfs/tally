@@ -81,7 +81,7 @@ The device holds every group and records without a network. **Done when** two br
 
 | #   | ID                               | Task                                | Priority | Depends on | Status |
 | --- | -------------------------------- | ----------------------------------- | -------- | ---------- | ------ |
-| 30  | [6.1](docs/epics/sync.md)        | The sync endpoint                   | P0       | 5.2        | 📋     |
+| 30  | [6.1](docs/epics/sync.md)        | The sync endpoint                   | P0       | 5.2        | ✅     |
 | 31  | [6.2](docs/epics/sync.md)        | The device's store, outbox and loop | P0       | 6.1        | 📋     |
 | 32  | [6.3](docs/epics/sync.md)        | Couldn't sync                       | P1       | 6.2        | 📋     |
 | 33  | [1.11](docs/epics/foundation.md) | The PWA                             | P1       | 1.8        | 📋     |
