@@ -118,8 +118,6 @@ test('signing out takes the key off the device', async ({ page }) => {
       ((await (await fetch('/api/auth/get-session')).json()) as { user: { id: string } }).user.id,
   );
   await signOut(page);
-  // Signing out goes to the front address, which sends a visitor on to sign in: looked at once it has arrived.
-  await page.waitForURL('**/sign-in');
   const names = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
   expect(names).not.toContain(`tally-vault-${accountId}`);
 });

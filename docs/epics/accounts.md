@@ -41,7 +41,7 @@ file, 307 on PostgreSQL; 37 browser tests in Chromium and WebKit on a file, and 
 the browser test each failed with their fault planted. **Left out:** the account key made at sign-up (15.2), the person made with the account (3.1),
 Sovereign sign-in (2.3) and `invite` (8.3).
 
-#### 📋 2.2 — Landing page and the address `/`
+#### ✅ 2.2 — Landing page and the address `/`
 
 **Goal:** a visitor sees what Tally is; a signed-in person sees Home. **Design:** §15.3. **Depends on:** 2.1.
 
@@ -49,6 +49,13 @@ Sovereign sign-in (2.3) and `invite` (8.3).
 cookie, as Tusk's.
 
 **Accepts when:** `/` shows the landing page signed out and Home signed in, with no redirect loop.
+
+**Done as:** copied from Ledger's same task: `src/landing/` (the page with no client code, its CSS, typed content and the test that keeps
+unbuilt features' words out), `app/page.tsx`, Home moved to `/home`, and the proxy showing Home at `/` for a request with a session cookie by rewriting
+to `/home` (the address stays `/`; `/home` itself goes to `/`; a mark on the request stops a loop). Changed: the words are Tally's, and say only what is
+built (what is written is sealed; signing in, which unlocks a new device; phone or desktop); the `/home` redirect carries every header, through the
+same helper as the trailing-slash one; signing out now lands on the landing page, and the e2e `signOut` helper waits for it. Run here: 402 tests; 52
+browser tests in Chromium and WebKit; the proxy's test failed with the rewrite off. **Left out:** nothing of the task.
 
 #### 📋 2.3 — Sign-in through core
 

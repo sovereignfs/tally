@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { hasSessionCookie } from './src/auth/cookie';
 import { edgeSettings } from './src/config/edge';
 import { HSTS, SECURITY_HEADERS, contentSecurityPolicy, newNonce } from './src/security/csp';
 
@@ -9,9 +10,16 @@ import { HSTS, SECURITY_HEADERS, contentSecurityPolicy, newNonce } from './src/s
  * answer is data, with no page to protect, so it gets only the headers every response has (`next.config.ts`).
  *
  * It keeps the Edge discipline: no Node built-ins and no database. It only looks at the request, so a session is for the page to check, and a
- * proxy is never the only thing standing in the way (DESIGN.md §5.2). The front address (task 2.2) joins it.
+ * proxy is never the only thing standing in the way (DESIGN.md §5.2).
+ *
+ * **The front address, `/`, is the landing page for a visitor and Home for someone with a session cookie** (DESIGN.md §15.3), as Ledger's: the proxy
+ * rewrites the request to `/home` and the address stays `/`. Only the cookie's presence is looked at: it cannot be checked here, and the page checks the
+ * session itself and sends a forged cookie to sign in. The page's own address, `/home`, goes to `/`, so that there is one address for it.
  */
 const SIGN_IN_PAGES = new Set(['/sign-in', '/sign-up', '/forgot-password', '/reset-password']);
+
+/** Set on the request the proxy rewrites `/` into, so that the page it is rewritten to is not sent back to `/` (which would be a loop). */
+const HOME_MARK = 'x-tally-home';
 
 export function proxy(request: NextRequest) {
   const { secure, development, authLocal } = edgeSettings();
@@ -20,17 +28,22 @@ export function proxy(request: NextRequest) {
   const policy = contentSecurityPolicy({ nonce, secure, development });
 
   // `/people/` is `/people`, as Next would answer it, but from here, so that the redirect carries the headers too (next.config.ts turns Next's off).
-  const slashless = withoutTrailingSlash(request.nextUrl.pathname);
-  if (slashless !== request.nextUrl.pathname) {
+  // A redirect made here carries every header a response has (Next's own would carry none).
+  const redirectTo = (pathname: string) => {
     // A plain URL: NextURL formats the path by the app's trailing-slash rule, and would put the slash back.
     const target = new URL(request.url);
-    target.pathname = slashless;
+    target.pathname = pathname;
     const redirect = NextResponse.redirect(target, 308);
     for (const { key, value } of SECURITY_HEADERS) redirect.headers.set(key, value);
     if (page) redirect.headers.set('content-security-policy', policy);
     if (secure) redirect.headers.set('strict-transport-security', HSTS);
     return redirect;
-  }
+  };
+  const slashless = withoutTrailingSlash(request.nextUrl.pathname);
+  if (slashless !== request.nextUrl.pathname) return redirectTo(slashless);
+  const path = request.nextUrl.pathname;
+  const cookie = hasSessionCookie(request.cookies);
+  if (cookie && path === '/home' && !request.headers.has(HOME_MARK)) return redirectTo('/');
 
   const requestHeaders = new Headers(request.headers);
   // Set, never trusted: a nonce or a policy the client sent is replaced here, and an API's request carries neither.
@@ -42,13 +55,15 @@ export function proxy(request: NextRequest) {
     requestHeaders.delete('content-security-policy');
   }
 
-  // Off means off (DESIGN.md §13.1): with local sign-in off, the sign-in pages are not there. A page cannot say so itself: the root loading state has
+  // Off means off (DESIGN.md §14.1): with local sign-in off, the sign-in pages are not there. A page cannot say so itself: the root loading state has
   // already sent a 200 by the time it would, so the proxy answers with the page that is not found, and its status.
-  const absent = !authLocal && SIGN_IN_PAGES.has(request.nextUrl.pathname);
-  const response = absent
-    ? NextResponse.rewrite(new URL('/not-found', request.url), {
-        request: { headers: requestHeaders },
-      })
+  const absent = !authLocal && SIGN_IN_PAGES.has(path);
+  const signedIn = path === '/' && cookie;
+  const target = absent ? '/not-found' : signedIn ? '/home' : null;
+  if (signedIn && !absent) requestHeaders.set(HOME_MARK, '1');
+  else requestHeaders.delete(HOME_MARK);
+  const response = target
+    ? NextResponse.rewrite(new URL(target, request.url), { request: { headers: requestHeaders } })
     : NextResponse.next({ request: { headers: requestHeaders } });
   if (page) response.headers.set('content-security-policy', policy);
   if (secure) response.headers.set('strict-transport-security', HSTS);

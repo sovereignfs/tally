@@ -24,8 +24,11 @@ export interface RouteRule {
 const account: RouteAccess = { kind: 'account' };
 
 export const ROUTES: RouteRule[] = [
-  // The places of the app (DESIGN.md §15.3), for someone signed in. The landing page for a visitor at `/` is task 2.2.
-  { route: '/', page: account },
+  // The front address (DESIGN.md §15.3): the landing page for a visitor, and Home for someone with a session cookie, which the proxy shows here by
+  // rewriting to `/home`: the address stays `/`, and `/home` itself is sent back to it.
+  { route: '/', page: { kind: 'public' } },
+  // The places of the app (DESIGN.md §15.3), for someone signed in.
+  { route: '/home', page: account },
   { route: '/groups', page: account },
   { route: '/people', page: account },
   { route: '/activity', page: account },

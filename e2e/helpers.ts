@@ -121,8 +121,8 @@ export async function signOut(page: Page) {
   await page.getByRole('button', { name: 'User menu' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'User menu' })).toHaveCount(0);
-  // Signing out goes to the front address, which sends a visitor on to sign in: the next step waits until it has arrived, or its own navigation
-  // would be interrupted by this one.
-  await page.waitForURL('**/sign-in');
+  // Signing out goes to the front address, the landing page for a visitor: the next step waits until it has arrived, or its own navigation would be
+  // interrupted by this one.
+  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
   await page.waitForLoadState('load');
 }

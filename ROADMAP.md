@@ -56,7 +56,7 @@ A person signs in, makes a group and is its owner, and every statement carries t
 | 16  | [3.2](docs/epics/groups.md)      | Groups, members and access       | P0       | 3.1, 4.1, 15.2 | ✅     |
 | 17  | [15.3](docs/epics/encryption.md) | Group keys and granting          | P0       | 15.2, 3.2      | ✅     |
 | 18  | [15.4](docs/epics/encryption.md) | The recovery key                 | P1       | 15.2           | ✅     |
-| 19  | [2.2](docs/epics/accounts.md)    | Landing page and the address `/` | P1       | 2.1            | 📋     |
+| 19  | [2.2](docs/epics/accounts.md)    | Landing page and the address `/` | P1       | 2.1            | ✅     |
 | 20  | [2.5](docs/epics/accounts.md)    | Deleting a person                | P0       | 3.2            | 📋     |
 | 21  | [2.6](docs/epics/accounts.md)    | Settings                         | P1       | 2.1, 1.8, 3.1  | 📋     |
 

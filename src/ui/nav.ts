@@ -41,6 +41,8 @@ export const FOOTER_RIGHT: readonly Place['id'][] = ['people', 'activity'];
 export function placeOf(pathname: string): Place | undefined {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
   if (path === '/g' || path.startsWith('/g/')) return placeById('groups');
+  // Home is shown at `/` by the proxy's rewrite to `/home`, which the router may report as either.
+  if (path === '/home') return placeById('home');
   return PLACES.find((place) =>
     place.href === '/' ? path === '/' : path === place.href || path.startsWith(`${place.href}/`),
   );

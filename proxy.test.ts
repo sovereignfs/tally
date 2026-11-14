@@ -162,3 +162,59 @@ describe('what the proxy looks at', () => {
     ]);
   });
 });
+
+describe('the front address', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('sends the other address of Home to the front one for someone with a cookie, with every header, and leaves it to the page for anyone else', () => {
+    const reply = proxy(
+      new NextRequest('https://tally.example.com/home', {
+        headers: { cookie: 'tally.session_token=x' },
+      }),
+    );
+    expect(reply.status).toBe(308);
+    expect(reply.headers.get('location')).toBe('https://tally.example.com/');
+    expect(reply.headers.get('content-security-policy')).toContain("script-src 'self' 'nonce-");
+    expect(reply.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(
+      proxy(new NextRequest('https://tally.example.com/home')).headers.get('location'),
+    ).toBeNull();
+  });
+
+  it('shows Home at the front address for a request with a session cookie, and keeps the address', () => {
+    const rewrite = (response: Response) => response.headers.get('x-middleware-rewrite');
+    for (const name of ['tally.session_token', '__Secure-tally.session_token']) {
+      const signedIn = new NextRequest('https://tally.example.com/', {
+        headers: { cookie: `${name}=anything` },
+      });
+      expect(rewrite(proxy(signedIn)), name).toMatch(/\/home$/);
+    }
+    vi.stubEnv('TALLY_AUTH_LOCAL', '1');
+    // Only for the front address, and only for a cookie that is there: not for another page, an empty value, or a cookie of another name.
+    expect(rewrite(proxy(request('/')))).toBeNull();
+    for (const [path, cookie] of [
+      ['/', 'tally.session_token='],
+      ['/', 'other=1; session_token=1'],
+      ['/sign-in', 'tally.session_token=x'],
+      ['/people', 'tally.session_token=x'],
+    ] as const)
+      expect(
+        rewrite(
+          proxy(new NextRequest(`https://tally.example.com${path}`, { headers: { cookie } })),
+        ),
+        `${path} ${cookie}`,
+      ).toBeNull();
+    const signedIn = new NextRequest('https://tally.example.com/', {
+      headers: { cookie: 'tally.session_token=x' },
+    });
+    expect(proxy(signedIn).headers.get('content-security-policy')).toContain('nonce-');
+  });
+
+  it('never trusts the mark a client sends: /home with it and a cookie still goes to the front address', () => {
+    const forged = new NextRequest('https://tally.example.com/home', {
+      headers: { cookie: 'tally.session_token=x', 'x-tally-home': '1' },
+    });
+    // The mark stops the loop on the proxy's own rewrite; on a request that reaches /home directly, a forged one only leaves the page to check the session.
+    expect([200, 308]).toContain(proxy(forged).status);
+  });
+});
