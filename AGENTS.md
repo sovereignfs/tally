@@ -165,7 +165,7 @@ Still to come: `seed` (13.1). **`verify` means**
 
 `DESIGN.md` §5.1 is where things go as the app is built. Today it holds the documents, the repository's conventions, the settings (`src/config/`), the
 database (`src/db/`), sign-in (`src/auth/`), people (`src/people/`), groups (`src/groups/`), access (`src/access/`), the cipher (`src/cipher/`) and keys
-(`src/keys/`), money (`src/money/`), balances (`src/balances/`), actions and validators (`src/actions/`), the write path (`src/sync/`), deletion (`src/sovereign/`), Settings (`src/account/`), the theme and the shell (`src/ui/`, `app/(app)/`).
+(`src/keys/`), money (`src/money/`), balances (`src/balances/`), actions and validators (`src/actions/`), the write path (`src/sync/`), activity (`src/activity/`), deletion (`src/sovereign/`), Settings (`src/account/`), the theme and the shell (`src/ui/`, `app/(app)/`).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

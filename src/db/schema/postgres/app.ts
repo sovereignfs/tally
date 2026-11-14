@@ -272,3 +272,18 @@ export const comment = app.table(
     index('comment_group_seq_idx').on(table.groupId, table.seq),
   ],
 );
+
+/** See `schema/sqlite/app.ts`. */
+export const activity = app.table(
+  'activity',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    actorPersonId: ref('actor_person_id'),
+    kind: text('kind').notNull(),
+    subjectId: ref('subject_id'),
+    details: json('details').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [index('activity_group_time_idx').on(table.groupId, table.createdAt)],
+);

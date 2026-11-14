@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import type { Database } from '../db/client';
 import { dbAll, dbGet, transaction } from '../db/exec';
 import { tables } from '../db/tables';
+import { recordActivity } from '../activity/record';
 import { activeMemberOf, ownerOf } from '../access/membership';
 import { parseSealed } from '../cipher/seal';
 import { checkWrapped } from '../keys/store';
@@ -196,6 +197,14 @@ export async function createGroup(
       sql`INSERT INTO ${t.keyWrap} (group_id, epoch, account_id, wrapped, wrapped_by, created_at)
           VALUES (${groupId}, 1, ${who.accountId}, ${keyWrap}, ${who.accountId}, ${now})`,
     );
+    await recordActivity(tx, {
+      groupId,
+      actorPersonId: who.personId,
+      kind: 'group_created',
+      subjectId: groupId,
+      details: { sealed },
+      now,
+    });
   });
   return readGroup(database, who, groupId);
 }
@@ -210,16 +219,35 @@ async function updateAsOwner(
   groupId: string,
   set: ReturnType<typeof sql>,
   now: number,
+  line?: OwnerActivity | ((tx: Database) => Promise<OwnerActivity>),
 ) {
   const t = tables(database);
-  const done = await dbAll<{ id: string }>(
-    database,
-    sql`UPDATE ${t.grp} SET ${set}, seq = seq + 1, updated_at = ${now}
-        WHERE id = ${groupId} AND closed_at IS NULL AND ${ownerOf(database, groupId, who.accountId)} RETURNING id`,
-  );
-  if (done.length === 0) throw new OpError('not_found');
+  await transaction(database, async (tx) => {
+    // A line that says what was there before reads it in the same transaction, before the change.
+    const activity = typeof line === 'function' ? await line(tx) : line;
+    const done = await dbAll<{ id: string }>(
+      tx,
+      sql`UPDATE ${t.grp} SET ${set}, seq = seq + 1, updated_at = ${now}
+          WHERE id = ${groupId} AND closed_at IS NULL AND ${ownerOf(tx, groupId, who.accountId)} RETURNING id`,
+    );
+    if (done.length === 0) throw new OpError('not_found');
+    if (activity)
+      await recordActivity(tx, {
+        ...activity,
+        groupId,
+        actorPersonId: who.personId,
+        subjectId: groupId,
+        now,
+      } as Parameters<typeof recordActivity>[1]);
+  });
   return readGroup(database, who, groupId);
 }
+
+/** The activity line of an owner's change to the group's own row, written in its transaction. */
+type OwnerActivity =
+  | { kind: 'group_renamed'; details: { sealed: string } }
+  | { kind: 'group_currency_changed'; details: { from: string; to: string } }
+  | { kind: 'group_simplify_changed'; details: { on: boolean } };
 
 export async function renameGroup(
   database: Database,
@@ -235,7 +263,10 @@ export async function renameGroup(
   );
   if (!current) throw new OpError('not_found');
   const sealed = checkSealedName(input.sealed, current.keyEpoch);
-  return updateAsOwner(database, who, groupId, sql`sealed = ${sealed}`, now);
+  return updateAsOwner(database, who, groupId, sql`sealed = ${sealed}`, now, {
+    kind: 'group_renamed',
+    details: { sealed },
+  });
 }
 
 export async function recolourGroup(
@@ -259,7 +290,23 @@ export async function changeCurrency(
   const currency = input.defaultCurrency;
   if (typeof currency !== 'string' || !isSupportedCurrencyCode(currency))
     throw new OpError('invalid');
-  return updateAsOwner(database, who, groupId, sql`default_currency = ${currency}`, now);
+  return updateAsOwner(
+    database,
+    who,
+    groupId,
+    sql`default_currency = ${currency}`,
+    now,
+    async (tx) => {
+      const before = await dbGet<{ currency: string }>(
+        tx,
+        sql`SELECT default_currency AS currency FROM ${tables(tx).grp} WHERE id = ${groupId}`,
+      );
+      return {
+        kind: 'group_currency_changed',
+        details: { from: before?.currency ?? currency, to: currency },
+      };
+    },
+  );
 }
 
 export async function setSimplifyDebts(
@@ -270,7 +317,10 @@ export async function setSimplifyDebts(
 ) {
   const groupId = string(input.groupId);
   if (typeof input.on !== 'boolean') throw new OpError('invalid');
-  return updateAsOwner(database, who, groupId, sql`simplify_debts = ${input.on}`, now);
+  return updateAsOwner(database, who, groupId, sql`simplify_debts = ${input.on}`, now, {
+    kind: 'group_simplify_changed',
+    details: { on: input.on },
+  });
 }
 
 /**
@@ -318,6 +368,18 @@ export async function setRole(
       }
       throw new OpError('not_found');
     }
+    const target = await dbGet<{ personId: string }>(
+      tx,
+      sql`SELECT person_id AS "personId" FROM ${t.member} WHERE id = ${memberId} AND group_id = ${groupId}`,
+    );
+    await recordActivity(tx, {
+      groupId,
+      actorPersonId: who.personId,
+      kind: 'role_changed',
+      subjectId: memberId,
+      details: { memberId, personId: target?.personId ?? '', role },
+      now,
+    });
   });
   return readGroup(database, who, groupId);
 }

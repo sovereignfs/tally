@@ -13,7 +13,7 @@ import { personOfAccount } from '../people/persons';
  * dealt with, and the account, by which the routine finds them, goes **last**. Its shape is Ledger's; what it does is Tally's.
  *
  *  1. **Their groups**, each in a transaction of its own. A group with no other member who has an account is deleted with every row of it, by
- *     `group_id` (`GROUP_TABLES`: its members, keys, expenses with their payers and shares, payments, comments, revisions and applied mutations). Otherwise, if they were its only owner, it passes to its longest-standing member with an account (who will be told,
+ *     `group_id` (`GROUP_TABLES`: its members, keys, expenses with their payers and shares, payments, comments, revisions, activity and applied mutations). Otherwise, if they were its only owner, it passes to its longest-standing member with an account (who will be told,
  *     `owner_passed`, once notices exist, 9.1); their own role becomes `member`, and **their membership stays**, shown as left Tally, so that the
  *     expenses and payments it carries still add up (ending it where the balance is zero joins with balances, 4.3). The group's order moves on.
  *  2. **Their keys** (§5.3): the account key, its wraps, its requests and every group key wrapped to them.
@@ -33,6 +33,7 @@ export interface PeopleDeps {
 
 /** The tables whose every row belongs to one group, deleted by `group_id` with a group that goes (the group's own row, `grp`, last). */
 export const GROUP_TABLES = [
+  'activity',
   'applied_mutation',
   'comment',
   'expense',
@@ -48,6 +49,7 @@ export const GROUP_TABLES = [
 function groupTable(database: Database, name: (typeof GROUP_TABLES)[number]) {
   const t = tables(database);
   return {
+    activity: t.activity,
     applied_mutation: t.appliedMutation,
     comment: t.comment,
     expense: t.expense,

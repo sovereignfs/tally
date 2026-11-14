@@ -304,3 +304,21 @@ export const comment = sqliteTable(
     index('comment_group_seq_idx').on(table.groupId, table.seq),
   ],
 );
+
+/**
+ * **What happened in a group** (DESIGN.md §12.1): a line per change, written in the change's transaction, read online by its members. `details` is
+ * JSON (`src/activity/kinds.ts`), what people wrote in it still sealed; the words are made on the device (`src/activity/describe.ts`).
+ */
+export const activity = sqliteTable(
+  'activity',
+  {
+    id: id('id'),
+    groupId: ref('group_id').notNull(),
+    actorPersonId: ref('actor_person_id'),
+    kind: text('kind').notNull(),
+    subjectId: ref('subject_id'),
+    details: json('details').notNull(),
+    createdAt: epochMs('created_at').notNull(),
+  },
+  (table) => [index('activity_group_time_idx').on(table.groupId, table.createdAt)],
+);

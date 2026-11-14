@@ -78,7 +78,7 @@ is applied (`not_author` otherwise), and deleting it twice changes nothing. A cl
 else. The text is checked on the device (`checkCommentText`, 5.1) and for its sealed form on the server. Comments go with a group that goes and stay,
 by the author's name, on one that carries on (`People.deletePerson`, tested). Pruning deleted comments after 30 days joins with 6.x (§11.8).
 
-#### 📋 5.4 — The activity log and its words
+#### ✅ 5.4 — The activity log and its words
 
 **Goal:** what happened in a group, written with the change and read in words. **Design:** §12.1. **Depends on:** 5.2, 3.2.
 
@@ -89,3 +89,14 @@ function giving each line in words from the reader's point of view, run on the d
 
 **Accepts when:** every kind in §12.1 is written by the change that causes it, in its transaction; a member who left no longer reads the group's
 activity; the words say "You" for the reader.
+
+**Done as:** `src/activity/`: `kinds.ts` (every kind and what its details carry, sealed text as the change carried it), `record.ts` (one insert,
+called with the change's transaction), `describe.ts` (the words, pure, on the device, with "an expense" and "the group" where the text cannot be
+opened) and `api.ts`, `GET /api/activity` (every group of the account, or one with `group`, filtered by `person` and `kind`, paged with `before`;
+only groups the account is an active member of, in the statement), with migration `0007_add_activity`. Written today by the write path (an expense or
+payment added, edited, deleted, restored, or `replaced` with whose version it overwrote; a comment, with its expense's sealed description) and by the
+group operations (made, renamed, currency, simplify debts, a role); `group_created` is Tally's addition to §12.1's list. Recolouring and what one hears
+are not activity. **Not yet written, because their changes do not exist yet:** closed and reopened, left and removed (3.3), added and invited (8.2,
+8.3), joined (8.3) and merged (3.4); each of those tasks writes its line. Activity goes with a group that goes and stays on one that carries on
+(`People.deletePerson`). Tests: a sentence per kind (and a check that every kind has one), every line written by its change and none by a refused one,
+paging and filters, and nothing read by Grace or by a member who left, on a file, sqld and PostgreSQL.

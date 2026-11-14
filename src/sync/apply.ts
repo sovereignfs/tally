@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { activeMemberOf } from '../access/membership';
+import { recordActivity } from '../activity/record';
 import type { Change, CommentChange, ExpenseRow, Mutation, PaymentRow } from '../actions/types';
 import {
   type GroupContext,
@@ -197,6 +198,15 @@ async function applyRecord(
       change.op === 'delete' ? 'deleted' : 'restored',
       now,
     );
+    await recordChange(
+      tx,
+      actor,
+      groupId,
+      change.table,
+      change.id,
+      deleting ? 'deleted' : 'restored',
+      now,
+    );
     return;
   }
 
@@ -231,6 +241,69 @@ async function applyRecord(
   }
   const kind = !stored ? 'created' : stored.deletedAt !== null ? 'restored' : 'edited';
   await writeRevision(tx, actor.personId, groupId, change.table, change.id, version, kind, now);
+  const replaced =
+    stored &&
+    stored.deletedAt === null &&
+    change.baseVersion !== null &&
+    change.baseVersion < Number(stored.version);
+  await recordChange(
+    tx,
+    actor,
+    groupId,
+    change.table,
+    change.id,
+    !stored ? 'added' : stored.deletedAt !== null ? 'restored' : replaced ? 'replaced' : 'edited',
+    now,
+    replaced ? stored.updatedBy : undefined,
+  );
+}
+
+/**
+ * The activity line of a change to an expense or a payment (§12.1), from the row as now written: its figures and its sealed text as they travelled,
+ * and for a replaced version, whose it was.
+ */
+async function recordChange(
+  tx: Database,
+  actor: Actor,
+  groupId: string,
+  table: 'expense' | 'payment',
+  id: string,
+  what: 'added' | 'edited' | 'deleted' | 'restored' | 'replaced',
+  now: number,
+  replacedPersonId?: string,
+) {
+  const row = JSON.parse(await snapshotOf(tx, table, id)) as Record<string, unknown>;
+  const extra = replacedPersonId ? { replacedPersonId } : {};
+  const base = { groupId, actorPersonId: actor.personId, subjectId: id, now };
+  if (table === 'expense') {
+    await recordActivity(tx, {
+      ...base,
+      kind: `expense_${what}`,
+      details: {
+        sealed: String(row.sealed),
+        amount: Number(row.amount),
+        currency: String(row.currency),
+        payers: (row.payers as { memberId: string; amount: number }[]) ?? [],
+        shares: ((row.shares as { memberId: string; amount: number }[]) ?? []).map((s) => ({
+          memberId: s.memberId,
+          amount: s.amount,
+        })),
+        ...extra,
+      },
+    });
+    return;
+  }
+  await recordActivity(tx, {
+    ...base,
+    kind: `payment_${what}`,
+    details: {
+      fromMemberId: String(row.fromMemberId),
+      toMemberId: String(row.toMemberId),
+      amount: Number(row.amount),
+      currency: String(row.currency),
+      ...extra,
+    },
+  });
 }
 
 /** The members on the stored version of a row, who may stay on it though they have left the group. */
@@ -454,4 +527,23 @@ async function applyComment(
   );
   // What it is on is the group's, in the same statement, or it is not there.
   if (made.length === 0) refuse('not_found');
+  const on =
+    checked.value.subject === 'expense'
+      ? await dbGet<{ sealed: string }>(
+          tx,
+          sql`SELECT sealed FROM ${t.expense} WHERE id = ${checked.value.subjectId} AND group_id = ${groupId}`,
+        )
+      : undefined;
+  await recordActivity(tx, {
+    groupId,
+    actorPersonId: actor.personId,
+    kind: 'comment_added',
+    subjectId: checked.value.subjectId,
+    details: {
+      subject: checked.value.subject,
+      sealed: checked.value.sealed,
+      subjectSealed: on?.sealed ?? null,
+    },
+    now,
+  });
 }
