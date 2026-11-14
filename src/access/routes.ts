@@ -72,6 +72,20 @@ export const ROUTES: RouteRule[] = [
   // What the account is told, and its reading of it (DESIGN.md §12.2): every statement names the account, and only its active groups' are shown.
   { route: '/api/notices', methods: { GET: account, POST: account } },
   { route: '/notifications', page: account },
+  // Core's notices (DESIGN.md §14.3): a person's session ended at core, or their account deleted. The signed token is the credential, checked by the SDK;
+  // no session, cookie or Origin. 404 where core is not set up.
+  {
+    route: '/api/sovereign/backchannel-logout',
+    methods: {
+      POST: { kind: 'public', because: 'core signs the notice; @sovereignfs/sdk checks it, once' },
+    },
+  },
+  {
+    route: '/api/sovereign/account-deleted',
+    methods: {
+      POST: { kind: 'public', because: 'core signs the notice; @sovereignfs/sdk checks it, once' },
+    },
+  },
   // The online operations of groups (DESIGN.md §11.6): each carries the account's membership, or an owner's role, in its own statements.
   { route: '/api/ops', methods: { POST: account } },
   // The account's key and its wraps, and a new device's request to be given it (DESIGN.md §5.3): each the account's own, by its session.

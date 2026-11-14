@@ -100,6 +100,87 @@ test.describe('an instance that signs in through Sovereign only', () => {
     }
   });
 
+  // Core's notices (DESIGN.md §14.3), signed by the fake core's control port as core signs them.
+  async function noticeFrom(
+    page: Page,
+    kind: 'logout' | 'account-deleted',
+    sub: string,
+    wrong?: 'signature' | 'audience' | 'expired' | 'type',
+  ): Promise<string> {
+    const reply = await page.request.post(`http://localhost:${PORTS.coreControl}/notice`, {
+      data: { kind, sub, sid: 'core-session-1', wrong },
+    });
+    expect(reply.ok()).toBe(true);
+    return reply.text();
+  }
+  const sendLogout = (page: Page, token: string) =>
+    page.request.post('/api/sovereign/backchannel-logout', { form: { logout_token: token } });
+  const sendDeletion = (page: Page, token: string) =>
+    page.request.post('/api/sovereign/account-deleted', { form: { account_deleted_token: token } });
+  async function signInAs(page: Page, who: { sub: string; email: string; name: string }) {
+    await nextPersonIs(page, who);
+    await page.goto('/sign-in');
+    await throughSovereign(page);
+    await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
+  }
+
+  test('signing out at core signs the person out here, wherever they are signed in; a wrong or replayed notice ends nothing', async ({
+    page,
+    browser,
+  }) => {
+    const who = {
+      sub: `e2e-out-${Date.now()}`,
+      email: `out-${Date.now()}@sovereign.test`,
+      name: 'Ada Lovelace',
+    };
+    await signInAs(page, who);
+    for (const wrong of ['signature', 'audience', 'expired', 'type'] as const) {
+      const reply = await sendLogout(page, await noticeFrom(page, 'logout', who.sub, wrong));
+      expect(reply.status(), wrong).toBe(400);
+    }
+    expect((await sendDeletion(page, await noticeFrom(page, 'logout', who.sub))).status()).toBe(
+      400,
+    );
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
+
+    const other = await browser.newContext({ baseURL: SOVEREIGN });
+    try {
+      const elsewhere = await other.newPage();
+      await signInAs(elsewhere, who);
+      const token = await noticeFrom(page, 'logout', who.sub);
+      expect((await sendLogout(page, token)).status()).toBe(200);
+      expect((await sendLogout(page, token)).status()).toBe(400);
+      for (const tab of [page, elsewhere]) {
+        await tab.goto('/groups');
+        await expect(tab).toHaveURL(/\/sign-in/);
+      }
+    } finally {
+      await other.close();
+    }
+  });
+
+  test('a person who deletes their account at core is deleted here, and a retry is answered too', async ({
+    page,
+  }) => {
+    const who = {
+      sub: `e2e-gone-${Date.now()}`,
+      email: `gone-${Date.now()}@sovereign.test`,
+      name: 'Hedy Lamarr',
+    };
+    await signInAs(page, who);
+    expect(
+      (await sendDeletion(page, await noticeFrom(page, 'account-deleted', who.sub))).status(),
+    ).toBe(200);
+    await page.goto('/groups');
+    await expect(page).toHaveURL(/\/sign-in/);
+    expect(
+      (await sendDeletion(page, await noticeFrom(page, 'account-deleted', who.sub))).status(),
+    ).toBe(200);
+    for (const path of ['/api/sovereign/backchannel-logout', '/api/sovereign/account-deleted'])
+      expect((await page.request.get(path)).status(), path).toBe(405);
+  });
+
   test('a person who declines at Sovereign is told so and is not signed in', async ({ page }) => {
     await page.goto('/sign-in?error=access_denied');
     await expect(page.getByText(/You declined to share/)).toBeVisible();
@@ -149,4 +230,11 @@ test.describe('an instance that offers both ways', () => {
     await page.keyboard.press('Escape');
     await signOut(page);
   });
+});
+
+test('an instance with no core has no notice addresses', async ({ page }) => {
+  for (const path of ['/api/sovereign/backchannel-logout', '/api/sovereign/account-deleted'])
+    expect((await page.request.post(path, { form: { logout_token: 'x' } })).status(), path).toBe(
+      404,
+    );
 });

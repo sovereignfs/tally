@@ -88,7 +88,7 @@ device locked, a decline told, a local address refused, and linking from Setting
 Sovereign setup passes. **Left out:** offering a core account an unlock-only passkey on its first device (DESIGN.md §5.3's row for a Sovereign
 core) is in no task yet; core's notices are 2.4; the refresh token for the directory is 11.2.
 
-#### 📋 2.4 — Core's notices
+#### ✅ 2.4 — Core's notices
 
 **Goal:** back-channel logout and account deleted. **Design:** §14.3. **Depends on:** 2.3, 2.5.
 
@@ -98,6 +98,19 @@ answers `200` only once done. Copied: Tusk's `src/sovereign/http.ts`, `verifiers
 
 **Accepts when:** against `createFakeCore`, a logout notice ends every session of the person, an account-deleted notice leaves nothing personal of
 them and every other member's balances unchanged, and a replayed `jti` is refused after a restart.
+
+**Done as:** copied from Tusk, as the task said: `src/sovereign/http.ts` (a bounded form, the one field, one rate limit for every caller,
+`400` for a notice the SDK refuses, `503` when core cannot be asked, `500` for a failure of ours, `200` for a deletion only once it is done),
+`verifiers.ts` (`@sovereignfs/sdk` 2.1.0, now a dependency, pinned exactly), `identity.ts`, `server.ts` and the two routes, 404 where core is not set,
+with their tests. **Changed from the wording above:** a replayed `jti` is held, as Tusk holds it, by a row of the shared rate-limit table for as long
+as the notice could be replayed (`seenBy`), not a `notice_seen` table of its own: it is in the database, so it holds after a restart and across
+processes. The server's wiring is callable with given stores (`noticeDepsFor`), so that a test runs the routes exactly as they run. Account deleted
+runs `People.deletePerson`. Tests: the copied ones; on each database, against the SDK's fake core and that wiring, a logout notice ending every
+session of the person and no one else's, the same notice refused by wiring made anew on the same database (a restart, seen failing with replays not
+remembered), and an account-deleted notice leaving the person a name alone, the sign-in store without them, the other member's balance as it was, and
+a retry answered `200`; the account found by its `sub` and no local one by an address. In Playwright, Chromium and WebKit: a logout notice signing
+the person out of two browsers, wrong and replayed notices ending nothing, a deletion signing them out and a retry answered, `GET` refused, and an
+instance with no core answering 404. The deploy check passes.
 
 #### ✅ 2.5 — Deleting a person
 

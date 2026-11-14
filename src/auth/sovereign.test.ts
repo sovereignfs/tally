@@ -10,6 +10,7 @@ import {
 } from './testing/fake-sovereign';
 import { type TestAuth, type TestClient, makeAuth } from './test-support';
 import { totpFor } from './testing/totp';
+import { accountOfSub, endSessionsOf } from '../sovereign/identity';
 import * as postgresAuth from '../db/schema/postgres/auth';
 import * as sqliteAuth from '../db/schema/sqlite/auth';
 
@@ -745,5 +746,58 @@ describe(`a core identity, handed to the app (${leg})`, () => {
     await client.follow(authorize.headers.get('location') as string);
     const mine = (await users(t)).find((u) => u.email === email);
     expect(joined.some((j) => j.sub === who.sub && j.account === got(mine).id)).toBe(true);
+  });
+});
+
+describe(`what Sovereign's notices find here (${leg})`, () => {
+  let fake: FakeSovereign;
+  let t: TestAuth;
+  beforeAll(async () => {
+    fake = await startFakeSovereign();
+    t = await makeAuth({
+      signUp: 'open',
+      sovereign: { issuer: fake.issuer, clientId: fake.clientId, clientSecret: fake.clientSecret },
+    });
+  });
+  afterAll(async () => {
+    await t.close();
+    await fake.close();
+  });
+
+  const signedIn = async (c: TestClient) =>
+    (await c.get('/api/auth/get-session')).body?.user?.email ?? null;
+
+  it('finds the account by the sub, and ends every session of that account and no one else’s', async () => {
+    const ada = person();
+    const grace = person();
+    const adaPhone = visitor(t);
+    const adaLaptop = visitor(t);
+    const graceLaptop = visitor(t);
+    await login(t, fake, adaPhone, ada);
+    await login(t, fake, adaLaptop, ada);
+    await login(t, fake, graceLaptop, grace);
+
+    const account = got(await accountOfSub(t.database, ada.sub));
+    expect(await accountOfSub(t.database, 'nobody-knows-this-sub')).toBeNull();
+
+    expect(await endSessionsOf(t.database, account)).toBe(2);
+    expect(await signedIn(adaPhone)).toBeNull();
+    expect(await signedIn(adaLaptop)).toBeNull();
+    expect(await signedIn(graceLaptop)).toBe(grace.email);
+    // Said again, it ends nothing and does not fail; and the person can sign in again, as the same account.
+    expect(await endSessionsOf(t.database, account)).toBe(0);
+    expect(await login(t, fake, visitor(t), ada)).toMatchObject({ signedIn: true });
+    expect(await accountOfSub(t.database, ada.sub)).toBe(account);
+  });
+
+  it('does not find a local account by a sub it has not linked', async () => {
+    const email = 'local-notice@example.com';
+    await visitor(t).post('/api/auth/sign-up/email', {
+      name: 'Local',
+      email,
+      password: 'correct horse battery',
+    });
+    expect(await accountOfSub(t.database, email)).toBeNull();
+    expect(await accountOfSub(t.database, 'local-notice')).toBeNull();
   });
 });
