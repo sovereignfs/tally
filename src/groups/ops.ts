@@ -9,6 +9,10 @@ import { checkWrapped } from '../keys/store';
 import { isSupportedCurrencyCode } from '../money/currencies';
 import { type PersonView, viewPerson } from '../people/visibility';
 import { isGroupColor } from './colors';
+import { OpError } from './errors';
+import { closeGroup, deleteGroup, leaveGroup, removeMember, reopenGroup } from './lifecycle';
+
+export { OpError } from './errors';
 
 /**
  * **The online operations of a group** (DESIGN.md §7, §11.6): decided by the server at once, each in one short transaction, **the permission in its
@@ -20,16 +24,6 @@ export const MAX_MEMBERS = 50;
 export const MAX_GROUPS = 200;
 /** The longest a sealed name may be: a hundred characters, sealed and padded, with room to spare. */
 export const MAX_SEALED_NAME = 1024;
-
-export class OpError extends Error {
-  constructor(
-    readonly code: 'not_found' | 'invalid' | 'id_taken' | 'last_owner' | 'too_many_groups',
-    readonly sentence?: string,
-  ) {
-    super(sentence ?? code);
-    this.name = 'OpError';
-  }
-}
 
 export type Role = 'owner' | 'member';
 export type NotifyChoice = 'all' | 'involved' | 'none';
@@ -394,7 +388,8 @@ export async function setNotify(database: Database, who: Who, input: Record<stri
   const done = await dbAll<{ id: string }>(
     database,
     sql`UPDATE ${t.member} SET notify = ${choice}
-        WHERE group_id = ${groupId} AND person_id = ${who.personId} AND left_at IS NULL RETURNING id`,
+        WHERE group_id = ${groupId} AND person_id = ${who.personId} AND left_at IS NULL
+          AND EXISTS (SELECT 1 FROM ${t.grp} g WHERE g.id = ${groupId} AND g.closed_at IS NULL) RETURNING id`,
   );
   if (done.length === 0) throw new OpError('not_found');
   return readGroup(database, who, groupId);
@@ -411,6 +406,14 @@ export const OPERATIONS = {
   'group.simplify': setSimplifyDebts,
   'member.role': setRole,
   'member.notify': setNotify,
+  'member.leave': leaveGroup,
+  'member.remove': (db: Database, who: Who, input: Record<string, unknown>) =>
+    removeMember(db, who, input).then(() => readGroup(db, who, string(input.groupId))),
+  'group.close': (db: Database, who: Who, input: Record<string, unknown>) =>
+    closeGroup(db, who, input).then(() => readGroup(db, who, string(input.groupId))),
+  'group.reopen': (db: Database, who: Who, input: Record<string, unknown>) =>
+    reopenGroup(db, who, input).then(() => readGroup(db, who, string(input.groupId))),
+  'group.delete': deleteGroup,
 } as const;
 
 export type OperationName = keyof typeof OPERATIONS;

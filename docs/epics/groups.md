@@ -59,7 +59,7 @@ palette; §7.1 is corrected. Run here: 394 tests on sqld and a file, 393 on Post
 place of the owner's, the last-owner condition removed) each failed their test. **Left out:** the screens (7.1, 7.9); adding people (8.2), which
 checks `MAX_MEMBERS`; leaving, removing, closing and deleting (3.3).
 
-#### 📋 3.3 — Leaving, removing, closing, deleting
+#### ✅ 3.3 — Leaving, removing, closing, deleting
 
 **Goal:** a group's lifecycle, with balances guarding it. **Design:** §7.3. **Depends on:** 3.2, 4.3, 5.2.
 
@@ -70,6 +70,16 @@ leaving makes the group due a new key epoch (15.6).
 
 **Accepts when:** leave, remove and close are refused with the amounts while a balance is not zero; a closed group refuses an expense through sync; a
 group with one deleted expense cannot be deleted; deleting a group leaves no row of it in any table.
+
+**Done as:** `src/groups/lifecycle.ts`, as `member.leave`, `member.remove`, `group.close`, `group.reopen` and `group.delete` in `POST /api/ops`
+(`OpError` moved to `src/groups/errors.ts`, with `unsettled` and `not_empty`). Each moves the group's `seq` on in a statement that carries the open group
+and the membership or the owner, then reads the group's rows (`groupRows`) and guards with `src/balances/` in the same transaction; the sentence names
+the amounts ("You owe €10.00 and are owed ¥500 in this group."). Leaving keeps the membership with `left_at` and drops an owner's role; the last owner
+cannot leave while another account is in the group. A closed group refuses every operation but reopen and read, `member.notify` included, and every
+mutation (`closed`, from 5.2). Deleting holds the owner and "never an expense or a payment" in the `DELETE` of the group's row, then removes every
+other row by `group_id` through `deleteGroupRows`, now shared with `People.deletePerson`, so the list of a group's tables is one. Activity:
+`member_left`, `member_removed`, `group_closed`, `group_reopened`. **Left for 15.6:** leaving and removing should make the group due a new key epoch;
+nothing marks it yet.
 
 #### 📋 3.4 — Merging a placeholder
 

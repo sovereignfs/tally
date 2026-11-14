@@ -45,6 +45,19 @@ export const GROUP_TABLES = [
   'revision',
 ] as const;
 
+/**
+ * Deletes every row of a group from every table that holds one, by `group_id` (`GROUP_TABLES`), in the caller's transaction. The group's own row
+ * (`grp`) is the caller's to delete, in the same transaction: deleting a person deletes it in the statement that decides the group goes, and deleting
+ * a group (`src/groups/lifecycle.ts`) in the statement that holds the owner and the group's emptiness. One list for both.
+ */
+export async function deleteGroupRows(tx: Database, groupId: string): Promise<void> {
+  for (const name of GROUP_TABLES)
+    await dbAll(
+      tx,
+      sql`DELETE FROM ${groupTable(tx, name)} WHERE group_id = ${groupId} RETURNING group_id`,
+    );
+}
+
 /** Each of `GROUP_TABLES` as the dialect has it. */
 function groupTable(database: Database, name: (typeof GROUP_TABLES)[number]) {
   const t = tables(database);
@@ -112,12 +125,7 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
               RETURNING id`,
         );
         if (gone.length > 0) {
-          for (const name of GROUP_TABLES) {
-            await dbAll(
-              tx,
-              sql`DELETE FROM ${groupTable(tx, name)} WHERE group_id = ${groupId} RETURNING group_id`,
-            );
-          }
+          await deleteGroupRows(tx, groupId);
           return true;
         }
         const seq = (

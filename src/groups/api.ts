@@ -15,6 +15,8 @@ const STATUS: Record<Exclude<OpError['code'], 'not_found'>, number> = {
   id_taken: 409,
   last_owner: 409,
   too_many_groups: 409,
+  unsettled: 409,
+  not_empty: 409,
 };
 
 export function opsHandler(databaseOf: () => Promise<Database> = getDatabase) {
