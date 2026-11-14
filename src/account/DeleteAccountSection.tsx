@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { messageFor } from '../auth/messages';
 import { signInValue } from '../auth/derive';
+import { forgetIdentity } from '../identity';
 import { deleteVault } from '../cipher/vault';
 import { signOutDevice } from '../sync/device';
 import { Alert, Button, FormField, Input } from '@sovereignfs/ui';
@@ -69,6 +70,7 @@ export function DeleteAccountSection({ accountId, email }: { accountId: string; 
       // The account is gone, and with it this device's copy of its key; the page starts again from the front.
       setPassword('');
       await deleteVault(accountId).catch(() => undefined);
+      forgetIdentity();
       await signOutDevice(accountId, 0).catch(() => undefined);
       window.location.assign('/');
     } catch {

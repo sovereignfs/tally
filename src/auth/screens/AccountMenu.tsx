@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { UserMenu } from '@sovereignfs/ui';
 import { authClient } from '../client';
+import { forgetIdentity } from '../../identity';
 import { deleteVault } from '../../cipher/vault';
 import { signOutDevice, watchFailed } from '../../sync/device';
 import styles from './AccountMenu.module.css';
@@ -46,6 +47,7 @@ export function AccountMenu({
     }
     // Signing out takes the account's key off this device (DESIGN.md §5.3, §11.7): the next sign-in here unlocks it again as a new device does.
     await deleteVault(accountId).catch(() => undefined);
+    forgetIdentity();
     // And its groups: one last try to send what it recorded, then the store deleted.
     await signOutDevice(accountId).catch(() => undefined);
     window.location.assign('/');

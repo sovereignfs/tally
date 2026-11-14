@@ -90,7 +90,7 @@ Move there and Discard, and Reset this device (`resetDevice`), which says how ma
 recorded offline in a group closed meanwhile lands in `failed` with "Lisbon was closed." and moves to another group and syncs, on a file, sqld and
 PostgreSQL; the section in Playwright.
 
-#### 📋 6.4 — Opening offline
+#### ✅ 6.4 — Opening offline
 
 **Goal:** a signed-in address opens with no network. **Design:** §15.11. **Depends on:** 6.2, 1.11.
 
@@ -100,6 +100,15 @@ renders from the store; every other address gets the worker's offline page; Back
 
 **Accepts when:** in Chromium, with the network off after one visit, Home and a group open from the device and an expense can be added; the worker's
 test shows no page with data is cached.
+
+**Done as:** copied from Tusk: `src/identity.ts` (with the person's id added; `tally.me` in `localStorage`, kept by `RememberIdentity` on every
+signed-in page and forgotten at sign-out and account deletion) and `src/sync/background.ts` (the `tally-sync` tag; a write asks to be woken, a wake
+is a sync, wired in `src/sync/device.ts`). `OfflineShell`, Tusk's `OfflineApp` for Tally, finds who is signed in on the device, draws the same frame
+and account menu as the server's layout, and starts the device's sync, which reads the store and sends once the network is back. The worker answers
+signed-in addresses with it (1.11). **Left for Milestone E:** the screens of a group, and adding an expense, which do not exist yet; until they do the
+shell lists the groups the device holds, and when they land it chooses the screen from the address as Tusk's does. Tests: in Chromium, after one visit
+and with the network off, `/groups` opens from the device with the group it holds and the account menu, and `/settings` says it needs a connection;
+the identity is read back only when it is exactly one.
 
 #### 📋 6.5 — Keeping the history small
 

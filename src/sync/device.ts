@@ -1,6 +1,7 @@
 import { type LocalDatabase, deleteLocal, localName, openLocal } from '../local/db';
 import { outboxSize } from '../local/store';
 import { type KeyExchange, SyncClient, type Transport, fetchTransport } from './client';
+import { onWake, registerBackgroundSync } from './background';
 import { type Loop, type LoopEnvironment, browserEnvironment, startSyncLoop } from './loop';
 
 /**
@@ -54,6 +55,9 @@ export function startDevice(options: DeviceOptions): Promise<Device> {
       ...(options.onSignedOut ? { onSignedOut: options.onSignedOut } : {}),
       ...(options.onUpdateRequired ? { onUpdateRequired: options.onUpdateRequired } : {}),
     });
+    // Background Sync, where the browser has it: a write asks to be woken when the network is back, and a wake is a sync (§11.3).
+    client.onWrite(registerBackgroundSync);
+    onWake(() => void loop.syncNow());
     // Unsent changes could be lost if the browser evicts the store: asked once, and a refusal changes nothing else (§11.6).
     void globalThis.navigator?.storage?.persist?.().catch(() => false);
     return { db, client, loop };
