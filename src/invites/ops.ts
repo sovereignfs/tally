@@ -57,6 +57,7 @@ export async function inviteCreate(
     token: made.token,
     expiresAt: made.expiresAt,
     mailed: made.mailed,
+    mailHeld: made.mailHeld === true,
     mailOn: Boolean(mail),
   };
 }

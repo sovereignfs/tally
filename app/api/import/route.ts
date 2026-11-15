@@ -34,7 +34,14 @@ export const POST = accountRoute(async ({ request, accountId, personId }) => {
     if (error instanceof OpError)
       return Response.json(
         { code: error.code, message: error.message },
-        { status: error.code === 'too_many_groups' || error.code === 'id_taken' ? 409 : 400 },
+        {
+          status:
+            error.code === 'rate_limited'
+              ? 429
+              : error.code === 'too_many_groups' || error.code === 'id_taken'
+                ? 409
+                : 400,
+        },
       );
     throw error;
   }

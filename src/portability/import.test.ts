@@ -9,7 +9,7 @@ import { testTarget } from '../db/test-support';
 import { opsHandler } from '../groups/api';
 import { personOfAccount } from '../people/persons';
 import { type ExportFile, type GroupInput, buildExport } from './format';
-import { importGroups } from './import';
+import { IMPORT_RATE, MAX_ROWS_IN_IMPORT, importGroups } from './import';
 import { prepareImport } from './prepare';
 import { validateFile } from './validate';
 
@@ -491,5 +491,23 @@ describe(`import (${leg})`, () => {
     if (first) first.sealed = 'not sealed';
     await expect(importGroups(t.database, grace, again)).rejects.toThrow();
     expect(await count()).toBe(before);
+  });
+
+  it('refuses a file larger than any real history, and more than a few imports an hour', async () => {
+    const huge = { groups: [{ expenses: new Array(MAX_ROWS_IN_IMPORT + 1).fill({}) }] };
+    await expect(importGroups(t.database, grace, huge)).rejects.toThrow();
+    const checked = validateFile(original());
+    if (!checked.ok) throw new Error(checked.message);
+    // The earlier imports here counted too; the limit is reached within ten.
+    let refused = false;
+    for (let i = 0; i < IMPORT_RATE.limit && !refused; i++) {
+      try {
+        await importGroups(t.database, grace, await prepareImport(checked.file, keyer, 'Grace'));
+      } catch (error) {
+        expect((error as { code?: string }).code).toBe('rate_limited');
+        refused = true;
+      }
+    }
+    expect(refused).toBe(true);
   });
 });

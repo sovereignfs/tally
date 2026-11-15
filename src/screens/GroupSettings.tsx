@@ -276,13 +276,20 @@ export function GroupSettings({ groupId }: { groupId: string }) {
                             ...(carried ? { keyWrap: carried.keyWrap } : {}),
                           });
                           const made = answer as
-                            { token?: string; mailed?: boolean; mailOn?: boolean } | undefined;
+                            | {
+                                token?: string;
+                                mailed?: boolean;
+                                mailHeld?: boolean;
+                                mailOn?: boolean;
+                              }
+                            | undefined;
                           if (made?.token)
                             setInvited({
                               personId: m.personId,
                               token: made.token,
                               fragment: carried?.fragment ?? null,
                               mailed: Boolean(made.mailed),
+                              mailHeld: Boolean(made.mailHeld),
                               mailOn: Boolean(made.mailOn),
                             });
                         })()
@@ -664,6 +671,8 @@ interface Invited {
   /** `<epoch>.<secret>`, for the copied link: it opens the group at once. Never sent to the server, never in a mail. */
   fragment: string | null;
   mailed: boolean;
+  /** An invitation email went to them less than an hour ago, so this link was not mailed again. */
+  mailHeld: boolean;
   mailOn: boolean;
 }
 
@@ -678,9 +687,11 @@ function InvitationLink({ invitation, name }: { invitation: Invited; name: strin
       <span className={styles.small}>
         {invitation.mailed
           ? `An email is on its way to ${name}. This link opens the group at once, if you send it yourself:`
-          : invitation.mailOn
-            ? `${name} has no email address here: send this link yourself.`
-            : 'Mail is not set up here, so this link is the only way: send it to them yourself.'}
+          : invitation.mailHeld
+            ? `An invitation email went to ${name} less than an hour ago, so this new link was not mailed: send it yourself.`
+            : invitation.mailOn
+              ? `${name} has no email address here: send this link yourself.`
+              : 'Mail is not set up here, so this link is the only way: send it to them yourself.'}
       </span>
       <span className={styles.row}>
         <code className={styles.small} style={{ wordBreak: 'break-all' }}>

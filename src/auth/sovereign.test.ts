@@ -709,6 +709,7 @@ describe(`a core identity, handed to the app (${leg})`, () => {
       },
       async (account, sub, token) => {
         tokens.push({ account, sub, token });
+        return true;
       },
     );
   });
@@ -727,7 +728,7 @@ describe(`a core identity, handed to the app (${leg})`, () => {
     ]);
   });
 
-  it('hands over core’s refresh token at each sign-in, opened, while better-auth keeps its own copy encrypted', async () => {
+  it('hands over core’s refresh token at each sign-in, opened, and clears better-auth’s own copy once the app keeps it', async () => {
     const who = person();
     await login(t, fake, visitor(t), who);
     const issued = fake.refreshTokensIssued[fake.refreshTokensIssued.length - 1];
@@ -739,7 +740,8 @@ describe(`a core identity, handed to the app (${leg})`, () => {
       t.database,
       sql`SELECT refresh_token FROM ${tables(t).account} WHERE account_id = ${who.sub}`,
     );
-    expect(raw[0]?.refresh_token).not.toBe(issued);
+    // Kept by the app, sealed under the instance key: better-auth's own copy is cleared, so the token rests in one place.
+    expect(raw[0]?.refresh_token).toBeNull();
     // The next sign-in brings a new one, handed over too.
     await login(t, fake, visitor(t), who);
     expect(tokens.filter((x) => x.sub === who.sub)).toHaveLength(2);

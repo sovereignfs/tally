@@ -228,7 +228,7 @@ describe(`invitations (${leg})`, () => {
     expect(await validInvitation(t.database, token, Date.now())).toBeDefined();
   });
 
-  it('puts a mailed invitation in the outbox, with no key and no group name', async () => {
+  it('puts a mailed invitation in the outbox, with no key and no group name, and mails a person at most once an hour', async () => {
     const mo = await call(t.ada, {
       op: 'member.add',
       groupId,
@@ -256,6 +256,39 @@ describe(`invitations (${leg})`, () => {
       link: `https://tally.test/invite/${made.token}`,
     });
     expect(mail?.data).not.toContain('#');
+
+    // A new link within the hour is made, and not mailed: an address cannot be flooded by making links.
+    const mails = async () =>
+      Number(
+        (
+          await dbGet<{ n: number }>(
+            t.database,
+            sql`SELECT COUNT(*) AS n FROM ${tables(t.database).mailOutbox} WHERE to_address = 'mo@example.com'`,
+          )
+        )?.n,
+      );
+    const before = await mails();
+    for (let i = 0; i < 3; i++) {
+      const again = await createInvitation(
+        t.database,
+        ada,
+        { groupId, personId: String(mo.body?.personId) },
+        { now: Date.now(), mail: { origin: 'https://tally.test', inviterName: 'Ada' } },
+      );
+      expect(again).toMatchObject({ mailed: false, mailHeld: true });
+    }
+    expect(await mails()).toBe(before);
+    // An hour on, one goes again.
+    const later = await createInvitation(
+      t.database,
+      ada,
+      { groupId, personId: String(mo.body?.personId) },
+      {
+        now: Date.now() + 61 * 60 * 1000,
+        mail: { origin: 'https://tally.test', inviterName: 'Ada' },
+      },
+    );
+    expect(later.mailed).toBe(true);
   });
 });
 

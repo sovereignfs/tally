@@ -1,4 +1,6 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
+import { sql } from 'drizzle-orm';
+import { dbAll } from '../db/exec';
 import { betterAuth } from 'better-auth';
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
 import { symmetricDecrypt } from 'better-auth/crypto';
@@ -55,10 +57,11 @@ export interface AuthDependencies {
     | undefined;
   /**
    * Called with core's refresh token whenever a sign-in through core hands one over (DESIGN.md §14.4), opened from better-auth's own encryption: the
-   * app keeps it sealed for the directory (`src/sovereign/tokens.ts`). Never logged; a failure here never fails the sign-in.
+   * app keeps it sealed for the directory (`src/sovereign/tokens.ts`), and answers whether it did: then better-auth's own copy is cleared, so that
+   * the token rests in one place. Never logged; a failure here never fails the sign-in.
    */
   onCoreToken?:
-    ((accountId: string, sub: string, refreshToken: string) => Promise<void>) | undefined;
+    ((accountId: string, sub: string, refreshToken: string) => Promise<boolean>) | undefined;
 }
 
 /**
@@ -111,7 +114,14 @@ export function createAuth({
       const plain = /^\$ba\$|^[0-9a-f]+$/i.test(refreshToken)
         ? await symmetricDecrypt({ key: settings.secret, data: refreshToken })
         : refreshToken;
-      await onCoreToken(userId, accountId, plain);
+      if (await onCoreToken(userId, accountId, plain)) {
+        const auth = database.dialect === 'postgres' ? postgresAuth : sqliteAuth;
+        await dbAll(
+          database,
+          sql`UPDATE ${auth.account} SET refresh_token = NULL
+              WHERE provider_id = ${SOVEREIGN_PROVIDER_ID} AND user_id = ${userId} AND account_id = ${accountId} RETURNING id`,
+        );
+      }
     } catch {
       // Nothing of it is said: the directory waits for the next sign-in.
     }

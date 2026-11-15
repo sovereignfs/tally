@@ -37,7 +37,7 @@ changing no table's count, the seeded password signing in and unwrapping the acc
 accepted. Seeded and looked at by hand in a browser: Home, a group with every description opened, an expense with its comments and its replaced
 version, and the notifications, all with something to show.
 
-#### 📋 13.2 — Security review
+#### ✅ 13.2 — Security review
 
 **Goal:** phase 1 reviewed before it is released. **Design:** §20 Security. **Depends on:** 12.2, 9.3, 11.2.
 
@@ -46,6 +46,13 @@ claiming (§6.3), emails' visibility (§6.1), deletion (§18), encryption (§5.3
 table, log or mail), the CSP, logs, rate limits, the refresh token; findings fixed or recorded with a decision.
 
 **Accepts when:** the review is merged with no open finding of high severity.
+
+**Done as:** `docs/security-review.md`, area by area as above, with what was looked at, what was found and what was decided. No finding of high
+severity. Fixed in the same change: an invitation email at most once an hour to a person however many links are made, said on the screen (medium);
+import limited to 50,000 rows and ten an hour (medium); the export note limited (low); better-auth's copy of core's refresh token cleared once Tally
+seals its own (low); and, from 13.1, a deleted person with no group left removed. Recorded with a decision: what is not sealed (names and figures, by
+design), the driver's start-up message. Tests for each fix: the invitation mail held within the hour and sent after it; the import's row cap and
+rate limit; better-auth's copy cleared.
 
 #### 📋 13.3 — Documents
 

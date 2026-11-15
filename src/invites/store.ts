@@ -44,6 +44,8 @@ export interface Made {
   expiresAt: number;
   /** Whether it was put in the outbox to the placeholder's address. */
   mailed: boolean;
+  /** Mail is on and there is an address, but one went to it less than an hour ago: this link was not mailed, so that an address cannot be flooded. */
+  mailHeld?: boolean;
 }
 
 /**
@@ -93,7 +95,15 @@ export async function createInvitationIn(
       sql`UPDATE ${t.invitation} SET revoked_at = ${options.now}, key_wrap = NULL
           WHERE person_id = ${input.personId} AND accepted_at IS NULL AND revoked_at IS NULL RETURNING id`,
     );
-    const mailed = Boolean(options.mail && placeholder.email);
+    // At most one invitation email to a person an hour, however many new links are made (a reminder is held to its own once a day).
+    const recent =
+      options.mail && placeholder.email && !options.mail.reminder
+        ? await dbGet<{ id: string }>(
+            tx,
+            sql`SELECT id FROM ${t.invitation} WHERE person_id = ${input.personId} AND sent_at IS NOT NULL AND sent_at > ${options.now - RESEND_AFTER_MS}`,
+          )
+        : undefined;
+    const mailed = Boolean(options.mail && placeholder.email && !recent);
     await dbAll(
       tx,
       sql`INSERT INTO ${t.invitation} (id, group_id, person_id, token_hash, email, key_wrap, created_by, expires_at, sent_at, accepted_by, accepted_at, revoked_at, created_at)
@@ -115,7 +125,7 @@ export async function createInvitationIn(
         },
         options.now,
       );
-    return { invitationId, token, expiresAt, mailed };
+    return { invitationId, token, expiresAt, mailed, ...(recent ? { mailHeld: true } : {}) };
   }
 }
 

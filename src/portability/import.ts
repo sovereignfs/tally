@@ -14,6 +14,7 @@ import { toMinor } from '../money/amount';
 import { isSupportedCurrencyCode } from '../money/currencies';
 import { NAME_MAX, cleanName } from '../people/persons';
 import { importGroupRows } from '../sync/apply';
+import { RateLimiter, type Rule } from '../limits/rate';
 import { MAX_GROUPS_IN_FILE, MAX_ROWS_IN_GROUP } from './validate';
 
 /**
@@ -24,6 +25,10 @@ import { MAX_GROUPS_IN_FILE, MAX_ROWS_IN_GROUP } from './validate';
  */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const MAX_SEALED_NAME = 2_048;
+/** Every row of every group of one import together: a file larger than any real history is refused before anything is read further. */
+export const MAX_ROWS_IN_IMPORT = 50_000;
+/** Imports per account and hour: each writes a great deal in one transaction. */
+export const IMPORT_RATE: Rule = { limit: 10, windowMs: 60 * 60 * 1000 };
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -211,6 +216,15 @@ export async function importGroups(
     input.groups.length > MAX_GROUPS_IN_FILE
   )
     return invalid();
+  const total = (input.groups as unknown[]).reduce<number>((sum, g) => {
+    if (!isObject(g)) return sum;
+    const length = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+    return sum + length(g.expenses) + length(g.payments) + length(g.comments);
+  }, 0);
+  if (total > MAX_ROWS_IN_IMPORT) return invalid();
+  const taken = await new RateLimiter(database).take(`import:${who.accountId}`, IMPORT_RATE);
+  if (!taken.ok)
+    throw new OpError('rate_limited', 'That is a lot of imports in an hour. Try again later.');
   const seen = new Set<string>();
   const groups = (input.groups as unknown[]).map((g) => checkGroup(g, seen));
   const t = tables(database);

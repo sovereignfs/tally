@@ -50,8 +50,9 @@ export function getAuth(): Promise<Auth | null> {
         // Kept sealed under the instance key, for the directory (§14.4); without a key there is nowhere to keep it, and the directory is off.
         onCoreToken: async (accountId, _sub, refreshToken) => {
           const ring = getConfig().encryption;
-          if (ring)
-            await putCredential(await getDatabase(), ring, accountId, CORE_TOKEN, refreshToken);
+          if (!ring) return false;
+          await putCredential(await getDatabase(), ring, accountId, CORE_TOKEN, refreshToken);
+          return true;
         },
       });
     })
