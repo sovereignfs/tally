@@ -1,19 +1,16 @@
 name: CI
 
+# CI runs only where a change is about to reach what is released (CONTRIBUTING.md, "Continuous integration"): on a promotion pull request into
+# `main` that is not a draft, and by hand (Actions -> CI -> Run workflow) for any branch. Never for `develop` or a feature branch, which the
+# pre-push hook checks locally. `main` changes only by merging a promotion, whose run already checked that merge result.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
     # `ready_for_review` is how a draft starts running CI, and `labeled` and `unlabeled` are how `skip-ci` takes effect straight away.
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
-  # So that a dependency's new release cannot quietly break the build unnoticed between commits.
-  schedule:
-    - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 # A pull request that is a draft, or carries the `skip-ci` label, runs nothing: the `changes` job has the guard, and every other job needs it.
-# A push to main runs, because a rebase-and-merge makes new commits and the pull request's run does not vouch for the one that lands. The weekly
-# schedule runs every job, because it exists to catch what a dependency broke.
 
 permissions:
   contents: read
