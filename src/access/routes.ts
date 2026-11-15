@@ -69,6 +69,8 @@ export const ROUTES: RouteRule[] = [
   { route: '/api/account/notifications', methods: { PATCH: account } },
   // An export was downloaded: noted on core's activity page when hosted (DESIGN.md §17).
   { route: '/api/account/exported', methods: { POST: account } },
+  // Importing a file as new groups (DESIGN.md §17): the importer owns what it makes; nothing of anyone else's is touched.
+  { route: '/api/import', methods: { POST: account } },
   // Settings (DESIGN.md §16), for someone signed in.
   { route: '/settings', page: account },
   // What the account is told, and its reading of it (DESIGN.md §12.2): every statement names the account, and only its active groups' are shown.

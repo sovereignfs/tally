@@ -204,6 +204,23 @@ export class GroupKeys {
   }
 
   /**
+   * A new group's key for an import (DESIGN.md §17): made here and kept on this device, wrapped to the account's own key for the server, and given
+   * back as a key to seal the group's text with. As `prepareGroup`, for a group whose rows the caller seals.
+   */
+  async keyForImport(groupId: string): Promise<{ key: CryptoKey; keyWrap: string }> {
+    const held = await this.account.current();
+    if (!held) throw new CipherError('wrong_key');
+    const key: Bytes = newGroupKey();
+    await this.account.vault.put(vaultName(groupId, 1), key);
+    const keyWrap = await wrapToPublicKey(
+      key,
+      held.publicKey,
+      bindingOf(groupId, 1, this.account.accountId),
+    );
+    return { key: await importGroupKey(key), keyWrap };
+  }
+
+  /**
    * A row's sealed text, opened with the key it was sealed under and sealed again for another row, under the target group's newest epoch held here (at
    * most `targetEpoch`): moving a refused expense to another group (§11.5). The text is in memory only for this.
    */

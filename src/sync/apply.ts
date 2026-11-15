@@ -689,3 +689,44 @@ export async function mergeMemberRows(
   }
   return { expenses: expenses.length, payments: payments.length };
 }
+
+/**
+ * **A group's rows from an import** (DESIGN.md §17), written here because they are expenses, payments and comments: in the caller's transaction, which
+ * has made the group and its members and checked every row as a change is checked. Each is written as created, version 1, by the importer, stamped
+ * with the group's first `seq`, with its first revision. A comment keeps its author, whom the caller has mapped to a person of the group.
+ */
+export async function importGroupRows(
+  tx: Database,
+  actorPersonId: string,
+  groupId: string,
+  rows: {
+    expenses: (ExpenseRow & { id: string })[];
+    payments: (PaymentRow & { id: string })[];
+    comments: {
+      id: string;
+      subject: 'expense' | 'payment';
+      subjectId: string;
+      authorPersonId: string;
+      sealed: string;
+    }[];
+  },
+  seq: number,
+  now: number,
+): Promise<void> {
+  const t = tables(tx);
+  const actor: Actor = { accountId: '', personId: actorPersonId };
+  for (const expense of rows.expenses) {
+    await writeExpense(tx, actor, groupId, expense.id, expense, undefined, seq, now);
+    await writeRevision(tx, actorPersonId, groupId, 'expense', expense.id, 1, 'created', now);
+  }
+  for (const payment of rows.payments) {
+    await writePayment(tx, actor, groupId, payment.id, payment, undefined, seq, now);
+    await writeRevision(tx, actorPersonId, groupId, 'payment', payment.id, 1, 'created', now);
+  }
+  for (const c of rows.comments)
+    await dbAll(
+      tx,
+      sql`INSERT INTO ${t.comment} (id, group_id, subject, subject_id, author_person_id, sealed, deleted_at, seq, created_at)
+          VALUES (${c.id}, ${groupId}, ${c.subject}, ${c.subjectId}, ${c.authorPersonId}, ${c.sealed}, NULL, ${seq}, ${now}) RETURNING id`,
+    );
+}

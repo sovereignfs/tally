@@ -154,7 +154,7 @@ Part of the suite, and a person can leave. **Done when** it signs in through cor
 | 65  | [11.1](docs/epics/suite.md)       | Core's bell, email, activity | P2       | 2.3, 9.2   | ✅     |
 | 66  | [11.2](docs/epics/suite.md)       | Core's directory             | P2       | 2.3, 8.2   | ✅     |
 | 67  | [12.1](docs/epics/portability.md) | Export                       | P2       | 5.3, 3.3   | ✅     |
-| 68  | [12.2](docs/epics/portability.md) | Import                       | P2       | 12.1, 8.2  | 📋     |
+| 68  | [12.2](docs/epics/portability.md) | Import                       | P2       | 12.1, 8.2  | ✅     |
 
 ### Milestone J — Release
 

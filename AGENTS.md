@@ -17,9 +17,9 @@ fully on its own, with every feature, needing no instance**: its own accounts, p
 `sovereignfs/sovereign-plugin-tally`, whose behaviour is the starting point and none of whose code, data or interface is carried over. It is a PWA on
 Next.js, with its own database (sqld, a SQLite file or PostgreSQL), signing people in locally, through a Sovereign core, or both, from one image.
 
-**Being built: Milestones A to H are done** (the foundation; accounts, people, groups and the keys that seal what is written; the arithmetic and the
+**Being built: Milestones A to I are done** (the foundation; accounts, people, groups and the keys that seal what is written; the arithmetic and the
 write path; offline and sync; the screens, with an interim money input until the design system has one; bringing people in, by placeholders, invitations and
-mail; notices, by the bell and email, and reminders; insights, with interim charts until the design system has them). `DESIGN.md` is the
+mail; notices, by the bell and email, and reminders; insights, with interim charts until the design system has them; the suite, through a Sovereign core, and a person's data in a file). `DESIGN.md` is the
 design, `ROADMAP.md` the order.
 
 ## Source of truth
@@ -167,7 +167,7 @@ Still to come: `seed` (13.1). **`verify` means**
 
 `DESIGN.md` §5.1 is where things go as the app is built. Today it holds the documents, the repository's conventions, the settings (`src/config/`), the
 database (`src/db/`), sign-in (`src/auth/`), people (`src/people/`), groups (`src/groups/`), access (`src/access/`), the cipher (`src/cipher/`) and keys
-(`src/keys/`), money (`src/money/`), balances (`src/balances/`), spending (`src/insights/`), actions and validators (`src/actions/`), the write path (`src/sync/`), activity (`src/activity/`), versions (`src/history/`), invitations (`src/invites/`), notices (`src/notices/`), mail (`src/mail/`), background jobs (`src/jobs/`), the device's store (`src/local/`), the service worker (`src/sw/`), the screens (`src/screens/`), deletion (`src/sovereign/`), Settings (`src/account/`), the theme and the shell (`src/ui/`, `app/(app)/`).
+(`src/keys/`), money (`src/money/`), balances (`src/balances/`), spending (`src/insights/`), export and import (`src/portability/`), credentials (`src/crypto/`), actions and validators (`src/actions/`), the write path (`src/sync/`), activity (`src/activity/`), versions (`src/history/`), invitations (`src/invites/`), notices (`src/notices/`), mail (`src/mail/`), background jobs (`src/jobs/`), the device's store (`src/local/`), the service worker (`src/sw/`), the screens (`src/screens/`), deletion and core's services (`src/sovereign/`), Settings (`src/account/`), the theme and the shell (`src/ui/`, `app/(app)/`).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

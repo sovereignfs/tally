@@ -40,7 +40,7 @@ for one left undecided; the note on core for someone linked and nobody else; in 
 the group by name and its expense's words, and no other address. Tusk's export format was the model; nothing of it is copied, since Tally's
 groups are not Tusk's boards.
 
-#### 📋 12.2 — Import
+#### ✅ 12.2 — Import
 
 **Goal:** a file becomes new groups. **Design:** §17. **Depends on:** 12.1, 8.2.
 
@@ -50,3 +50,18 @@ placeholder with a name and no email; refused for a newer `version` with a sente
 again; equal but for ids, times and the members' kind).
 
 **Accepts when:** the round trip passes on all three databases; a malformed file writes nothing.
+
+**Done as:** in the browser, `validateFile` (`src/portability/validate.ts`, pure) checks the file whole, every figure held to the rules a change is
+held to (`checkExpense`, `checkPayment` and the text checks, against the group's members in their order), and refuses a newer `version` with a
+sentence; `prepareImport` (`prepare.ts`) gives every group, member, expense, payment and comment a new id, mapped consistently, has the device make
+each group's key (`GroupKeys.keyForImport`, kept on this device and wrapped to the account's key) and seals the name and every text under it. Only
+sealed text leaves the device. On the server, `importGroups` (`import.ts`, `POST /api/import`) checks every row again and writes all the groups in one
+transaction, or none: the importer each group's owner (their own member, or one added for them), everyone else a placeholder with their name and no
+email, the members' order kept (a split's leftover follows it); the rows are written by `importGroupRows` in `src/sync/apply.ts`, as created, with
+their first revision. A group comes in open; a closed one in the file is opened. Settings, Data, Import reads the file and says what it made, or why
+not; an import is noted on core's activity page when hosted. The export now lists payers and shares in member order, as the server keeps them, so a
+file is the same whichever way the rows were read. Tests: on each database, the round trip (a file of two groups and two currencies, with a member who
+left, a comment, a split's leftover and three split methods, imported into a second account and exported again: equal but for ids, times and the
+members' kind); the importer the owner of each and everyone else a placeholder with no email; a newer version refused with its sentence, a split that
+does not add up refused; a wrong row in the last group, and a sealed name not in form, writing nothing. In Playwright, Chromium and WebKit: the
+downloaded file imported back as a copy, owned and opened at once with its expense's words; a newer file refused with its sentence.

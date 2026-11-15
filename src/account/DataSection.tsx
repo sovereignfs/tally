@@ -1,9 +1,10 @@
 import type { ExportFile } from '../portability/format';
 import { DeleteAccountSection } from './DeleteAccountSection';
 import { ExportSection } from './ExportSection';
+import { ImportSection } from './ImportSection';
 
 /**
- * Settings, Data (DESIGN.md §16, §17): taking your data with you, and deleting the account. Import joins with task 12.2.
+ * Settings, Data (DESIGN.md §16, §17): taking your data with you, bringing a file in as new groups, and deleting the account.
  */
 export function DataSection({
   accountId,
@@ -17,6 +18,7 @@ export function DataSection({
   return (
     <>
       <ExportSection profile={profile} />
+      <ImportSection name={profile.name} />
       <DeleteAccountSection accountId={accountId} email={email} />
     </>
   );

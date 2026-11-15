@@ -215,7 +215,7 @@ test('Notifications says mail is not set up here, so the bell is the only way, a
   await expect(page).toHaveURL(/\/g\/[0-9a-f-]{36}\/settings$/);
 });
 
-test('Data downloads one plain file of the profile and every group, with what was written opened, and no one else’s address', async ({
+test('Data downloads one plain file of the profile and every group, with no one else’s address, and imports it back as a new group', async ({
   page,
 }) => {
   await signedIn(page);
@@ -254,5 +254,41 @@ test('Data downloads one plain file of the profile and every group, with what wa
   expect(new Set(text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}/g))).toEqual(
     new Set([EMAIL]),
   );
-  await expect(section.getByRole('status')).toHaveText('Downloaded.');
+  await expect(section.getByRole('status').first()).toHaveText('Downloaded.');
+
+  // Import it back, just this group: a copy, owned by the importer, its words opened on this device at once.
+  const one = {
+    ...JSON.parse(text),
+    groups: [JSON.parse(text).groups.find((g: { id: string }) => g.id === groupId)],
+  };
+  await section.getByLabel('A Tally export to import').setInputFiles({
+    name: 'tally-export.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(one)),
+  });
+  await expect(
+    section.getByText('Imported 1 group. You will find it with your groups.'),
+  ).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.goto('/groups');
+  const copies = page.getByRole('main').getByRole('link', { name: new RegExp(groupName) });
+  await expect(copies).toHaveCount(2);
+  const copy = (await copies.evaluateAll((links) => links.map((l) => l.getAttribute('href')))).find(
+    (href) => href && !href.includes(groupId),
+  );
+  await page.goto(copy ?? '/');
+  await expect(page.getByRole('heading', { level: 1, name: groupName })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Expenses' }).getByRole('link', { name: /Ferry to Cacilhas/ }),
+  ).toBeVisible();
+
+  // A file from a newer Tally is refused, with a sentence.
+  await openSettings(page, 'data');
+  await section.getByLabel('A Tally export to import').setInputFiles({
+    name: 'newer.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ ...one, version: 9 })),
+  });
+  await expect(section.getByText(/made by a newer Tally/)).toBeVisible();
 });

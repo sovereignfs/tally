@@ -207,6 +207,14 @@ export function buildExport(input: {
   const groups = [...input.groups]
     .map((g): ExportedGroup => {
       const memberOfPerson = new Map(g.members.map((m) => [m.personId, m.id]));
+      // Payers and shares in the group's member order, as the server keeps them.
+      const place = new Map(
+        [...g.members]
+          .sort((a, b) => a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : 1))
+          .map((m, i) => [m.id, i]),
+      );
+      const inOrder = <T extends { memberId: string }>(list: readonly T[]) =>
+        [...list].sort((a, b) => (place.get(a.memberId) ?? 0) - (place.get(b.memberId) ?? 0));
       const commentsOf = (subject: 'expense' | 'payment', id: string): ExportedComment[] =>
         g.comments
           .filter((c) => c.subject === subject && c.subjectId === id && c.deletedAt === null)
@@ -248,8 +256,8 @@ export function buildExport(input: {
             method: e.method,
             description: text(e.sealed, 'description'),
             note: text(e.sealed, 'note'),
-            payers: e.payers.map((p) => ({ memberId: p.memberId, amount: p.amount })),
-            shares: e.shares.map((s) => ({
+            payers: inOrder(e.payers).map((p) => ({ memberId: p.memberId, amount: p.amount })),
+            shares: inOrder(e.shares).map((s) => ({
               memberId: s.memberId,
               amount: s.amount,
               units: s.units,
