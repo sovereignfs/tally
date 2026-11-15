@@ -8,6 +8,8 @@ Each release's section is also its GitHub release notes: the release workflow re
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-15
+
 The first release of Tally: shared expenses for groups, on its own or on a Sovereign instance.
 
 ### Added
@@ -40,4 +42,5 @@ The first release of Tally: shared expenses for groups, on its own or on a Sover
   from an outbox; every setting in `.env.example` and the README; `pnpm seed` for development.
 - A security review of phase 1, `docs/security-review.md`, with nothing of high severity open.
 
-[Unreleased]: https://github.com/sovereignfs/tally/commits/main
+[Unreleased]: https://github.com/sovereignfs/tally/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sovereignfs/tally/releases/tag/v0.1.0
