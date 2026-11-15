@@ -61,16 +61,19 @@ tells it where it is. What it sets is the settings above under Tally's own names
 `TALLY_CORE_CLIENT_SECRET` (or `_FILE`), the database (`TALLY_DB_DIALECT` and its address) and `PORT`, and it makes `TALLY_AUTH_SECRET` and `TALLY_ENCRYPTION_KEY`
 once and keeps them. With `TALLY_AUTH_LOCAL` unset, people sign in through the instance only: there is no password, sign-up or reset to find.
 
-Sign-up is open there without being set: with the instance as the only way in, it already decides who may sign in, so Tally gives an account to
-anyone it signs in (`TALLY_AUTH_SIGNUP=closed` turns that off). Mail (`TALLY_SMTP_*`) is not used when there is no password. The instance can end a person's sessions here, and delete their account, by
-signed notices to `/api/sovereign/backchannel-logout` and `/api/sovereign/account-deleted`; both are answered only when they carry a token the instance
-signed.
+Anyone the instance signs in gets an account here, whatever `TALLY_AUTH_SIGNUP` says: the instance already decides who may sign in, and the setting
+governs local accounts only (`DESIGN.md` §6.4). For people linked to it, the instance's bell and email carry Tally's notices, and the Add people field
+searches its directory as the person (which needs `TALLY_ENCRYPTION_KEY`, to keep their token sealed). Tally's own mail (`TALLY_SMTP_*`), when set, still
+emails invitations to people not on Tally yet, and notices where the instance does not. The instance can end a person's sessions here, and delete their
+account, by signed notices to `/api/sovereign/backchannel-logout` and `/api/sovereign/account-deleted`; both are answered only when they carry a token the
+instance signed.
 
 ## Keys
 
 - **`TALLY_AUTH_SECRET`** signs sessions and tokens. Changing it signs everyone out. Make it once (`openssl rand -base64 48`) and keep it with your secrets.
-- **`TALLY_ENCRYPTION_KEY`** seals any credential the app keeps for another service. Phase 1 keeps none, so nothing is sealed yet, and the key is there
-  so that the first release that does (a core's refresh token, for its directory) is not a change of setting. Make it once (`openssl rand -base64 32`) and keep it with your secrets. **To change it**, put
+- **`TALLY_ENCRYPTION_KEY`** seals any credential the app keeps for another service: today a core's refresh token, which lets the Add people field
+  search the instance's directory as the person. Without it, that search is off and nothing else changes. Make it once (`openssl rand -base64 32`) and
+  keep it with your secrets. **To change it**, put
   the new one in `TALLY_ENCRYPTION_KEY` and the old in `TALLY_ENCRYPTION_KEY_PREVIOUS`, start the server once, and then remove the old one.
 
 ## What the operator cannot read

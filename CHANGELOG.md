@@ -7,3 +7,5 @@ Each release's section is also its GitHub release notes: the release workflow re
 `## [Unreleased]` as you go; a release turns them into the version's section.
 
 ## [Unreleased]
+
+[Unreleased]: https://github.com/sovereignfs/tally/commits/main

@@ -164,7 +164,7 @@ Part of the suite, and a person can leave. **Done when** it signs in through cor
 | --- | ------------------------------ | --------------------------------------- | -------- | --------------- | ------ |
 | 69  | [13.1](docs/epics/release.md)  | Development seed                        | P1       | 8.3, 5.3        | ✅     |
 | 70  | [14.6](docs/epics/upstream.md) | Tally's port in the guide (`sovereign`) | P3       | —               | 📋     |
-| 71  | [13.3](docs/epics/release.md)  | Documents                               | P2       | 1.10            | 📋     |
+| 71  | [13.3](docs/epics/release.md)  | Documents                               | P2       | 1.10            | ✅     |
 | 72  | [13.2](docs/epics/release.md)  | Security review                         | P2       | 12.2, 9.3, 11.2 | ✅     |
 | 73  | [13.4](docs/epics/release.md)  | Release 0.1.0                           | P2       | 13.2, 13.3      | 📋     |
 | 74  | [13.5](docs/epics/release.md)  | Hosting on an instance                  | P2       | 13.4            | 📋     |

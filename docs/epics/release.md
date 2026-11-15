@@ -54,7 +54,7 @@ seals its own (low); and, from 13.1, a deleted person with no group left removed
 design), the driver's start-up message. Tests for each fix: the invitation mail held within the hour and sent after it; the import's row cap and
 rate limit; better-auth's copy cleared.
 
-#### 📋 13.3 — Documents
+#### ✅ 13.3 — Documents
 
 **Goal:** what a self-hoster, an operator and a person need to read. **Design:** §11.6, §20 Deployment. **Depends on:** 1.10.
 
@@ -62,6 +62,16 @@ rate limit; better-auth's copy cleared.
 and what cannot be hidden (§11.6), `RELEASING.md` and `scripts/release.sh` copied from Tusk.
 
 **Accepts when:** someone new runs Tally from the README alone, in each database form.
+
+**Done as:** the README says what Tally is and what is in it, runs it in one `docker run` and in each form of database through `deploy/` (sqld, a file,
+PostgreSQL), says how it is hosted on a Sovereign instance, lists every setting, and how to work on it; `deploy/README.md` brought up to date where
+core sign-in changed it (anyone the instance signs in gets an account, its bell, email and directory, and the instance key now seals a core token).
+The user's documentation is `docs/working-offline.md` (§11.6: what works offline, what needs a connection, where it stops), `docs/privacy.md` (what
+is sealed, what cannot be hidden, who sees an address) and `docs/your-data.md` (download, import, delete), indexed by `docs/README.md`.
+`RELEASING.md`, `scripts/release.sh`, `scripts/lib/release.sh`, `scripts/release/tally.sh` and `scripts/test-release.sh` are copied from Tusk with
+Tally's names, and the changelog gained the `[Unreleased]` link the release script updates. `pnpm seed` now reads `.env.local`, as `pnpm dev`
+writes it, so that it seeds the development server's database, a value in the shell winning. Checked: every link in the README and the guides
+resolves; the release scripts' tests pass (71); the deploy check brings up each form the README describes from nothing.
 
 #### 📋 13.4 — Release 0.1.0
 
