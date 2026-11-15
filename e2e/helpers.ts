@@ -211,6 +211,7 @@ export async function addExpense(
   await page.locator('body').click({ position: { x: 1, y: 1 } });
   await page.keyboard.press('n');
   const form = page.getByRole('form', { name: 'Add expense' });
+  await untilOpened(form);
   await form.getByLabel('Amount', { exact: true }).fill(amount);
   await form.getByLabel('Description').fill(description);
   if (category) await form.getByLabel('Category').selectOption({ label: category });
@@ -218,6 +219,16 @@ export async function addExpense(
   await form.getByLabel('Description').press('Enter');
   await expect(form).toHaveCount(0);
   await expect(page).not.toHaveURL(/add=expense/);
+}
+
+/**
+ * Waits until a sheet or drawer holding a new expense or payment has finished opening, which is when its amount has focus: the overlay first moves focus
+ * to its own first control (an effect, which React may run tens of milliseconds after the panel is on screen when the machine is busy), and the amount
+ * takes it 80 ms later (`MoneyInput`'s `focusOnOpen`). Typing before then races the overlay: Playwright focuses a field and inserts the text in two
+ * steps, and the overlay's focus landing between them sends the text to the Close button, so the field stays empty.
+ */
+export async function untilOpened(form: Locator) {
+  await expect(form.getByLabel('Amount', { exact: true })).toBeFocused();
 }
 
 /** The id of the group whose page this is. */

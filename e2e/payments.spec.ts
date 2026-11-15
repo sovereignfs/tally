@@ -11,6 +11,7 @@ import {
   signedIn,
   trySignIn,
   untilMembers,
+  untilOpened,
 } from './helpers';
 import { seedPlaceholders } from './seed';
 
@@ -55,6 +56,7 @@ test('settling a suggested payment zeroes the pair on both devices, and a part r
   await page.locator('body').click({ position: { x: 1, y: 1 } });
   await page.keyboard.press('p');
   const byHand = page.getByRole('form', { name: 'Record a payment' });
+  await untilOpened(byHand);
   await byHand.getByLabel('Who paid').selectOption({ label: 'Sam' });
   await byHand.getByLabel('Who was paid').selectOption({ label: 'you' });
   await byHand.getByLabel('Amount', { exact: true }).fill('4');
