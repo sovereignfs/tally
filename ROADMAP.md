@@ -162,7 +162,7 @@ Part of the suite, and a person can leave. **Done when** it signs in through cor
 
 | #   | ID                             | Task                                    | Priority | Depends on      | Status |
 | --- | ------------------------------ | --------------------------------------- | -------- | --------------- | ------ |
-| 69  | [13.1](docs/epics/release.md)  | Development seed                        | P1       | 8.3, 5.3        | 📋     |
+| 69  | [13.1](docs/epics/release.md)  | Development seed                        | P1       | 8.3, 5.3        | ✅     |
 | 70  | [14.6](docs/epics/upstream.md) | Tally's port in the guide (`sovereign`) | P3       | —               | 📋     |
 | 71  | [13.3](docs/epics/release.md)  | Documents                               | P2       | 1.10            | 📋     |
 | 72  | [13.2](docs/epics/release.md)  | Security review                         | P2       | 12.2, 9.3, 11.2 | 📋     |

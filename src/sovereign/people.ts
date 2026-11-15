@@ -20,7 +20,8 @@ import { personOfAccount } from '../people/persons';
  *     `owner_passed`); their own role becomes `member`, and **their membership stays**, shown as left Tally, so that the
  *     expenses and payments it carries still add up (ending it where the balance is zero joins with balances, 4.3). The group's order moves on.
  *  2. **Their keys** (§5.3): the account key, its wraps, its requests and every group key wrapped to them.
- *  3. **Their person**: `account_id`, `email` and `core_sub` cleared and `deleted_at` set; the name stays. Placeholders they added that are in no group go.
+ *  3. **Their person**: `account_id`, `email` and `core_sub` cleared and `deleted_at` set; the name stays while a group still shows it, and the person
+ *     goes when none does. Placeholders they added that are in no group go.
  *  4. What was kept for them in the app's store: their settings, the mutations they sent (`applied_mutation`), their notices and what they chose to hear, their stored core token, mail waiting for them, and the counters of rate limits, keyed
  *     `kind:account`.
  *  5. **The sign-in store**: sessions, sign-ins, second factors, passkeys, pending verifications, and then the account.
@@ -58,10 +59,22 @@ export const GROUP_TABLES = [
  * a group (`src/groups/lifecycle.ts`) in the statement that holds the owner and the group's emptiness. One list for both.
  */
 export async function deleteGroupRows(tx: Database, groupId: string): Promise<void> {
+  const t = tables(tx);
+  const people = await dbAll<{ personId: string }>(
+    tx,
+    sql`SELECT DISTINCT person_id AS "personId" FROM ${t.member} WHERE group_id = ${groupId}`,
+  );
   for (const name of GROUP_TABLES)
     await dbAll(
       tx,
       sql`DELETE FROM ${groupTable(tx, name)} WHERE group_id = ${groupId} RETURNING group_id`,
+    );
+  // Someone who deleted their account kept their name for this group's record: with it gone, and no other group showing them, so does the name.
+  for (const { personId } of people)
+    await dbAll(
+      tx,
+      sql`DELETE FROM ${t.person} WHERE id = ${personId} AND deleted_at IS NOT NULL AND account_id IS NULL
+            AND NOT EXISTS (SELECT 1 FROM ${t.member} m WHERE m.person_id = ${personId}) RETURNING id`,
     );
 }
 
@@ -210,6 +223,12 @@ export async function deletePerson(deps: PeopleDeps, accountId: string): Promise
         tx,
         sql`UPDATE ${t.person} SET account_id = NULL, email = NULL, core_sub = NULL, deleted_at = ${now}, updated_at = ${now}
             WHERE id = ${person.id} RETURNING id`,
+      );
+      // The name is kept only for the record others share: with no membership left to show it on, the person goes too.
+      await dbAll(
+        tx,
+        sql`DELETE FROM ${t.person} WHERE id = ${person.id}
+              AND NOT EXISTS (SELECT 1 FROM ${t.member} m WHERE m.person_id = ${person.id}) RETURNING id`,
       );
     });
   }

@@ -14,7 +14,7 @@ A seed to develop and demonstrate against, a security review, the documents, the
 
 ## Tasks
 
-#### 📋 13.1 — Development seed
+#### ✅ 13.1 — Development seed
 
 **Goal:** a realistic set of groups for development and the browser tests. **Design:** §20 Testing. **Depends on:** 8.3, 5.3.
 
@@ -23,6 +23,19 @@ split method and several payers, a conflict in history, comments, payments, a cl
 written through the one path (5.2), never around it; `--reset`.
 
 **Accepts when:** a fresh database seeded twice gives the same groups; every screen has something to show.
+
+**Done as:** `pnpm seed` (`scripts/seed-run.mjs`, running `scripts/seed.ts` through `jiti`, as Tusk's), refusing an address or a database not on this
+machine: three accounts (`ada@`, `grace@` and `lee@example.test`, password `tally-development-only`), made through better-auth with the password
+derived as the browser derives it, and each account's key made and wrapped by that password, so that signing in unlocks it; three groups made by the
+operations, each group's key wrapped to every member: **Lisbon trip** in euros and yen with every split method, an expense with two payers, an edit
+replaced by another (with Restore in its history), two comments, a payment, simplify debts off, and Sam, not on Tally yet, with a live invitation;
+**Flat** with simplify debts on; **Ski weekend**, settled and closed. Every expense, payment and comment goes through `applyMutation` with a fixed id,
+and a group already there is left alone, so a second run changes nothing. `--reset` deletes the seeded accounts with `deletePerson` and makes it
+all again. **A gap it found, fixed here:** deleting an account kept the person's name even when no group showed it any more; now the person goes
+once no membership points at it, at the deletion and when their last group is deleted. Tests: on each database, everything above made, a second run
+changing no table's count, the seeded password signing in and unwrapping the account's key, `--reset` making the same again, and only this machine
+accepted. Seeded and looked at by hand in a browser: Home, a group with every description opened, an expense with its comments and its replaced
+version, and the notifications, all with something to show.
 
 #### 📋 13.2 — Security review
 
