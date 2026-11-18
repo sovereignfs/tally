@@ -3,10 +3,15 @@
 All notable changes to Tally are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
-Each release's section is also its GitHub release notes: the release workflow reads this file when a release is cut. Write the notes under
-`## [Unreleased]` as you go; a release turns them into the version's section.
+Each version's section is also its GitHub release notes. It is written in the change that sets the version, dated that day, and a promotion
+titled `Release vX.Y.Z` is refused without it (RELEASING.md).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-18
+
+### Added
+
+- Opened from Sovereign's launcher, or from any link to it, an installed Tally now opens as itself on desktop Chrome and Edge and on Android Chrome, on the page the link names, rather than in a browser view. On an iPhone, an iPad and in Safari the link opens a browser view, as before.
+- Added to an iPhone's Home Screen from Safari, it opens as an app without Safari's bars, under its own name.
 
 ## [0.1.0] - 2026-11-15
 
@@ -42,5 +47,4 @@ The first release of Tally: shared expenses for groups, on its own or on a Sover
   from an outbox; every setting in `.env.example` and the README; `pnpm seed` for development.
 - A security review of phase 1, `docs/security-review.md`, with nothing of high severity open.
 
-[Unreleased]: https://github.com/sovereignfs/tally/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/sovereignfs/tally/releases/tag/v0.1.0

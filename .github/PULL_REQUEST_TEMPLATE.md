@@ -22,7 +22,7 @@
 - [ ] A new table is deleted by `People.deletePerson` and in the export, with a test
 - [ ] A write goes through the one path and keeps the arithmetic's invariants (payers and shares add up; a balance is never written)
 - [ ] What people write is sealed on the device, and no sealed text reaches a log, a mail or core in plain text
-- [ ] `## [Unreleased]` in `CHANGELOG.md` is updated (for a change in behaviour)
+- [ ] A version set here has its section in `CHANGELOG.md` (RELEASING.md)
 - [ ] The task is marked done in `ROADMAP.md` and written up in its epic
 - [ ] Relevant docs updated (README, DESIGN, AGENTS)
 
