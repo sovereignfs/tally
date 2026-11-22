@@ -6,7 +6,18 @@ All notable changes to Tally are recorded here. The format follows [Keep a Chang
 Each version's section is also its GitHub release notes. It is written in the change that sets the version, dated that day, and a promotion
 titled `Release vX.Y.Z` is refused without it (RELEASING.md).
 
-## [0.2.0] - 2026-11-18
+## [0.3.0] - 2026-11-22
+
+### Added
+
+- Core's export of a person now holds their Tally groups: Sovereign's "Your data" download includes their profile and every group they are in, with its members by name, expenses, payments and comments. What people wrote stays sealed in it, as it is on the server; Tally's own export, from Settings, is the one that opens it. Needs core 0.126.0 or later, which the manifest now asks for.
+
+### Changed
+
+- The service worker, the web manifest and the worker's registration are the suite's, from `@sovereignfs/pwa`. A new version of Tally is announced with a Reload button instead of waiting for every window to close. With no connection, every page opens Tally's offline screens, and a page they cannot show (Settings, an invitation, notices) says it needs a connection there; before a first visit has kept them, the suite's offline page says so. As before, nothing of a person is kept in a cache.
+- On the suite's current packages: `@sovereignfs/sdk` 2.11.0, `@sovereignfs/ui` 0.105.0, `@sovereignfs/manifest` 0.4.0 (manifest 5) and `@sovereignfs/create` 0.27.1, whose shared rules are now in `AGENTS.md` and `CONTRIBUTING.md`. Tally keeps its own `Dockerfile`, `.dockerignore` and Compose setups, for its three databases.
+
+- 2026-11-18
 
 ### Added
 
@@ -47,4 +58,6 @@ The first release of Tally: shared expenses for groups, on its own or on a Sover
   from an outbox; every setting in `.env.example` and the README; `pnpm seed` for development.
 - A security review of phase 1, `docs/security-review.md`, with nothing of high severity open.
 
+[0.3.0]: https://github.com/sovereignfs/tally/releases/tag/v0.3.0
+[0.2.0]: https://github.com/sovereignfs/tally/releases/tag/v0.2.0
 [0.1.0]: https://github.com/sovereignfs/tally/releases/tag/v0.1.0

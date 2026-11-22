@@ -932,10 +932,11 @@ The sentence of choices (§15.9) is Tally's own composition of `Button`, `Popove
 - **`MobileFooter`:** Home and Groups left of the launcher, People and Activity right. **Add** is a floating button above it, opening the drawer.
   Insights, Notifications and Settings are in the avatar menu; the bell stays in the header.
 - A group's views are tabs; an expense, a person and settings are full pages with a back link.
-- **Installable as a PWA,** as Tusk's §17.9: the service worker keeps the shell by allow-list and the one shell page, which holds nothing of a person;
-  with no network, a signed-in address (Home, a group, an expense, a person) is answered with the kept shell, which reads the device's store. **No data
-  is ever in a cache;** it lives in IndexedDB, named per account and deleted at sign-out. Every other address offline gets a page saying it needs a
-  connection. The worker also runs Background Sync (§11.3).
+- **Installable as a PWA,** from the suite's `@sovereignfs/pwa` (its manifest, its worker and its registration, which announces a new version with
+  Reload): the service worker keeps the shell by allow-list and the one shell page, which holds nothing of a person; with no network every address is
+  answered with the kept shell, which reads the device's store and shows Home, a group, an expense or a person, and says any other address needs a
+  connection. **No data is ever in a cache;** it lives in IndexedDB, named per account and deleted at sign-out. The worker also runs Background Sync
+  (§11.3), added after the package's text until `@sovereignfs/pwa` 0.3.0's `sync` option is released.
 
 ## 16. Settings
 
@@ -965,6 +966,11 @@ The sentence of choices (§15.9) is Tally's own composition of `Button`, `Popove
   consistently. A file from a newer version is refused with a sentence that says so. The browser reads the file, makes each new group's key and seals
   its text, and the server validates and writes the rest.
 - **A round trip is a test:** export, import into a second account, export again; the groups match but for ids, times and the members' kind.
+- **Core's export of a person** (`signIn.export`, manifest 5): when the person downloads their data from Sovereign, core asks Tally for its part at
+  `/api/sovereign/export` with a signed token the SDK checks. The server cannot open what people wrote, so the part is the same groups as stored, read
+  on the server (`src/portability/core-export.ts`): the person and their settings, and each group they are in with its members by name only, its
+  expenses, payers, shares, payments and comments, the sealed text as it is and its files marked end to end. The browser's own export is the one that
+  opens it.
 
 ## 18. Account deletion and signing out
 

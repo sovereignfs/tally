@@ -22,7 +22,7 @@ import { AddSheet } from '../screens/AddSheet';
  * holds nothing of a person; this is that page. It finds who is signed in on the device (`src/identity.ts`), draws the same frame the server's layout
  * draws, and starts the device's sync, which reads the store and sends what is recorded once the network is back. Tusk's `OfflineApp`, for Tally.
  *
- * It chooses the screen from the address, as Tusk's does: a group's page, or the groups.
+ * It chooses the screen from the address, as Tusk's does: a group's page, or the groups; any other address says it needs a connection.
  */
 export function OfflineShell() {
   // Not known until the page is in the browser: the server renders nothing of a person.
@@ -72,6 +72,20 @@ function OfflineScreen() {
   if (pathname === '/people') return <PeopleList />;
   if (pathname === '/insights') return <InsightsPage />;
   if (pathname === '/' || pathname === '/home') return <Home />;
+  // The worker answers every address with this page when there is no network (`@sovereignfs/pwa`), so an address that is not a screen of the groups
+  // (settings, an invitation, notices) says it needs a connection here, as the worker's own page did before.
+  if (pathname !== '/groups' && pathname !== '/activity')
+    return (
+      <PageContainer>
+        <PageHeader
+          title="This needs a connection"
+          description="Settings, invitations and notices are read from the server, so they are not here while you are offline. Your groups are: you can record expenses and payments, and they reach the others when you are back online."
+        />
+        <p>
+          <Link href="/">Back to your groups</Link>
+        </p>
+      </PageContainer>
+    );
   return (
     <PageContainer>
       <PageHeader

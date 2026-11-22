@@ -90,6 +90,13 @@ export const ROUTES: RouteRule[] = [
       POST: { kind: 'public', because: 'core signs the notice; @sovereignfs/sdk checks it, once' },
     },
   },
+  // Core asks for a person's part of their export (`signIn.export`): a signed token, checked by the SDK, a replay refused.
+  {
+    route: '/api/sovereign/export',
+    methods: {
+      POST: { kind: 'public', because: 'core signs the notice; @sovereignfs/sdk checks it, once' },
+    },
+  },
   // The online operations of groups (DESIGN.md §11.6): each carries the account's membership, or an owner's role, in its own statements.
   { route: '/api/ops', methods: { POST: account } },
   // The account's key and its wraps, and a new device's request to be given it (DESIGN.md §5.3): each the account's own, by its session.

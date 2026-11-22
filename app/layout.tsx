@@ -6,7 +6,7 @@ import './globals.css';
 import { site } from '@/src/site';
 import { themeScript } from '@/src/theme/script';
 import { ToastProvider } from '@sovereignfs/ui';
-import { RegisterWorker } from '@/src/ui/RegisterWorker';
+import { ServiceWorkerRegistration } from '@sovereignfs/pwa/client';
 
 // The typeface is Hanken Grotesk, which `@sovereignfs/ui` ships with its tokens and serves from this app's own origin: nothing is fetched from
 // another site, and no font is loaded here.
@@ -41,7 +41,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         <ToastProvider>{children}</ToastProvider>
-        <RegisterWorker />
+        {/* Registers the service worker in production, and says when a new version is ready (`@sovereignfs/pwa`). */}
+        <ServiceWorkerRegistration appName={site.name} />
       </body>
     </html>
   );

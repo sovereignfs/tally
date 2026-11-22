@@ -45,7 +45,9 @@ test('a device the password cannot unlock asks another, and is unlocked once tha
   await signedIn(page);
   await expect.poll(() => holdsKey(page)).toBe(true);
 
-  await using phone = await secondBrowser(browser);
+  // Its requests are rewritten by the test (`page.route`), which WebKit does not apply to a page a service worker controls: the worker
+  // claims the page as it starts, so this device runs without one, as the test is about keys and not the worker.
+  await using phone = await secondBrowser(browser, { serviceWorkers: 'block' });
   // This device is told of no password wrap, as one whose password was reset by email: its sign-in cannot unlock.
   await phone.page.route('**/api/keys', async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
@@ -117,7 +119,9 @@ test('the recovery key, kept when offered, unlocks a device nothing else can, ho
   ).wraps;
   expect(wraps.filter((w) => w.method === 'recovery')).toHaveLength(1);
 
-  await using phone = await secondBrowser(browser);
+  // Its requests are rewritten by the test (`page.route`), which WebKit does not apply to a page a service worker controls: the worker
+  // claims the page as it starts, so this device runs without one, as the test is about keys and not the worker.
+  await using phone = await secondBrowser(browser, { serviceWorkers: 'block' });
   await phone.page.route('**/api/keys', async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const reply = await route.fetch();

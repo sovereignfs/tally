@@ -28,13 +28,16 @@ export async function hydrated(page: Page) {
  * A second browser, as a second person or a second device has: its own cookies, its own storage and its own IndexedDB, nothing shared with the
  * test's own `page`. Closed by `close`, which a test calls in a `finally` or leaves to `using`.
  */
-export async function secondBrowser(browser: Browser): Promise<{
+export async function secondBrowser(
+  browser: Browser,
+  options: { serviceWorkers?: 'allow' | 'block' } = {},
+): Promise<{
   context: BrowserContext;
   page: Page;
   close: () => Promise<void>;
   [Symbol.asyncDispose]: () => Promise<void>;
 }> {
-  const context = await browser.newContext();
+  const context = await browser.newContext(options);
   const page = await context.newPage();
   const close = () => context.close();
   return { context, page, close, [Symbol.asyncDispose]: close };
