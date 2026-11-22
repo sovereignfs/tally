@@ -1,5 +1,5 @@
 {
-  "manifest": 2,
+  "manifest": 5,
   "prefix": "tally",
   "name": "Tally",
   "description": "Split shared expenses with the people you share them with, and see who owes whom",
@@ -11,6 +11,7 @@
     "redirect": ["/api/auth/callback/sovereign"],
     "backChannel": "/api/sovereign/backchannel-logout",
     "accountDeleted": "/api/sovereign/account-deleted",
+    "export": "/api/sovereign/export",
     "scopes": ["openid", "profile", "email", "offline_access", "directory"]
   },
   "database": true,
@@ -21,5 +22,5 @@
       "bytes": 32
     }
   ],
-  "core": ">=0.57.0 <1.0.0"
+  "core": ">=0.126.0 <1.0.0"
 }
